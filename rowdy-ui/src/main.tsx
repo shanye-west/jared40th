@@ -4,7 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import "./firebase";
 import App from "./App";
-import Match from "./routes/Match";
+import Match from "./routes/Match"; // path + casing must match the file
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
