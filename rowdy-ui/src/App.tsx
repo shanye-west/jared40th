@@ -65,6 +65,11 @@ setMatchesByRound(bucket);
     <div style={{ padding: 16, display: "grid", gap: 16 }}>
       <h1>{tournament.name}</h1>
 
+      <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+  <Link to="/leaderboard">Leaderboard</Link>
+</div>
+
+
       {rounds.map((r, idx) => {
         const matches = matchesByRound[r.id] ?? [];
         return (

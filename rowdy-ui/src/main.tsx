@@ -5,10 +5,12 @@ import "./index.css";
 import "./firebase";
 import App from "./App";
 import Match from "./routes/Match"; // path + casing must match the file
+import Leaderboard from "./routes/Leaderboard";
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
   { path: "/match/:matchId", element: <Match /> },
+  { path: "/leaderboard", element: <Leaderboard /> },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
