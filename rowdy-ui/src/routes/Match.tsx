@@ -72,9 +72,14 @@ export default function Match() {
   }, [match]);
 
   async function saveHole(k: string, nextInput: any) {
-    if (!match?.id || isClosed) return; // block writes if Final
+  if (!match?.id || isClosed) return;
+  try {
     await updateDoc(doc(db, "matches", match.id), { [`holes.${k}.input`]: nextInput });
+  } catch (e) {
+    console.error("updateDoc failed", e);
+    alert(`Failed to save: ${(e as any)?.code || e}`);
   }
+}
 
   function HoleRow({ k, input }: { k: string; input: any }) {
     if (format === "twoManScramble") {
@@ -225,6 +230,11 @@ export default function Match() {
             } • ${match.status.closed ? "Final" : "Live"}`
           : "—"}
       </div>
+      <div>
+  <strong>Strokes (hole 1):</strong>{" "}
+  A: {match.teamAPlayers?.map((p:any)=>p.strokesReceived?.[0] ?? 0).join(", ")} •{" "}
+  B: {match.teamBPlayers?.map((p:any)=>p.strokesReceived?.[0] ?? 0).join(", ")}
+</div>
       {isClosed && (
         <div style={{ color: "#b91c1c" }}>
           Final — edit a prior hole to reopen

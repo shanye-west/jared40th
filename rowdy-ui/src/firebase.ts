@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth, signInAnonymously } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY as string,
@@ -17,6 +17,7 @@ const app = initializeApp(firebaseConfig);
 // sign in anonymously right away (you enabled Anonymous in Firebase Auth)
 const auth = getAuth(app);
 signInAnonymously(auth).catch(console.error);
+onAuthStateChanged(auth, (u) => console.log("auth uid =", u?.uid || null));
 
 export const db = getFirestore(app);
 export { auth };
