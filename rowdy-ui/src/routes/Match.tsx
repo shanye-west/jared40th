@@ -1,7 +1,7 @@
 // src/routes/Match.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "singles";
@@ -28,33 +28,19 @@ export default function Match() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        if (!matchId) { if (alive) setLoading(false); return; }
-        setLoading(true);
-
-        const mRef = doc(db, "matches", matchId);
-        const mSnap = await getDoc(mRef);
-        if (!mSnap.exists()) { if (alive) { setMatch(null); setLoading(false); } return; }
-        const m = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
-        if (alive) setMatch(m);
-
-        if (m.roundId) {
-          const rSnap = await getDoc(doc(db, "rounds", m.roundId));
-          if (rSnap.exists() && alive) {
-            const r = { id: rSnap.id, ...(rSnap.data() as any) } as RoundDoc;
-            setRound(r);
-          }
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, [matchId]);
+  if (!matchId) return;
+  const unsub = onSnapshot(doc(db, "matches", matchId), async (mSnap) => {
+    if (!mSnap.exists()) { setMatch(null); setLoading(false); return; }
+    const m = { id: mSnap.id, ...(mSnap.data() as any) };
+    setMatch(m);
+    if (m.roundId) {
+      const rSnap = await getDoc(doc(db, "rounds", m.roundId));
+      if (rSnap.exists()) setRound({ id: rSnap.id, ...(rSnap.data() as any) });
+    }
+    setLoading(false);
+  });
+  return () => unsub();
+}, [matchId]);
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   const holes = useMemo(() => {
