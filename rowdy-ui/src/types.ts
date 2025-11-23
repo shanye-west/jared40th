@@ -1,10 +1,11 @@
 export type RoundFormat = "twoManBestBall" | "twoManShamble" | "twoManScramble" | "singles";
 
+export type PlayerDoc = { id: string; displayName?: string; username?: string };
 export type TournamentDoc = {
   id: string;
   name: string;
-  active?: boolean;
-  roundIds?: string[];
+  teamA: { id: string; name: string; color?: string };
+  teamB: { id: string; name: string; color?: string };
 };
 
 export type RoundDoc = {
