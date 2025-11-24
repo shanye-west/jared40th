@@ -54,3 +54,13 @@ export function getOpponents(fact: PlayerMatchFact): { id: string; tier: string 
   }
   return [];
 }
+
+export function getPartners(fact: PlayerMatchFact): { id: string; tier: string }[] {
+  if (fact.partnerIds && fact.partnerIds.length > 0) {
+    return fact.partnerIds.map((id, index) => ({
+      id,
+      tier: fact.partnerTiers?.[index] || "Unknown",
+    }));
+  }
+  return [];
+}

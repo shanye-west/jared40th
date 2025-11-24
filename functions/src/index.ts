@@ -289,8 +289,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
   const batch = db.batch();
 
-  // UPDATED: Accepts an array of opponents
-  const writeFact = (p: any, team: "teamA" | "teamB", opponentPlayers: any[]) => {
+  // UPDATED: Accepts 'opponentPlayers' AND 'myTeamPlayers'
+  const writeFact = (p: any, team: "teamA" | "teamB", opponentPlayers: any[], myTeamPlayers: any[]) => {
     if (!p?.playerId) return;
     
     let outcome = "loss"; 
@@ -302,16 +302,32 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     const myTeamId = team === "teamA" ? teamAId : teamBId;
     const oppTeamId = team === "teamA" ? teamBId : teamAId;
 
-    // --- EXTRACT IDS AND TIERS ---
+    // --- 1. OPPONENTS ---
     const opponentIds: string[] = [];
     const opponentTiers: string[] = [];
 
-    opponentPlayers.forEach((op) => {
-      if (op && op.playerId) {
-        opponentIds.push(op.playerId);
-        opponentTiers.push(playerTierLookup[op.playerId] || "Unknown");
-      }
-    });
+    if (Array.isArray(opponentPlayers)) {
+      opponentPlayers.forEach((op) => {
+        if (op && op.playerId) {
+          opponentIds.push(op.playerId);
+          opponentTiers.push(playerTierLookup[op.playerId] || "Unknown");
+        }
+      });
+    }
+
+    // --- 2. PARTNERS (New Logic) ---
+    const partnerIds: string[] = [];
+    const partnerTiers: string[] = [];
+
+    if (Array.isArray(myTeamPlayers)) {
+      myTeamPlayers.forEach((tm) => {
+        // Add if valid ID AND not myself
+        if (tm && tm.playerId && tm.playerId !== p.playerId) {
+          partnerIds.push(tm.playerId);
+          partnerTiers.push(playerTierLookup[tm.playerId] || "Unknown");
+        }
+      });
+    }
 
     batch.set(db.collection("playerMatchFacts").doc(`${matchId}_${p.playerId}`), {
       playerId: p.playerId, matchId, tournamentId: tId, roundId: rId, format,
@@ -321,11 +337,13 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       playerTeamId: myTeamId,
       opponentTeamId: oppTeamId,
       
-      // ARRAYS ONLY (Source of Truth)
+      // Opponent Arrays (Source of Truth)
       opponentIds,
       opponentTiers,
 
-      // REMOVED: opponentId, opponentTier
+      // Partner Arrays (New)
+      partnerIds,
+      partnerTiers,
 
       finalMargin: status.margin || 0,
       finalThru: status.thru || 18,
@@ -337,9 +355,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const pA = after.teamAPlayers || [];
   const pB = after.teamBPlayers || [];
   
-  // UPDATED: Pass the entire opposing team array to the helper
-  pA.forEach((p: any) => writeFact(p, "teamA", pB));
-  pB.forEach((p: any) => writeFact(p, "teamB", pA));
+  // UPDATED: Pass 'pA' as the 4th arg for Team A (to find partners), and 'pB' for Team B
+  if (Array.isArray(pA)) pA.forEach((p: any) => writeFact(p, "teamA", pB, pA));
+  if (Array.isArray(pB)) pB.forEach((p: any) => writeFact(p, "teamB", pA, pB));
 
   await batch.commit();
 });

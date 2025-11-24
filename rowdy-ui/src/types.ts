@@ -89,11 +89,15 @@ export type PlayerMatchFact = {
   playerTeamId?: string;
   opponentTeamId?: string;
 
-  // The new array fields
+  // Opponents
   opponentIds?: string[];
   opponentTiers?: string[];
 
+  // Partners (NEW)
+  partnerIds?: string[];
+  partnerTiers?: string[];
+
   finalMargin?: number;
   finalThru?: number;
-  updatedAt?: any; // Firestore Timestamp
+  updatedAt?: any;
 };
