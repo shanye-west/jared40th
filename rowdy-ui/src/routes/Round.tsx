@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc } from "../types";
+import { formatMatchStatus } from "../utils"; // <--- IMPORT THIS
 
 function ScoreBlock({ final, proj, color }: { final: number; proj: number; color?: string }) {
   return (
@@ -106,24 +107,25 @@ export default function Round() {
 
       <section style={{ display: "grid", gap: 12 }}>
         <h3 style={{ margin: "0 0 8px 0", borderBottom: "1px solid #eee", paddingBottom: 8 }}>Matches</h3>
+        
         {matches.length === 0 ? (
           <div style={{ padding: "8px 0", fontStyle: "italic", opacity: 0.6 }}>No matches.</div>
         ) : (
           <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0, display: 'grid', gap: 12 }}>
             {matches.map((m) => (
               <li key={m.id}>
-                <Link to={`/match/${m.id}`} style={{ textDecoration: "none", color: "inherit", display: "block", border: "1px solid #eee", borderRadius: 8, padding: 12, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <Link 
+                  to={`/match/${m.id}`} 
+                  style={{ textDecoration: "none", color: "inherit", display: "block", border: "1px solid #eee", borderRadius: 8, padding: 12, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
+                >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <span style={{ fontWeight: 600 }}>Match {m.id}</span>
-                    <span style={{ fontSize: "0.9em", opacity: 0.8 }}>
-                      {m.status?.leader 
-                        ? `${m.status.leader === "teamA" ? (tournament?.teamA.name || "Team A") : (tournament?.teamB.name || "Team B")} ${m.status.margin}`
-                        : (m.status?.thru ?? 0) > 0 ? "AS" : "—"
-                      } 
-                      <span style={{ opacity: 0.6, marginLeft: 6 }}>
-                        {m.status?.closed ? "(F)" : (m.status?.thru ?? 0) > 0 ? `(${m.status?.thru})` : ""}
-                      </span>
+                    
+                    {/* --- NEW: Using the helper here --- */}
+                    <span style={{ fontSize: "0.9em", opacity: 0.8, fontWeight: 500 }}>
+                      {formatMatchStatus(m.status, tournament?.teamA?.name, tournament?.teamB?.name)}
                     </span>
+                  
                   </div>
                   <div style={{ fontSize: "0.85em", color: "#666" }}>
                     {(m.teamAPlayers || []).length > 0 && <span>vs</span>}

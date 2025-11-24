@@ -13,6 +13,7 @@ import {
 import { db } from "../firebase";
 // 1. Import unified types from your central file
 import type { TournamentDoc, PlayerDoc, MatchDoc, RoundDoc, RoundFormat } from "../types";
+import { formatMatchStatus } from "../utils";
 
 // Helper component for Handicap Dots
 function Dots({ count }: { count: number }) {
@@ -252,17 +253,14 @@ export default function Match() {
 
       {/* Status Card */}
       <div style={{ background: isClosed ? "#fff1f2" : "#f8fafc", border: "1px solid #e2e8f0", padding: 16, borderRadius: 8, textAlign: "center" }}>
+        
+        {/* --- NEW: Using the helper here --- */}
         <div style={{ fontSize: "1.2em", fontWeight: "bold", marginBottom: 4 }}>
-          {/* 2. Added optional chaining to match.status calls here to fix red underlines */}
-          {match.status?.leader
-            ? `${match.status?.leader === "teamA" ? (tournament?.teamA.name || "Team A") : (tournament?.teamB.name || "Team B")} is ${match.status?.margin} UP`
-            : (match.status?.thru ?? 0) > 0 ? "All Square" : "Even"
-          }
+          {formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name)}
         </div>
+        
         <div style={{ fontSize: "0.9em", opacity: 0.7 }}>
-          {match.status?.closed 
-            ? "Final Result" 
-            : (match.status?.thru ?? 0) > 0 ? `Thru ${match.status?.thru}` : "Not started"}
+          {match.status?.closed ? "Final Result" : "Live Scoring"}
         </div>
       </div>
 
