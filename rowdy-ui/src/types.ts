@@ -6,22 +6,28 @@ export type PlayerDoc = {
   username?: string; 
 };
 
+// NEW: Helper for the Tier Arrays
+export type TierMap = {
+  A?: string[];
+  B?: string[];
+  C?: string[];
+  D?: string[];
+};
+
 export type TournamentDoc = {
   id: string;
   name: string;
   teamA: { 
     id: string; 
     name: string; 
-    color?: string;
-    // Nested here
-    rosterByTier?: Record<string, "A" | "B" | "C" | "D">; 
+    color?: string; 
+    rosterByTier?: TierMap; // <--- Nested inside the team
   };
   teamB: { 
     id: string; 
     name: string; 
-    color?: string;
-    // And here
-    rosterByTier?: Record<string, "A" | "B" | "C" | "D">; 
+    color?: string; 
+    rosterByTier?: TierMap; // <--- Nested here too
   };
 };
 
@@ -37,27 +43,19 @@ export type MatchDoc = {
   roundId: string;
   tournamentId?: string;
   pointsValue?: number;
-  
-  // Scoring Data
   holes?: Record<string, { input: any }>;
-  
-  // Calculated Results
   result?: { 
     winner?: "teamA" | "teamB" | "AS";
     holesWonA?: number;
     holesWonB?: number;
   };
-  
-  // Live Status
   status?: {
-    leader?: "teamA" | "teamB" | null;
-    margin?: number;
-    thru?: number;
-    dormie?: boolean;
-    closed?: boolean;
+    leader: "teamA" | "teamB" | null;
+    margin: number;
+    thru: number;
+    dormie: boolean;
+    closed: boolean;
   };
-
-  // Roster & Strokes
   teamAPlayers?: { playerId: string; strokesReceived: number[] }[];
   teamBPlayers?: { playerId: string; strokesReceived: number[] }[];
 };
