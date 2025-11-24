@@ -1,3 +1,4 @@
+// functions/src/index.ts
 import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -38,18 +39,26 @@ function zeros18(): number[] {
 }
 
 function ensureSideSize(side: any, count: number) {
+  // Build exactly `count` entries; each has playerId "" and 18 zeros for strokes
   const make = () => ({ playerId: "", strokesReceived: zeros18() });
-  if (!Array.isArray(side)) return Array.from({ length: count }, make);
+
+  if (!Array.isArray(side)) {
+    return Array.from({ length: count }, make);
+  }
 
   const trimmed = side.slice(0, count).map((p: any) => ({
     playerId: typeof p?.playerId === "string" ? p.playerId : "",
-    strokesReceived: Array.isArray(p?.strokesReceived) && p.strokesReceived.length === 18 ? p.strokesReceived : zeros18(),
+    strokesReceived:
+      Array.isArray(p?.strokesReceived) && p.strokesReceived.length === 18
+        ? p.strokesReceived
+        : zeros18(),
   }));
 
   while (trimmed.length < count) trimmed.push(make());
   return trimmed;
 }
 
+// Normalize a holes map to the desired shape for this format.
 function normalizeHoles(existing: Record<string, any> | undefined, format: RoundFormat) {
   const desired = emptyHolesFor(format);
   const holes: Record<string, any> = { ...(existing || {}) };
@@ -72,16 +81,24 @@ function normalizeHoles(existing: Record<string, any> | undefined, format: Round
     } else if (format === "singles") {
       let a = exInput.teamAPlayerGross;
       let b = exInput.teamBPlayerGross;
-      if (a == null && Array.isArray(exInput.teamAPlayersGross)) a = exInput.teamAPlayersGross[0] ?? null;
-      if (b == null && Array.isArray(exInput.teamBPlayersGross)) b = exInput.teamBPlayersGross[0] ?? null;
+
+      if (a == null && Array.isArray(exInput.teamAPlayersGross)) {
+        a = exInput.teamAPlayersGross[0] ?? null;
+      }
+      if (b == null && Array.isArray(exInput.teamBPlayersGross)) {
+        b = exInput.teamBPlayersGross[0] ?? null;
+      }
+
       holes[k] = { input: { teamAPlayerGross: a ?? null, teamBPlayerGross: b ?? null } };
     } else {
+      // BestBall/Shamble → 2-length arrays
       const aArr = Array.isArray(exInput.teamAPlayersGross) ? exInput.teamAPlayersGross : [null, null];
       const bArr = Array.isArray(exInput.teamBPlayersGross) ? exInput.teamBPlayersGross : [null, null];
       const norm2 = (arr: any[]) => [arr[0] ?? null, arr[1] ?? null];
       holes[k] = { input: { teamAPlayersGross: norm2(aArr), teamBPlayersGross: norm2(bArr) } };
     }
   }
+
   return holes;
 }
 
@@ -100,23 +117,28 @@ export const seedMatchBoilerplate = onDocumentCreated("matches/{matchId}", async
   if (!roundSnap.exists) return;
   const round = roundSnap.data()!;
   const format = (round.format as RoundFormat) || "twoManBestBall";
+
   const tournamentId = match.tournamentId ?? round.tournamentId ?? "";
 
   const count = playersPerSide(format);
   const teamA = ensureSideSize(match.teamAPlayers, count);
   const teamB = ensureSideSize(match.teamBPlayers, count);
+
   const holes = normalizeHoles(match.holes, format);
 
-  await matchRef.set({
-    tournamentId,
-    roundId,
-    pointsValue: match.pointsValue == null ? 1 : match.pointsValue,
-    teamAPlayers: teamA,
-    teamBPlayers: teamB,
-    status: match.status ?? defaultStatus(),
-    holes,
-    _seededAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
+  await matchRef.set(
+    {
+      tournamentId,
+      roundId,
+      pointsValue: match.pointsValue == null ? 1 : match.pointsValue,
+      teamAPlayers: teamA,
+      teamBPlayers: teamB,
+      status: match.status ?? defaultStatus(),
+      holes,
+      _seededAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
 
   const roundRef = db.collection("rounds").doc(roundId);
   await db.runTransaction(async (tx) => {
@@ -142,6 +164,7 @@ export const seedRoundDefaults = onDocumentCreated("rounds/{roundId}", async (ev
 export const linkRoundToTournament = onDocumentWritten("rounds/{roundId}", async (event) => {
   const after = event.data?.after.data();
   if (!after) return;
+
   const roundId = event.params.roundId as string;
   const tIdAfter = after.tournamentId;
   if (!tIdAfter) return;
@@ -197,11 +220,13 @@ function decideHole(format: RoundFormat, i: number, match: any): Leader | "AS" {
     return "AS";
   }
 
+  // twoManBestBall / twoManShamble
   const aArr = to2(h.teamAPlayersGross);
   const bArr = to2(h.teamBPlayersGross);
 
+  // *** UPDATE: Strict check for ALL 4 SCORES ***
   if (aArr[0] == null || aArr[1] == null || bArr[0] == null || bArr[1] == null) {
-    return null; 
+    return null; // Hole not finished until all 4 scores entered
   }
 
   const useHandicap = (format === "twoManBestBall");
@@ -210,8 +235,14 @@ function decideHole(format: RoundFormat, i: number, match: any): Leader | "AS" {
   const bSt0 = useHandicap ? clamp01(match.teamBPlayers?.[0]?.strokesReceived?.[i-1]) : 0;
   const bSt1 = useHandicap ? clamp01(match.teamBPlayers?.[1]?.strokesReceived?.[i-1]) : 0;
 
-  const aNet = [aArr[0]! - aSt0, aArr[1]! - aSt1];
-  const bNet = [bArr[0]! - bSt0, bArr[1]! - bSt1];
+  const aNet = [
+    aArr[0]! - aSt0, // non-null assertion safe due to check above
+    aArr[1]! - aSt1,
+  ];
+  const bNet = [
+    bArr[0]! - bSt0,
+    bArr[1]! - bSt1,
+  ];
 
   const aBest = Math.min(aNet[0], aNet[1]);
   const bBest = Math.min(bNet[0], bNet[1]);
@@ -226,7 +257,7 @@ function summarize(format: RoundFormat, match: any) {
   const keys = holesRange(match.holes ?? {});
   for (const i of keys) {
     const res = decideHole(format, i, match);
-    if (res === null) continue;
+    if (res === null) continue;         // not decided
     thru = Math.max(thru, i);
     if (res === "teamA") a++;
     else if (res === "teamB") b++;
@@ -239,9 +270,12 @@ function summarize(format: RoundFormat, match: any) {
   const closed = leader !== null && margin > holesRemaining;
   const winner = (thru === 18 && a === b) ? "AS" : (leader ?? "AS");
 
-  return { holesWonA: a, holesWonB: b, thru, leader, margin, dormie, closed, winner };
+  return {
+    holesWonA: a, holesWonB: b, thru, leader, margin, dormie, closed, winner
+  };
 }
 
+// --- compute trigger ---
 export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async (event) => {
   const before = event.data?.before?.data() || {};
   const after  = event.data?.after?.data();
@@ -265,8 +299,18 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
 
   const s = summarize(format, after);
 
-  const status = { leader: s.leader, margin: s.margin, thru: s.thru, dormie: s.dormie, closed: s.closed };
-  const result = { winner: s.winner, holesWonA: s.holesWonA, holesWonB: s.holesWonB };
+  const status = {
+    leader: s.leader,
+    margin: s.margin,
+    thru:   s.thru,
+    dormie: s.dormie,
+    closed: s.closed,
+  };
+  const result = {
+    winner:    s.winner,
+    holesWonA: s.holesWonA,
+    holesWonB: s.holesWonB,
+  };
 
   const prevStatus = before.status ?? {};
   const prevResult = before.result ?? {};
@@ -300,7 +344,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   
   // 1. Fetch Context (Format & Tiers)
   let format = "unknown";
-  let playerTiers: Record<string, string> = {};
+  // *** UPDATED: RENAMED VARIABLE ***
+  let rosterByTier: Record<string, string> = {};
 
   if (roundId) {
     const rSnap = await db.collection("rounds").doc(roundId).get();
@@ -310,8 +355,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   if (tournamentId) {
     const tSnap = await db.collection("tournaments").doc(tournamentId).get();
     if (tSnap.exists) {
-      // *** UPDATE HERE: Accessing 'rosterByTier' ***
-      playerTiers = tSnap.data()?.rosterByTier || {}; 
+      // *** UPDATED: FETCHING CORRECT FIELD INTO CORRECT VARIABLE ***
+      rosterByTier = tSnap.data()?.rosterByTier || {}; 
     }
   }
 
@@ -335,8 +380,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     }
 
     // 2. Snapshot the Tiers
-    const myTier = playerTiers[p.playerId] || "Unknown";
-    const oppTier = opponent?.playerId ? (playerTiers[opponent.playerId] || "Unknown") : "N/A";
+    // *** UPDATED: USING CORRECT VARIABLE ***
+    const myTier = rosterByTier[p.playerId] || "Unknown";
+    const oppTier = opponent?.playerId ? (rosterByTier[opponent.playerId] || "Unknown") : "N/A";
 
     const factRef = db.collection("playerMatchFacts").doc(`${matchId}_${p.playerId}`);
     
