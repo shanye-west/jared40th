@@ -126,6 +126,7 @@ export const seedRoundDefaults = onDocumentCreated("rounds/{roundId}", async (ev
   if (!Array.isArray(data.matchIds)) toMerge.matchIds = [];
   if (data.day === undefined) toMerge.day = 0;
   if (data.format === undefined) toMerge.format = null;
+  if (data.courseId === undefined) toMerge.courseId = null;
   if (data.locked === undefined) toMerge.locked = false;
   if (Object.keys(toMerge).length > 0) {
     toMerge._seededAt = FieldValue.serverTimestamp();
