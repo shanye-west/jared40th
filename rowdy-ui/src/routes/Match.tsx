@@ -51,9 +51,6 @@ export default function Match() {
         return;
       }
 
-      // Only fetch if we haven't already (or if new players appeared)
-      // For simplicity in this hook, we just fetch. 
-      // A production app might cache this better.
       const fetchPlayers = async () => {
         const batches = [];
         for (let i = 0; i < ids.length; i += 10) batches.push(ids.slice(i, i + 10));
@@ -92,9 +89,11 @@ export default function Match() {
   }, [match?.roundId]);
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
-  const roundLocked = !!round?.locked;
-  const isMatchClosed = !!match?.status?.closed;
-  const matchThru = match?.status?.thru ?? 0;
+  
+  // --- LOCKING LOGIC (Reverted to your original logic) ---
+  const roundLocked = !!round?.locked;          // Admin Lock
+  const isMatchClosed = !!match?.status?.closed;// Match Finished
+  const matchThru = match?.status?.thru ?? 0;   // How many holes played
 
   const holes = useMemo(() => {
     const hMatch = match?.holes || {};
@@ -111,7 +110,6 @@ export default function Match() {
     if (!pid) return "P";
     const p = players[pid];
     if (!p) return "?";
-    // Return "FM" (First Middle/Last)
     if (p.displayName) {
         const parts = p.displayName.split(" ");
         if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
@@ -121,6 +119,8 @@ export default function Match() {
   }
 
   async function saveHole(k: string, nextInput: any) {
+    // Safety check: we still check locked state inside the UI components, 
+    // but a double check here is good practice.
     if (!match?.id || roundLocked) return;
     try {
       await updateDoc(doc(db, "matches", match.id), { [`holes.${k}.input`]: nextInput });
@@ -132,16 +132,20 @@ export default function Match() {
   // --- SUB-COMPONENT: SINGLE HOLE ROW ---
   function HoleRow({ k, input, par, hcpIndex }: { k: string; input: any; par?: number; hcpIndex?: number }) {
     const holeIdx = Number(k) - 1;
-    
-    // Lock logic: only lock if the administrator has locked the round via the dashboard
-    const isLocked = roundLocked; 
+    const holeNum = Number(k);
+
+    // --- RESTORED LOCK LOGIC ---
+    // 1. If the Admin has locked the Round -> EVERYTHING LOCKED.
+    // 2. OR if the Match is Closed -> Only lock holes that are AFTER the deciding hole.
+    //    (e.g. if A wins 3&2, matchThru is 16. Holes 1-16 are open for edit. Holes 17-18 are locked).
+    const isLocked = roundLocked || (isMatchClosed && holeNum > matchThru);
 
     const getStrokes = (team: "A" | "B", pIdx: number) => {
       const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
       return roster?.[pIdx]?.strokesReceived?.[holeIdx] ?? 0;
     };
 
-    // Specialized Input Renderers based on format
+    // Input Renderers
     const renderInputs = () => {
         if (format === "twoManScramble") {
             const a = input?.teamAGross ?? "";
@@ -177,7 +181,8 @@ export default function Match() {
                 </>
             );
         }
-        // Default: 2 Man (Best Ball / Shamble) -> 4 Inputs
+        
+        // Default: 2 Man (Best Ball / Shamble)
         const aArr = Array.isArray(input?.teamAPlayersGross) ? input.teamAPlayersGross : [null, null];
         const bArr = Array.isArray(input?.teamBPlayersGross) ? input.teamBPlayersGross : [null, null];
         
@@ -227,8 +232,6 @@ export default function Match() {
 
   const tName = tournament?.name || "Match Scoring";
   const tSeries = tournament?.series;
-
-  // Header Initials Row
   const showFour = format !== "singles" && format !== "twoManScramble";
 
   return (
