@@ -11,7 +11,7 @@ function ScoreBlock({ final, proj, color }: { final: number; proj: number; color
     <span>
       <span style={{ color: color || "inherit" }}>{final}</span>
       {proj > 0 && (
-        <span style={{ fontSize: "0.6em", color: "#64748b", marginLeft: 6, verticalAlign: "middle" }}>
+        <span style={{ fontSize: "0.6em", color: "var(--text-secondary)", marginLeft: 6, verticalAlign: "middle" }}>
           (+{proj})
         </span>
       )}
@@ -168,7 +168,7 @@ export default function App() {
             </div>
           </section>
 
-          {/* ACTIONS */}
+          {/* ACTIONS BUTTON (NEW) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
             <Link to="/teams" style={{ textDecoration: 'none' }}>
               <button style={{ 
