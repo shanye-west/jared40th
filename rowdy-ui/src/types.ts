@@ -75,3 +75,29 @@ export type MatchDoc = {
   teamAPlayers?: { playerId: string; strokesReceived: number[] }[];
   teamBPlayers?: { playerId: string; strokesReceived: number[] }[];
 };
+
+export type PlayerMatchFact = {
+  playerId: string;
+  matchId: string;
+  tournamentId?: string;
+  roundId?: string;
+  format?: string;
+  outcome: "win" | "loss" | "halve";
+  pointsEarned: number;
+  
+  playerTier?: string;
+  playerTeamId?: string;
+  opponentTeamId?: string;
+
+  // The new array fields
+  opponentIds?: string[];
+  opponentTiers?: string[];
+
+  // Legacy/Singular fields
+  opponentId?: string | null;
+  opponentTier?: string | null;
+
+  finalMargin?: number;
+  finalThru?: number;
+  updatedAt?: any; // Firestore Timestamp
+};

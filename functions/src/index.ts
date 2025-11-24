@@ -264,7 +264,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let teamAId = "teamA";
   let teamBId = "teamB";
 
-  // Fetch Context
+  // Fetch Context (Round & Tournament)
   if (rId) {
     const rSnap = await db.collection("rounds").doc(rId).get();
     if (rSnap.exists) format = rSnap.data()?.format || "unknown";
@@ -288,7 +288,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   }
 
   const batch = db.batch();
-  const writeFact = (p: any, team: "teamA" | "teamB", opponent: any) => {
+
+  // UPDATED: Accepts an array of opponents
+  const writeFact = (p: any, team: "teamA" | "teamB", opponentPlayers: any[]) => {
     if (!p?.playerId) return;
     
     let outcome = "loss"; 
@@ -297,20 +299,42 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     else if (result.winner === team) { outcome = "win"; pts = points; }
 
     const myTier = playerTierLookup[p.playerId] || "Unknown";
-    const oppTier = opponent?.playerId ? (playerTierLookup[opponent.playerId] || "Unknown") : "N/A";
     const myTeamId = team === "teamA" ? teamAId : teamBId;
     const oppTeamId = team === "teamA" ? teamBId : teamAId;
+
+    // --- NEW LOGIC START ---
+    const opponentIds: string[] = [];
+    const opponentTiers: string[] = [];
+
+    opponentPlayers.forEach((op) => {
+      if (op && op.playerId) {
+        opponentIds.push(op.playerId);
+        opponentTiers.push(playerTierLookup[op.playerId] || "Unknown");
+      }
+    });
+
+    // Maintain backwards compatibility for Singles queries
+    // If there is exactly 1 opponent, fill the singular fields. Otherwise null.
+    const legacyOpponentId = opponentIds.length === 1 ? opponentIds[0] : null;
+    const legacyOpponentTier = opponentTiers.length === 1 ? opponentTiers[0] : null;
+    // --- NEW LOGIC END ---
 
     batch.set(db.collection("playerMatchFacts").doc(`${matchId}_${p.playerId}`), {
       playerId: p.playerId, matchId, tournamentId: tId, roundId: rId, format,
       outcome, pointsEarned: pts,
       
-      // New Detailed Stats
       playerTier: myTier,
-      opponentTier: oppTier,
       playerTeamId: myTeamId,
       opponentTeamId: oppTeamId,
-      opponentId: opponent?.playerId || null,
+      
+      // New Arrays
+      opponentIds,
+      opponentTiers,
+
+      // Legacy/Singular fields (kept for safety/convenience)
+      opponentId: legacyOpponentId,
+      opponentTier: legacyOpponentTier,
+
       finalMargin: status.margin || 0,
       finalThru: status.thru || 18,
       
@@ -321,8 +345,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const pA = after.teamAPlayers || [];
   const pB = after.teamBPlayers || [];
   
-  pA.forEach((p: any, i: number) => writeFact(p, "teamA", format === "singles" ? pB[i] : null));
-  pB.forEach((p: any, i: number) => writeFact(p, "teamB", format === "singles" ? pA[i] : null));
+  // UPDATED: Pass the entire opposing team array to the helper
+  pA.forEach((p: any) => writeFact(p, "teamA", pB));
+  pB.forEach((p: any) => writeFact(p, "teamB", pA));
 
   await batch.commit();
 });
