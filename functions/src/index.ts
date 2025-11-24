@@ -319,3 +319,107 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
 
   await matchRef.set({ status, result }, { merge: true });
 });
+
+// --- STATS ENGINE ----------------------------------------------------------
+
+// 1. Create "Facts" when a match is finalized
+export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (event) => {
+  const matchId = event.params.matchId;
+  const after = event.data?.after?.data();
+  
+  // If match is deleted or NOT closed, delete any existing facts for this match
+  // (This handles the "Re-opening" case automatically)
+  if (!after || !after.status?.closed) {
+    const factsSnap = await db.collection("playerMatchFacts").where("matchId", "==", matchId).get();
+    if (factsSnap.empty) return;
+    
+    const batch = db.batch();
+    factsSnap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    return;
+  }
+
+  // Match is CLOSED -> Generate/Overwrite Facts
+  const result = after.result || {}; // { winner: 'teamA', ... }
+  const points = after.pointsValue ?? 1;
+  const tournamentId = after.tournamentId || "";
+  const roundId = after.roundId || "";
+  const format = (await db.collection("rounds").doc(roundId).get()).data()?.format || "unknown";
+
+  const batch = db.batch();
+
+  // Helper to write a fact for a player
+  const writeFact = (p: any, team: "teamA" | "teamB") => {
+    if (!p?.playerId) return;
+    
+    let outcome: "win" | "loss" | "halve" = "halve";
+    let pointsEarned = 0;
+
+    if (result.winner === "AS") {
+      outcome = "halve";
+      pointsEarned = points / 2;
+    } else if (result.winner === team) {
+      outcome = "win";
+      pointsEarned = points;
+    } else {
+      outcome = "loss";
+      pointsEarned = 0;
+    }
+
+    const factId = `${matchId}_${p.playerId}`;
+    const factRef = db.collection("playerMatchFacts").doc(factId);
+    
+    batch.set(factRef, {
+      playerId: p.playerId,
+      matchId,
+      tournamentId,
+      roundId,
+      format,
+      outcome,
+      pointsEarned,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  };
+
+  // Process Team A
+  (after.teamAPlayers || []).forEach((p: any) => writeFact(p, "teamA"));
+  // Process Team B
+  (after.teamBPlayers || []).forEach((p: any) => writeFact(p, "teamB"));
+
+  await batch.commit();
+});
+
+
+// 2. Aggregate Stats whenever a Fact changes
+export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}", async (event) => {
+  const data = event.data?.after?.data() || event.data?.before?.data();
+  if (!data) return; // Should not happen unless data is missing in both
+
+  const playerId = data.playerId;
+  if (!playerId) return;
+
+  // Fetch ALL facts for this player to recalculate totals safely
+  const factsSnap = await db.collection("playerMatchFacts").where("playerId", "==", playerId).get();
+
+  let wins = 0, losses = 0, halves = 0, totalPoints = 0;
+  let matchesPlayed = 0;
+
+  factsSnap.forEach(doc => {
+    const f = doc.data();
+    matchesPlayed++;
+    totalPoints += (f.pointsEarned || 0);
+    if (f.outcome === "win") wins++;
+    else if (f.outcome === "loss") losses++;
+    else halves++;
+  });
+
+  // Write the summary to the player's profile
+  await db.collection("playerStats").doc(playerId).set({
+    wins,
+    losses,
+    halves,
+    totalPoints,
+    matchesPlayed,
+    lastUpdated: FieldValue.serverTimestamp()
+  }, { merge: true });
+});
