@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { collection, getDocs, query, where, documentId } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
@@ -13,12 +14,15 @@ type TournamentStat = {
 };
 
 export default function Teams() {
+  const [searchParams] = useSearchParams();
+  const teamParam = searchParams.get("team");
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
   const [stats, setStats] = useState<Record<string, TournamentStat>>({});
-  const [selectedTeam, setSelectedTeam] = useState<"A" | "B">("A");
+  const [selectedTeam, setSelectedTeam] = useState<"A" | "B">(teamParam === "B" ? "B" : "A");
 
   useEffect(() => {
     (async () => {
