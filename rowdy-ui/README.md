@@ -1,6 +1,6 @@
 What the app is
 
-A mobile-first Progressive Web App for a 12v12 Ryder-Cup–style golf tournament. Admins seed all setup data in Firestore (no admin UI). Players only enter gross scores per hole during play. Cloud Functions compute net, hole winners, match status, and results in real time. The public can view everything read-only (match pages, leaderboard, roster).
+A mobile-first Progressive Web App for a 12v12 Ryder-Cup–style golf tournament. Our webpage (for styling, etc. is www.rowdycup.com). Admins seed all setup data in Firestore (no admin UI). Players only enter gross scores per hole during play. Cloud Functions compute net, hole winners, match status, and results in real time. The public can view everything read-only (match pages, leaderboard, roster).
 
 If you want the longer spec you drafted earlier, it’s here: /mnt/data/Golf Tournament PWA - Project Blueprint (Final MVP).docx
 And the current “compute & stats” contract lives here (latest): Golf Pwa — Compute & Stats Contract V1 (Canvas)

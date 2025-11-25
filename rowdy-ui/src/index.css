@@ -1,184 +1,238 @@
 /* rowdy-ui/src/index.css */
 
-/* Import a nice font (Inter) from Google Fonts so it looks professional */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+/* Tailwind CSS */
+@import "tailwindcss";
 
-:root {
-  /* --- ROWDY CUP (SUMMER/DEFAULT) THEME --- */
-  --brand-primary: #132448;   /* Navy Blue */
-  --brand-secondary: #bf203c; /* Crimson Red */
-  --brand-accent: #ffffff;    /* White */
+/* Custom Theme - extend Tailwind with CSS variables */
+@theme {
+  /* Brand Colors */
+  --color-brand-primary: #132448;
+  --color-brand-secondary: #bf203c;
+  --color-brand-accent: #ffffff;
   
-  /* UI Colors */
-  --app-bg: #f1f5f9;          /* Slate 100 - crisp professional background */
-  --card-bg: #ffffff;
-  --text-primary: #0f172a;    /* Slate 900 - High contrast text */
-  --text-secondary: #64748b;  /* Slate 500 - Subtitles */
-  --divider: #e2e8f0;         /* Slate 200 */
+  /* Team Defaults */
+  --color-team-a: #132448;
+  --color-team-b: #bf203c;
   
-  /* Team Defaults (Fallbacks) */
-  --team-a-default: #132448;  /* Matches Primary */
-  --team-b-default: #bf203c;  /* Matches Secondary */
-
-  /* Dimensions */
-  --header-height: 60px;
-  --max-width: 600px;         /* Keep it mobile-width on desktop */
-  --radius-lg: 16px;
-  --radius-md: 12px;
-  --radius-sm: 8px;
+  /* Font */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* --- CHRISTMAS CLASSIC OVERRIDE --- */
-body.theme-christmas {
-  --brand-primary: #ef211c;   /* Holiday Red */
-  --brand-secondary: #00863c; /* Holiday Green */
-  
-  --app-bg: #fdfdfd;          /* Snow White background */
-  --team-a-default: #00863c;  /* Green Team */
-  --team-b-default: #ef211c;  /* Red Team */
+/* Base layer for global styles */
+@layer base {
+  :root {
+    /* --- ROWDY CUP (SUMMER/DEFAULT) THEME --- */
+    --brand-primary: #132448;
+    --brand-secondary: #bf203c;
+    --brand-accent: #ffffff;
+    
+    /* UI Colors */
+    --app-bg: #f1f5f9;
+    --card-bg: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --divider: #e2e8f0;
+    
+    /* Team Defaults */
+    --team-a-default: #132448;
+    --team-b-default: #bf203c;
+
+    /* Dimensions */
+    --header-height: 60px;
+    --max-width: 600px;
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+
+  /* --- CHRISTMAS CLASSIC OVERRIDE --- */
+  body.theme-christmas {
+    --brand-primary: #ef211c;
+    --brand-secondary: #00863c;
+    --app-bg: #fdfdfd;
+    --team-a-default: #00863c;
+    --team-b-default: #ef211c;
+  }
+
+  body {
+    @apply bg-slate-100 text-slate-900 antialiased;
+    font-family: var(--font-sans);
+    background-color: var(--app-bg);
+    color: var(--text-primary);
+    overscroll-behavior-y: contain;
+  }
+
+  #root {
+    @apply w-full min-h-screen mx-auto flex flex-col;
+  }
+
+  h1, h2, h3, h4, h5 {
+    @apply m-0 font-bold tracking-tight;
+  }
+
+  a {
+    @apply no-underline text-inherit;
+  }
+
+  ul {
+    @apply list-none p-0 m-0;
+  }
 }
 
-/* --- RESET & BASE --- */
-body {
-  margin: 0;
-  padding: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--app-bg);
-  color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
-  line-height: 1.5;
-  /* Disable native pull-to-refresh so our custom one works */
-  overscroll-behavior-y: contain;
-}
+/* Component layer for reusable UI patterns */
+@layer components {
+  /* App Shell */
+  .app-container {
+    @apply w-full mx-auto pb-10 flex-1;
+    max-width: var(--max-width);
+  }
 
-#root {
-  width: 100%;
-  min-height: 100vh;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-}
+  /* Sticky Header */
+  .app-header {
+    @apply flex items-center justify-between px-4 sticky top-0 z-50;
+    background-color: var(--brand-primary);
+    color: var(--brand-accent);
+    height: var(--header-height);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
 
-h1, h2, h3, h4, h5 {
-  margin: 0;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
+  .header-title {
+    @apply text-lg font-bold uppercase tracking-wide truncate;
+    max-width: 70%;
+  }
 
-a {
-  text-decoration: none;
-  color: inherit;
-}
+  /* Cards */
+  .card {
+    @apply bg-white rounded-xl p-4 mb-3 relative overflow-hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.04);
+  }
 
-ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
+  .card-hover {
+    @apply transition-all duration-200;
+  }
+  .card-hover:hover {
+    @apply shadow-lg;
+    transform: translateY(-1px);
+  }
 
-/* --- APP SHELL LAYOUT --- */
-.app-container {
-  width: 100%;
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding-bottom: 40px;
-  flex: 1; /* Takes up remaining space */
-}
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center font-semibold rounded-lg 
+           transition-all duration-200 cursor-pointer;
+  }
+  .btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 
-/* Sticky Header */
-.app-header {
-  background-color: var(--brand-primary);
-  color: var(--brand-accent);
-  height: var(--header-height);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
+  .btn-primary {
+    @apply inline-flex items-center justify-center font-semibold rounded-lg 
+           transition-all duration-200 cursor-pointer px-4 py-3 text-white;
+    background-color: var(--brand-primary);
+  }
+  .btn-primary:hover:not(:disabled) {
+    @apply brightness-110 shadow-md;
+  }
+  .btn-primary:active:not(:disabled) {
+    @apply brightness-95;
+  }
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 
-.header-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  /* Truncate long text */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 70%; 
-}
+  .btn-secondary {
+    @apply inline-flex items-center justify-center font-semibold rounded-lg 
+           transition-all duration-200 cursor-pointer px-4 py-3 bg-white border border-slate-200 text-slate-700;
+  }
+  .btn-secondary:hover:not(:disabled) {
+    @apply bg-slate-50 border-slate-300;
+  }
+  .btn-secondary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 
-/* --- CARD SYSTEM --- */
-.card {
-  background: var(--card-bg);
-  border-radius: var(--radius-md);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
-  padding: 16px;
-  margin-bottom: 12px;
-  border: 1px solid rgba(0,0,0,0.03);
-  position: relative;
-  overflow: hidden;
-}
+  .btn-ghost {
+    @apply inline-flex items-center justify-center font-semibold rounded-lg 
+           transition-all duration-200 cursor-pointer px-3 py-2 bg-transparent text-slate-600;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    @apply bg-slate-100;
+  }
+  .btn-ghost:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 
-/* --- TYPOGRAPHY UTILITIES --- */
-.text-sm { font-size: 0.875rem; }
-.text-xs { font-size: 0.75rem; }
-.text-muted { color: var(--text-secondary); }
-.font-bold { font-weight: 700; }
-.font-mono { font-family: 'Courier New', Courier, monospace; letter-spacing: -0.05em; }
+  .btn-back {
+    @apply bg-transparent border-none text-white text-xl cursor-pointer p-2 -ml-2 
+           flex items-center justify-center transition-opacity duration-150;
+  }
+  .btn-back:hover {
+    @apply opacity-80;
+  }
 
-/* --- SCORE INPUTS --- */
-/* The large boxes for entering scores */
-.score-input {
-  width: 100%;
-  height: 50px;
-  font-size: 1.5rem;
-  text-align: center;
-  border: 1px solid var(--divider);
-  border-radius: var(--radius-sm);
-  background: #f8fafc;
-  font-weight: 700;
-  color: var(--text-primary);
-  appearance: none; /* Remove default browser styling */
-}
+  /* Status Badges */
+  .badge {
+    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase;
+  }
+  .badge-default {
+    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-slate-200 text-slate-600;
+  }
+  .badge-success {
+    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-emerald-100 text-emerald-700;
+  }
+  .badge-warning {
+    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-amber-100 text-amber-700;
+  }
+  .badge-error {
+    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-red-100 text-red-700;
+  }
+  .badge-info {
+    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-blue-100 text-blue-700;
+  }
 
-.score-input:focus {
-  outline: 2px solid var(--brand-primary);
-  background: #fff;
-  border-color: transparent;
-}
+  /* Score Inputs */
+  .score-input {
+    @apply w-full h-12 text-2xl text-center font-bold rounded-lg 
+           bg-slate-50 border border-slate-200 text-slate-900
+           transition-all duration-150;
+    appearance: none;
+  }
+  .score-input:focus {
+    @apply outline-none ring-2 ring-offset-0 bg-white border-transparent;
+    --tw-ring-color: var(--brand-primary);
+  }
+  .score-input:disabled {
+    @apply bg-slate-200 text-slate-400 cursor-not-allowed;
+  }
 
-.score-input:disabled {
-  background: #e2e8f0;
-  color: #94a3b8;
-}
+  /* Section Headers */
+  .section-header {
+    @apply bg-slate-100 px-4 py-1.5 text-xs font-bold text-slate-500 
+           uppercase tracking-wider border-b border-slate-200;
+  }
 
-/* --- MATCH STATUS BADGE --- */
-.status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  background: #e2e8f0;
-  color: var(--text-secondary);
-}
+  /* Empty State */
+  .empty-state {
+    @apply text-center py-12 text-slate-400;
+  }
+  .empty-state-icon {
+    @apply text-4xl mb-2;
+  }
+  .empty-state-text {
+    @apply text-sm font-medium;
+  }
 
-/* --- BUTTONS --- */
-.btn-back {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 8px;
-  margin-left: -8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Loading Spinner */
+  .spinner {
+    @apply inline-block w-5 h-5 border-2 border-slate-200 border-t-slate-600 
+           rounded-full animate-spin;
+  }
+  .spinner-lg {
+    @apply w-8 h-8 border-3;
+  }
+
+  /* Divider */
+  .divider {
+    @apply border-t border-slate-200 my-4;
+  }
 }
