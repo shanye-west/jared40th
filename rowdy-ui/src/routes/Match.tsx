@@ -150,6 +150,58 @@ export default function Match() {
     return (roster?.[pIdx]?.strokesReceived?.[holeIdx] ?? 0) > 0;
   }
 
+  // For twoManBestBall: get the team's low net score for a hole
+  function getTeamLowNet(hole: typeof holes[0], team: "A" | "B"): number | null {
+    if (format !== "twoManBestBall") return null;
+    
+    const { input } = hole;
+    const holeIdx = hole.num - 1;
+    const arr = team === "A" ? input?.teamAPlayersGross : input?.teamBPlayersGross;
+    
+    if (!Array.isArray(arr)) return null;
+    
+    const p0Gross = arr[0];
+    const p1Gross = arr[1];
+    
+    // Calculate net scores
+    const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
+    const p0Stroke = (roster?.[0]?.strokesReceived?.[holeIdx] ?? 0) > 0 ? 1 : 0;
+    const p1Stroke = (roster?.[1]?.strokesReceived?.[holeIdx] ?? 0) > 0 ? 1 : 0;
+    
+    const p0Net = p0Gross != null ? p0Gross - p0Stroke : null;
+    const p1Net = p1Gross != null ? p1Gross - p1Stroke : null;
+    
+    // Return the lower net score
+    if (p0Net == null && p1Net == null) return null;
+    if (p0Net == null) return p1Net;
+    if (p1Net == null) return p0Net;
+    return Math.min(p0Net, p1Net);
+  }
+
+  // Calculate team totals for low net (for OUT/IN/TOT columns)
+  const teamLowNetTotals = useMemo(() => {
+    if (format !== "twoManBestBall") return null;
+    
+    const front = holes.slice(0, 9);
+    const back = holes.slice(9, 18);
+    
+    const sumLowNet = (arr: typeof holes, team: "A" | "B") => {
+      let total = 0;
+      let hasAny = false;
+      arr.forEach(h => {
+        const v = getTeamLowNet(h, team);
+        if (v != null) { total += v; hasAny = true; }
+      });
+      return hasAny ? total : null;
+    };
+    
+    return {
+      getOut: (team: "A" | "B") => sumLowNet(front, team),
+      getIn: (team: "A" | "B") => sumLowNet(back, team),
+      getTotal: (team: "A" | "B") => sumLowNet(holes, team),
+    };
+  }, [holes, format, match]);
+
   async function saveHole(k: string, nextInput: any) {
     if (!match?.id || roundLocked) return;
     try {
@@ -545,6 +597,45 @@ export default function Match() {
                   );
                 })}
 
+                {/* Team A Score Row (twoManBestBall only) - Low Net */}
+                {format === "twoManBestBall" && (
+                  <tr style={{ backgroundColor: teamAColor }}>
+                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: teamAColor }}>
+                      {tournament?.teamA?.name || "Team A"}
+                    </td>
+                    {/* Front 9 low net */}
+                    {holes.slice(0, 9).map(h => {
+                      const lowNet = getTeamLowNet(h, "A");
+                      return (
+                        <td key={`teamA-${h.k}`} className="py-1 text-center text-white font-bold text-sm">
+                          {lowNet ?? ""}
+                        </td>
+                      );
+                    })}
+                    {/* OUT total */}
+                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
+                      {teamLowNetTotals?.getOut("A") ?? "–"}
+                    </td>
+                    {/* Back 9 low net */}
+                    {holes.slice(9, 18).map((h, i) => {
+                      const lowNet = getTeamLowNet(h, "A");
+                      return (
+                        <td key={`teamA-${h.k}`} className={`py-1 text-center text-white font-bold text-sm ${i === 0 ? "border-l-2 border-white/30" : ""}`}>
+                          {lowNet ?? ""}
+                        </td>
+                      );
+                    })}
+                    {/* IN total */}
+                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
+                      {teamLowNetTotals?.getIn("A") ?? "–"}
+                    </td>
+                    {/* TOTAL */}
+                    <td className="py-1 text-center text-white font-extrabold text-base" style={{ backgroundColor: "rgba(0,0,0,0.25)" }}>
+                      {teamLowNetTotals?.getTotal("A") ?? "–"}
+                    </td>
+                  </tr>
+                )}
+
                 {/* MATCH STATUS ROW - Between Team A and Team B */}
                 <tr className="bg-slate-800 border-y-2 border-slate-600">
                   <td className="sticky left-0 z-10 bg-slate-800 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide">
@@ -587,6 +678,45 @@ export default function Match() {
                   {/* TOTAL status - always blank */}
                   <td className="py-1 bg-slate-600"></td>
                 </tr>
+
+                {/* Team B Score Row (twoManBestBall only) - Low Net */}
+                {format === "twoManBestBall" && (
+                  <tr style={{ backgroundColor: teamBColor }}>
+                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: teamBColor }}>
+                      {tournament?.teamB?.name || "Team B"}
+                    </td>
+                    {/* Front 9 low net */}
+                    {holes.slice(0, 9).map(h => {
+                      const lowNet = getTeamLowNet(h, "B");
+                      return (
+                        <td key={`teamB-${h.k}`} className="py-1 text-center text-white font-bold text-sm">
+                          {lowNet ?? ""}
+                        </td>
+                      );
+                    })}
+                    {/* OUT total */}
+                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
+                      {teamLowNetTotals?.getOut("B") ?? "–"}
+                    </td>
+                    {/* Back 9 low net */}
+                    {holes.slice(9, 18).map((h, i) => {
+                      const lowNet = getTeamLowNet(h, "B");
+                      return (
+                        <td key={`teamB-${h.k}`} className={`py-1 text-center text-white font-bold text-sm ${i === 0 ? "border-l-2 border-white/30" : ""}`}>
+                          {lowNet ?? ""}
+                        </td>
+                      );
+                    })}
+                    {/* IN total */}
+                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
+                      {teamLowNetTotals?.getIn("B") ?? "–"}
+                    </td>
+                    {/* TOTAL */}
+                    <td className="py-1 text-center text-white font-extrabold text-base" style={{ backgroundColor: "rgba(0,0,0,0.25)" }}>
+                      {teamLowNetTotals?.getTotal("B") ?? "–"}
+                    </td>
+                  </tr>
+                )}
 
                 {/* Team B Player Rows */}
                 {playerRows.filter(pr => pr.team === "B").map((pr, rowIdx, teamRows) => {
