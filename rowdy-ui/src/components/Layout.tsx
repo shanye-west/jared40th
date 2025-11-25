@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PullToRefresh from "./PullToRefresh";
 
 type LayoutProps = {
@@ -10,7 +10,8 @@ type LayoutProps = {
   children: React.ReactNode;
 };
 
-export default function Layout({ title, series, tournamentLogo, children }: LayoutProps) {
+export default function Layout({ title, series, showBack, tournamentLogo, children }: LayoutProps) {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Parse title to extract year (if present at start) and main name
@@ -43,8 +44,15 @@ export default function Layout({ title, series, tournamentLogo, children }: Layo
     <>
       {/* STICKY HEADER */}
       <header className="app-header">
-        {/* Left: Tournament Logo (links to home) */}
-        <div style={{ display: "flex", alignItems: "center", minWidth: 48 }}>
+        {/* Left: Back Button (if shown) + Tournament Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {showBack && (
+            <button onClick={() => navigate(-1)} className="btn-back" aria-label="Go Back">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+          )}
           {tournamentLogo ? (
             <Link to="/" aria-label="Home">
               <img 
@@ -54,7 +62,7 @@ export default function Layout({ title, series, tournamentLogo, children }: Layo
               />
             </Link>
           ) : (
-            <div style={{ width: 44 }}></div>
+            <div style={{ width: showBack ? 0 : 44 }}></div>
           )}
         </div>
 
