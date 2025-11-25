@@ -102,9 +102,10 @@ export default function App() {
 
   const tName = tournament?.name || "Rowdy Cup";
   const tSeries = tournament?.series; // "rowdyCup" or "christmasClassic"
+  const tLogo = tournament?.tournamentLogo;
 
   return (
-    <Layout title={tName} series={tSeries}>
+    <Layout title={tName} series={tSeries} tournamentLogo={tLogo}>
       {!tournament ? (
         <div className="empty-state">
           <div className="empty-state-icon">🏌️</div>

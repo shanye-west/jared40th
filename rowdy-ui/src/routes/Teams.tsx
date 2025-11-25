@@ -165,7 +165,7 @@ export default function Teams() {
   );
 
   return (
-    <Layout title="Team Rosters" series={tournament?.series} showBack>
+    <Layout title="Team Rosters" series={tournament?.series} showBack tournamentLogo={tournament?.tournamentLogo}>
       <div style={{ padding: 16, display: "grid", gap: 24, maxWidth: 800, margin: "0 auto" }}>
         {/* Team A Card */}
         {renderRoster(

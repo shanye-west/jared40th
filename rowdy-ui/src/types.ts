@@ -20,6 +20,7 @@ export type TournamentDoc = {
   series: string;
   active: boolean;
   roundIds?: string[];
+  tournamentLogo?: string;
   teamA: { 
     id: string; 
     name: string;

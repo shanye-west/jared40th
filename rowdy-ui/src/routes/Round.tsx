@@ -136,9 +136,10 @@ export default function Round() {
 
   const tName = tournament?.name || "Round Detail";
   const tSeries = tournament?.series;
+  const tLogo = tournament?.tournamentLogo;
 
   return (
-    <Layout title={tName} series={tSeries} showBack>
+    <Layout title={tName} series={tSeries} showBack tournamentLogo={tLogo}>
       <div style={{ padding: 16, display: "grid", gap: 20 }}>
         
         {/* ROUND HEADER / SCOREBOARD */}
