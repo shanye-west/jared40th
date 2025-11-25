@@ -406,10 +406,10 @@ export default function Match() {
       { team: "B", pIdx: 1, label: getPlayerName(match.teamBPlayers?.[1]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
     );
   } else {
-    // 2 rows: Team A, Team B
+    // 2 rows: Player A, Player B (singles or scramble)
     playerRows.push(
-      { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: tournament?.teamA?.color || "var(--team-a-default)" },
-      { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: tournament?.teamB?.color || "var(--team-b-default)" },
+      { team: "A", pIdx: 0, label: getPlayerName(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
+      { team: "B", pIdx: 0, label: getPlayerName(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
     );
   }
 
