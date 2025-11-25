@@ -413,7 +413,7 @@ export default function Match() {
   const totalColWidth = 48;
 
   return (
-    <Layout title={tName} series={tSeries} showBack>
+    <Layout title={tName} series={tSeries} showBack tournamentLogo={tournament?.tournamentLogo}>
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
         
         {/* MATCH STATUS BANNER */}
