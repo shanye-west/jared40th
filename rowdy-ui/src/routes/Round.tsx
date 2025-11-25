@@ -6,7 +6,6 @@ import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc } from "../types";
 import { formatMatchStatus, formatRoundType } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
-import ScoreBlock from "../components/ScoreBlock";
 
 export default function Round() {
   const { roundId } = useParams();
@@ -153,24 +152,70 @@ export default function Round() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: 12, alignItems: "center", borderTop: "1px solid var(--divider)", paddingTop: 16 }}>
              {/* Team A */}
-             <div>
+             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {tournament?.teamA?.logo && (
+                  <img 
+                    src={tournament.teamA.logo} 
+                    alt={tournament.teamA?.name || "Team A"}
+                    style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
+                  />
+                )}
                 <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamA?.color || "var(--team-a-default)", marginBottom: 2 }}>
                   {tournament?.teamA?.name}
                 </div>
-                <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1 }}>
-                  <ScoreBlock final={stats.fA} proj={stats.pA} color={tournament?.teamA?.color || "var(--team-a-default)"} />
+                <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
+                  <span style={{ color: tournament?.teamA?.color || "var(--team-a-default)" }}>{stats.fA}</span>
+                  {stats.pA > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        left: '100%',
+                        bottom: '15%',
+                        fontSize: "0.35em",
+                        color: "#aaa",
+                        marginLeft: 3,
+                        fontWeight: 400,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      (+{stats.pA})
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div style={{ height: "100%", background: "var(--divider)" }}></div>
 
               {/* Team B */}
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {tournament?.teamB?.logo && (
+                  <img 
+                    src={tournament.teamB.logo} 
+                    alt={tournament.teamB?.name || "Team B"}
+                    style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
+                  />
+                )}
                 <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamB?.color || "var(--team-b-default)", marginBottom: 2 }}>
                   {tournament?.teamB?.name}
                 </div>
-                <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1 }}>
-                  <ScoreBlock final={stats.fB} proj={stats.pB} color={tournament?.teamB?.color || "var(--team-b-default)"} />
+                <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
+                  {stats.pB > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        right: '100%',
+                        bottom: '15%',
+                        fontSize: "0.35em",
+                        color: "#aaa",
+                        marginRight: 3,
+                        fontWeight: 400,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      (+{stats.pB})
+                    </span>
+                  )}
+                  <span style={{ color: tournament?.teamB?.color || "var(--team-b-default)" }}>{stats.fB}</span>
                 </div>
               </div>
           </div>

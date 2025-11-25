@@ -97,9 +97,9 @@ export type MatchDoc = {
 export type PlayerMatchFact = {
   playerId: string;
   matchId: string;
-  tournamentId?: string;
-  roundId?: string;
-  format?: string;
+  tournamentId: string;
+  roundId: string;
+  format: string;
   outcome: "win" | "loss" | "halve";
   pointsEarned: number;
   
