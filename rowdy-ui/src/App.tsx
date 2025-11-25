@@ -130,11 +130,13 @@ export default function App() {
               {/* Team A */}
               <div>
                 {tournament.teamA?.logo && (
-                  <img 
-                    src={tournament.teamA.logo} 
-                    alt={tournament.teamA?.name || "Team A"}
-                    style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8 }}
-                  />
+                  <Link to="/teams?team=A">
+                    <img 
+                      src={tournament.teamA.logo} 
+                      alt={tournament.teamA?.name || "Team A"}
+                      style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8, cursor: "pointer" }}
+                    />
+                  </Link>
                 )}
                 <div style={{ 
                   fontWeight: 800, 
@@ -160,11 +162,13 @@ export default function App() {
               {/* Team B */}
               <div>
                 {tournament.teamB?.logo && (
-                  <img 
-                    src={tournament.teamB.logo} 
-                    alt={tournament.teamB?.name || "Team B"}
-                    style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8 }}
-                  />
+                  <Link to="/teams?team=B">
+                    <img 
+                      src={tournament.teamB.logo} 
+                      alt={tournament.teamB?.name || "Team B"}
+                      style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8, cursor: "pointer" }}
+                    />
+                  </Link>
                 )}
                 <div style={{ 
                   fontWeight: 800, 
@@ -185,15 +189,6 @@ export default function App() {
               </div>
             </div>
           </section>
-
-          {/* ACTIONS BUTTON */}
-          <div className="grid gap-3">
-            <Link to="/teams">
-              <button className="btn-secondary w-full uppercase tracking-wide">
-                View Team Rosters
-              </button>
-            </Link>
-          </div>
 
           {/* ROUNDS LIST */}
           <section style={{ display: "grid", gap: 12 }}>
