@@ -7,18 +7,6 @@ import { formatMatchStatus } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 
-// Small red dots for strokes
-function Dots({ count }: { count: number }) {
-  if (!count || count <= 0) return null;
-  return (
-    <div className="flex gap-px justify-center absolute top-0.5 right-0.5 pointer-events-none">
-      {Array.from({length: count}).map((_, i) => (
-        <div key={i} className="w-1 h-1 rounded-full bg-red-500"></div>
-      ))}
-    </div>
-  );
-}
-
 export default function Match() {
   const { matchId } = useParams();
   const [match, setMatch] = useState<MatchDoc | null>(null);
@@ -88,11 +76,12 @@ export default function Match() {
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
-  // --- LOCKING LOGIC (Reverted to your original logic) ---
-  const roundLocked = !!round?.locked;          // Admin Lock
-  const isMatchClosed = !!match?.status?.closed;// Match Finished
-  const matchThru = match?.status?.thru ?? 0;   // How many holes played
+  // --- LOCKING LOGIC ---
+  const roundLocked = !!round?.locked;
+  const isMatchClosed = !!match?.status?.closed;
+  const matchThru = match?.status?.thru ?? 0;
 
+  // Build holes data
   const holes = useMemo(() => {
     const hMatch = match?.holes || {};
     const hCourse = round?.course?.holes || [];
@@ -100,25 +89,68 @@ export default function Match() {
       const num = i + 1;
       const k = String(num);
       const info = hCourse.find(h => h.number === num);
-      return { k, input: hMatch[k]?.input || {}, par: info?.par, hcpIndex: info?.hcpIndex };
+      return { k, num, input: hMatch[k]?.input || {}, par: info?.par ?? 4, hcpIndex: info?.hcpIndex };
     });
   }, [match, round]);
+
+  // Calculate totals
+  const totals = useMemo(() => {
+    const front = holes.slice(0, 9);
+    const back = holes.slice(9, 18);
+    
+    const sumPar = (arr: typeof holes) => arr.reduce((s, h) => s + (h.par || 0), 0);
+    
+    const getScore = (h: typeof holes[0], team: "A" | "B", pIdx: number) => {
+      if (format === "twoManScramble") {
+        return team === "A" ? h.input?.teamAGross : h.input?.teamBGross;
+      }
+      if (format === "singles") {
+        return team === "A" ? h.input?.teamAPlayerGross : h.input?.teamBPlayerGross;
+      }
+      // Best Ball / Shamble
+      const arr = team === "A" ? h.input?.teamAPlayersGross : h.input?.teamBPlayersGross;
+      return Array.isArray(arr) ? arr[pIdx] : null;
+    };
+
+    const sumScores = (arr: typeof holes, team: "A" | "B", pIdx: number) => {
+      let total = 0;
+      let hasAny = false;
+      arr.forEach(h => {
+        const v = getScore(h, team, pIdx);
+        if (v != null) { total += v; hasAny = true; }
+      });
+      return hasAny ? total : null;
+    };
+
+    return {
+      parOut: sumPar(front),
+      parIn: sumPar(back),
+      parTotal: sumPar(holes),
+      // For each player position
+      getOut: (team: "A" | "B", pIdx: number) => sumScores(front, team, pIdx),
+      getIn: (team: "A" | "B", pIdx: number) => sumScores(back, team, pIdx),
+      getTotal: (team: "A" | "B", pIdx: number) => sumScores(holes, team, pIdx),
+    };
+  }, [holes, format]);
 
   function getInitials(pid?: string) {
     if (!pid) return "P";
     const p = players[pid];
     if (!p) return "?";
     if (p.displayName) {
-        const parts = p.displayName.split(" ");
-        if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
-        return p.displayName.slice(0,2).toUpperCase();
+      const parts = p.displayName.split(" ");
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return p.displayName.slice(0, 2).toUpperCase();
     }
-    return (p.username || "??").slice(0,2).toUpperCase();
+    return (p.username || "??").slice(0, 2).toUpperCase();
+  }
+
+  function hasStroke(team: "A" | "B", pIdx: number, holeIdx: number) {
+    const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
+    return (roster?.[pIdx]?.strokesReceived?.[holeIdx] ?? 0) > 0;
   }
 
   async function saveHole(k: string, nextInput: any) {
-    // Safety check: we still check locked state inside the UI components, 
-    // but a double check here is good practice.
     if (!match?.id || roundLocked) return;
     try {
       await updateDoc(doc(db, "matches", match.id), { [`holes.${k}.input`]: nextInput });
@@ -127,102 +159,57 @@ export default function Match() {
     }
   }
 
-  // --- SUB-COMPONENT: SINGLE HOLE ROW ---
-  function HoleRow({ k, input, par, hcpIndex }: { k: string; input: any; par?: number; hcpIndex?: number }) {
-    const holeIdx = Number(k) - 1;
-    const holeNum = Number(k);
+  // Get current value for a cell
+  function getCellValue(hole: typeof holes[0], team: "A" | "B", pIdx: number): number | "" {
+    const { input } = hole;
+    if (format === "twoManScramble") {
+      const v = team === "A" ? input?.teamAGross : input?.teamBGross;
+      return v ?? "";
+    }
+    if (format === "singles") {
+      const v = team === "A" ? input?.teamAPlayerGross : input?.teamBPlayerGross;
+      return v ?? "";
+    }
+    // Best Ball / Shamble
+    const arr = team === "A" ? input?.teamAPlayersGross : input?.teamBPlayersGross;
+    return Array.isArray(arr) ? (arr[pIdx] ?? "") : "";
+  }
 
-    // --- RESTORED LOCK LOGIC ---
-    // 1. If the Admin has locked the Round -> EVERYTHING LOCKED.
-    // 2. OR if the Match is Closed -> Only lock holes that are AFTER the deciding hole.
-    //    (e.g. if A wins 3&2, matchThru is 16. Holes 1-16 are open for edit. Holes 17-18 are locked).
-    const isLocked = roundLocked || (isMatchClosed && holeNum > matchThru);
+  // Update a cell value
+  function updateCell(hole: typeof holes[0], team: "A" | "B", pIdx: number, value: number | null) {
+    const { k, input } = hole;
+    
+    if (format === "twoManScramble") {
+      const newInput = {
+        teamAGross: team === "A" ? value : (input?.teamAGross ?? null),
+        teamBGross: team === "B" ? value : (input?.teamBGross ?? null),
+      };
+      saveHole(k, newInput);
+      return;
+    }
+    
+    if (format === "singles") {
+      const newInput = {
+        teamAPlayerGross: team === "A" ? value : (input?.teamAPlayerGross ?? null),
+        teamBPlayerGross: team === "B" ? value : (input?.teamBPlayerGross ?? null),
+      };
+      saveHole(k, newInput);
+      return;
+    }
+    
+    // Best Ball / Shamble
+    const aArr = Array.isArray(input?.teamAPlayersGross) ? [...input.teamAPlayersGross] : [null, null];
+    const bArr = Array.isArray(input?.teamBPlayersGross) ? [...input.teamBPlayersGross] : [null, null];
+    
+    if (team === "A") aArr[pIdx] = value;
+    else bArr[pIdx] = value;
+    
+    saveHole(k, { teamAPlayersGross: aArr, teamBPlayersGross: bArr });
+  }
 
-    const getStrokes = (team: "A" | "B", pIdx: number) => {
-      const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
-      return roster?.[pIdx]?.strokesReceived?.[holeIdx] ?? 0;
-    };
-
-    // Input Renderers
-    const renderInputs = () => {
-        if (format === "twoManScramble") {
-            const a = input?.teamAGross ?? "";
-            const b = input?.teamBGross ?? "";
-            return (
-                <>
-                    <div style={{ gridColumn: "span 2" }}>
-                        <input className="score-input" type="number" inputMode="numeric" value={a ?? ""} disabled={isLocked} 
-                            onChange={(e) => saveHole(k, { teamAGross: e.target.value === "" ? null : Number(e.target.value), teamBGross: b })} />
-                    </div>
-                    <div style={{ gridColumn: "span 2" }}>
-                        <input className="score-input" type="number" inputMode="numeric" value={b ?? ""} disabled={isLocked}
-                            onChange={(e) => saveHole(k, { teamAGross: a, teamBGross: e.target.value === "" ? null : Number(e.target.value) })} />
-                    </div>
-                </>
-            );
-        }
-        if (format === "singles") {
-            const a = input?.teamAPlayerGross ?? "";
-            const b = input?.teamBPlayerGross ?? "";
-            return (
-                <>
-                    <div style={{ gridColumn: "span 2", position: 'relative' }}>
-                        <input className="score-input" type="number" inputMode="numeric" value={a ?? ""} disabled={isLocked}
-                            onChange={(e) => saveHole(k, { teamAPlayerGross: e.target.value === "" ? null : Number(e.target.value), teamBPlayerGross: b })} />
-                        <Dots count={getStrokes("A", 0)} />
-                    </div>
-                    <div style={{ gridColumn: "span 2", position: 'relative' }}>
-                        <input className="score-input" type="number" inputMode="numeric" value={b ?? ""} disabled={isLocked}
-                            onChange={(e) => saveHole(k, { teamAPlayerGross: a, teamBPlayerGross: e.target.value === "" ? null : Number(e.target.value) })} />
-                        <Dots count={getStrokes("B", 0)} />
-                    </div>
-                </>
-            );
-        }
-        
-        // Default: 2 Man (Best Ball / Shamble)
-        const aArr = Array.isArray(input?.teamAPlayersGross) ? input.teamAPlayersGross : [null, null];
-        const bArr = Array.isArray(input?.teamBPlayersGross) ? input.teamBPlayersGross : [null, null];
-        
-        return (
-            <>
-                <div style={{ position: 'relative' }}>
-                    <input className="score-input" type="number" inputMode="numeric" value={aArr[0] ?? ""} disabled={isLocked}
-                        onChange={(e) => { const n = [...aArr]; n[0] = e.target.value===""?null:Number(e.target.value); saveHole(k, { teamAPlayersGross: n, teamBPlayersGross: bArr }); }} />
-                    <Dots count={getStrokes("A", 0)} />
-                </div>
-                <div style={{ position: 'relative' }}>
-                    <input className="score-input" type="number" inputMode="numeric" value={aArr[1] ?? ""} disabled={isLocked}
-                        onChange={(e) => { const n = [...aArr]; n[1] = e.target.value===""?null:Number(e.target.value); saveHole(k, { teamAPlayersGross: n, teamBPlayersGross: bArr }); }} />
-                    <Dots count={getStrokes("A", 1)} />
-                </div>
-                <div style={{ position: 'relative' }}>
-                    <input className="score-input" type="number" inputMode="numeric" value={bArr[0] ?? ""} disabled={isLocked}
-                        onChange={(e) => { const n = [...bArr]; n[0] = e.target.value===""?null:Number(e.target.value); saveHole(k, { teamAPlayersGross: aArr, teamBPlayersGross: n }); }} />
-                    <Dots count={getStrokes("B", 0)} />
-                </div>
-                <div style={{ position: 'relative' }}>
-                    <input className="score-input" type="number" inputMode="numeric" value={bArr[1] ?? ""} disabled={isLocked}
-                        onChange={(e) => { const n = [...bArr]; n[1] = e.target.value===""?null:Number(e.target.value); saveHole(k, { teamAPlayersGross: aArr, teamBPlayersGross: n }); }} />
-                    <Dots count={getStrokes("B", 1)} />
-                </div>
-            </>
-        );
-    };
-
-    return (
-        <div className="card" style={{ display: "grid", gridTemplateColumns: "40px repeat(4, 1fr)", gap: 8, alignItems: "center", padding: "12px 8px" }}>
-            <div style={{ textAlign: "center", borderRight: "1px solid var(--divider)", paddingRight: 8 }}>
-                <div style={{ fontSize: "1.2rem", fontWeight: 800 }}>{k}</div>
-                <div className="text-xs text-slate-500">
-                    {par ? `Par ${par}` : ""}
-                </div>
-                {hcpIndex && <div className="text-xs text-slate-400">{hcpIndex}</div>}
-            </div>
-            
-            {renderInputs()}
-        </div>
-    );
+  // Check if hole is locked
+  function isHoleLocked(holeNum: number) {
+    return roundLocked || (isMatchClosed && holeNum > matchThru);
   }
 
   if (loading) return (
@@ -230,6 +217,7 @@ export default function Match() {
       <div className="spinner-lg"></div>
     </div>
   );
+  
   if (!match) return (
     <div className="empty-state">
       <div className="empty-state-icon">🔍</div>
@@ -239,66 +227,231 @@ export default function Match() {
 
   const tName = tournament?.name || "Match Scoring";
   const tSeries = tournament?.series;
-  const showFour = format !== "singles" && format !== "twoManScramble";
+  const isFourPlayer = format !== "singles" && format !== "twoManScramble";
+
+  // Build player rows config
+  type PlayerRowConfig = { team: "A" | "B"; pIdx: number; label: string; color: string };
+  const playerRows: PlayerRowConfig[] = [];
+  
+  if (isFourPlayer) {
+    // 4 players: A1, A2, B1, B2
+    playerRows.push(
+      { team: "A", pIdx: 0, label: getInitials(match.teamAPlayers?.[0]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
+      { team: "A", pIdx: 1, label: getInitials(match.teamAPlayers?.[1]?.playerId), color: tournament?.teamA?.color || "var(--team-a-default)" },
+      { team: "B", pIdx: 0, label: getInitials(match.teamBPlayers?.[0]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
+      { team: "B", pIdx: 1, label: getInitials(match.teamBPlayers?.[1]?.playerId), color: tournament?.teamB?.color || "var(--team-b-default)" },
+    );
+  } else {
+    // 2 rows: Team A, Team B
+    playerRows.push(
+      { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: tournament?.teamA?.color || "var(--team-a-default)" },
+      { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: tournament?.teamB?.color || "var(--team-b-default)" },
+    );
+  }
+
+  const cellWidth = 44;
+  const labelWidth = 72;
+  const totalColWidth = 48;
 
   return (
     <Layout title={tName} series={tSeries} showBack>
-      <div style={{ padding: 16, display: "grid", gap: 16, maxWidth: 600, margin: "0 auto" }}>
+      <div className="p-4 space-y-4 max-w-4xl mx-auto">
         
         {/* MATCH STATUS BANNER */}
-        <div style={{ 
+        <div 
+          className="rounded-xl text-center shadow-md"
+          style={{ 
             background: isMatchClosed ? "var(--brand-secondary)" : "var(--brand-primary)", 
             color: "var(--brand-accent)", 
-            padding: 16, 
-            borderRadius: 12, 
-            textAlign: "center",
-            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)"
-        }}>
-            <div style={{ fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.9 }}>
-                {isMatchClosed ? "Final Result" : `Thru ${matchThru}`}
-            </div>
-            <div style={{ fontSize: "1.8rem", fontWeight: 800, margin: "4px 0" }}>
-                {formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name)}
-            </div>
-            <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
-                {format}
-            </div>
+            padding: "16px 12px",
+          }}
+        >
+          <div className="text-xs uppercase tracking-wider opacity-90">
+            {isMatchClosed ? "Final Result" : `Thru ${matchThru}`}
+          </div>
+          <div className="text-2xl font-extrabold my-1">
+            {formatMatchStatus(match.status, tournament?.teamA?.name, tournament?.teamB?.name)}
+          </div>
+          <div className="text-xs opacity-80">{format}</div>
         </div>
 
-        {/* HEADERS (Initials) */}
-        <div style={{ display: "grid", gridTemplateColumns: "40px repeat(4, 1fr)", gap: 8, textAlign: "center", padding: "0 8px" }}>
-            <div></div> {/* Hole Num */}
-            
-            {/* Team A Headers */}
-            {showFour ? (
-                <>
-                    <div style={{ color: tournament?.teamA?.color, fontWeight: 800 }}>{getInitials(match.teamAPlayers?.[0]?.playerId)}</div>
-                    <div style={{ color: tournament?.teamA?.color, fontWeight: 800 }}>{getInitials(match.teamAPlayers?.[1]?.playerId)}</div>
-                </>
-            ) : (
-                <div style={{ gridColumn: "span 2", color: tournament?.teamA?.color, fontWeight: 800 }}>
-                    {tournament?.teamA?.name || "Team A"}
-                </div>
-            )}
+        {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
+        <div className="card p-0 overflow-hidden">
+          <div 
+            className="overflow-x-auto"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            <table 
+              className="w-max border-collapse text-center text-sm"
+              style={{ minWidth: "100%" }}
+            >
+              {/* HEADER ROW - Hole Numbers: 1-9 | OUT | 10-18 | IN | TOT */}
+              <thead>
+                <tr className="bg-slate-800 text-white">
+                  <th 
+                    className="sticky left-0 z-10 bg-slate-800 font-bold text-left px-3 py-2"
+                    style={{ width: labelWidth, minWidth: labelWidth }}
+                  >
+                    HOLE
+                  </th>
+                  {/* Front 9 */}
+                  {holes.slice(0, 9).map(h => (
+                    <th 
+                      key={h.k} 
+                      className="font-bold py-2"
+                      style={{ width: cellWidth, minWidth: cellWidth }}
+                    >
+                      {h.num}
+                    </th>
+                  ))}
+                  <th className="font-bold py-2 bg-slate-700 border-l-2 border-slate-600" style={{ width: totalColWidth, minWidth: totalColWidth }}>OUT</th>
+                  {/* Back 9 */}
+                  {holes.slice(9, 18).map(h => (
+                    <th 
+                      key={h.k} 
+                      className="font-bold py-2 border-l-2 border-slate-600 first:border-l-2"
+                      style={{ width: cellWidth, minWidth: cellWidth }}
+                    >
+                      {h.num}
+                    </th>
+                  ))}
+                  <th className="font-bold py-2 bg-slate-700 border-l-2 border-slate-600" style={{ width: totalColWidth, minWidth: totalColWidth }}>IN</th>
+                  <th className="font-bold py-2 bg-slate-600" style={{ width: totalColWidth, minWidth: totalColWidth }}>TOT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Par Row */}
+                <tr className="bg-slate-100 text-slate-600 text-xs font-semibold">
+                  <td className="sticky left-0 z-10 bg-slate-100 text-left px-3 py-1.5">Par</td>
+                  {holes.slice(0, 9).map(h => (
+                    <td key={h.k} className="py-1.5">{h.par}</td>
+                  ))}
+                  <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parOut}</td>
+                  {holes.slice(9, 18).map((h, i) => (
+                    <td key={h.k} className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>{h.par}</td>
+                  ))}
+                  <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parIn}</td>
+                  <td className="py-1.5 bg-slate-300 font-bold">{totals.parTotal}</td>
+                </tr>
+                
+                {/* Handicap Row */}
+                <tr className="bg-slate-50 text-slate-400 text-xs border-b border-slate-200">
+                  <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1">Hcp</td>
+                  {holes.slice(0, 9).map(h => (
+                    <td key={h.k} className="py-1">{h.hcpIndex || ""}</td>
+                  ))}
+                  <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
+                  {holes.slice(9, 18).map((h, i) => (
+                    <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.hcpIndex || ""}</td>
+                  ))}
+                  <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
+                  <td className="py-1 bg-slate-200"></td>
+                </tr>
 
-            {/* Team B Headers */}
-            {showFour ? (
-                <>
-                    <div style={{ color: tournament?.teamB?.color, fontWeight: 800 }}>{getInitials(match.teamBPlayers?.[0]?.playerId)}</div>
-                    <div style={{ color: tournament?.teamB?.color, fontWeight: 800 }}>{getInitials(match.teamBPlayers?.[1]?.playerId)}</div>
-                </>
-            ) : (
-                <div style={{ gridColumn: "span 2", color: tournament?.teamB?.color, fontWeight: 800 }}>
-                    {tournament?.teamB?.name || "Team B"}
-                </div>
-            )}
-        </div>
-
-        {/* HOLES LIST */}
-        <div style={{ display: "grid", gap: 8 }}>
-            {holes.map((h) => (
-                <HoleRow key={h.k} k={h.k} input={h.input} par={h.par} hcpIndex={h.hcpIndex} />
-            ))}
+                {/* Player Rows */}
+                {playerRows.map((pr, rowIdx) => {
+                  const isLastOfTeam = (isFourPlayer && (rowIdx === 1 || rowIdx === 3)) || (!isFourPlayer && rowIdx === 0);
+                  return (
+                    <tr 
+                      key={`row-${pr.team}-${pr.pIdx}`}
+                      className={`${isLastOfTeam ? "border-b-2 border-slate-300" : "border-b border-slate-100"}`}
+                    >
+                      <td 
+                        className="sticky left-0 z-10 bg-white text-left px-3 py-1 font-semibold whitespace-nowrap"
+                        style={{ color: pr.color }}
+                      >
+                        {pr.label}
+                        {/* Show dot if player has any strokes */}
+                        {holes.some((_, i) => hasStroke(pr.team, pr.pIdx, i)) && (
+                          <span className="ml-1 text-red-500">•</span>
+                        )}
+                      </td>
+                      {/* Front 9 holes */}
+                      {holes.slice(0, 9).map(h => {
+                        const locked = isHoleLocked(h.num);
+                        const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
+                        return (
+                          <td key={h.k} className="p-0.5">
+                            <div className="relative">
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                className={`
+                                  w-10 h-10 text-center text-base font-semibold rounded-md border
+                                  focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                                  transition-colors duration-100
+                                  ${locked 
+                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                    : "bg-white border-slate-200 hover:border-slate-300"
+                                  }
+                                  ${stroke ? "ring-1 ring-red-300" : ""}
+                                `}
+                                value={getCellValue(h, pr.team, pr.pIdx)}
+                                disabled={locked}
+                                onChange={(e) => {
+                                  const val = e.target.value === "" ? null : Number(e.target.value);
+                                  updateCell(h, pr.team, pr.pIdx, val);
+                                }}
+                              />
+                              {stroke && (
+                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      {/* OUT total */}
+                      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
+                        {totals.getOut(pr.team, pr.pIdx) ?? "–"}
+                      </td>
+                      {/* Back 9 holes */}
+                      {holes.slice(9, 18).map((h, i) => {
+                        const locked = isHoleLocked(h.num);
+                        const stroke = hasStroke(pr.team, pr.pIdx, h.num - 1);
+                        return (
+                          <td key={h.k} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                className={`
+                                  w-10 h-10 text-center text-base font-semibold rounded-md border
+                                  focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                                  transition-colors duration-100
+                                  ${locked 
+                                    ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                    : "bg-white border-slate-200 hover:border-slate-300"
+                                  }
+                                  ${stroke ? "ring-1 ring-red-300" : ""}
+                                `}
+                                value={getCellValue(h, pr.team, pr.pIdx)}
+                                disabled={locked}
+                                onChange={(e) => {
+                                  const val = e.target.value === "" ? null : Number(e.target.value);
+                                  updateCell(h, pr.team, pr.pIdx, val);
+                                }}
+                              />
+                              {stroke && (
+                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></div>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      {/* IN total */}
+                      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
+                        {totals.getIn(pr.team, pr.pIdx) ?? "–"}
+                      </td>
+                      {/* TOTAL */}
+                      <td className="py-1 bg-slate-200 font-bold text-slate-900 text-base">
+                        {totals.getTotal(pr.team, pr.pIdx) ?? "–"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <LastUpdated />
