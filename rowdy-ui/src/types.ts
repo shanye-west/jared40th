@@ -89,6 +89,8 @@ export type MatchDoc = {
     thru: number;
     dormie: boolean;
     closed: boolean;
+    wasTeamADown3PlusBack9?: boolean;
+    wasTeamAUp3PlusBack9?: boolean;
   };
   teamAPlayers?: { playerId: string; strokesReceived: number[] }[];
   teamBPlayers?: { playerId: string; strokesReceived: number[] }[];
@@ -116,12 +118,29 @@ export type PlayerMatchFact = {
   opponentIds?: string[];
   opponentTiers?: string[];
 
-  // Partners (NEW)
+  // Partners
   partnerIds?: string[];
   partnerTiers?: string[];
 
+  // Match result details
+  holesWon?: number;
+  holesLost?: number;
   finalMargin?: number;
   finalThru?: number;
+
+  // Momentum stats (was down/up 3+ on back 9)
+  comebackWin?: boolean;
+  blownLead?: boolean;
+
+  // Round context
+  courseId?: string;
+  day?: number;
+
+  // Tournament context
+  tournamentYear?: number;
+  tournamentName?: string;
+  tournamentSeries?: string;
+
   updatedAt?: any;
 };
 

@@ -222,12 +222,22 @@ function decideHole(format: RoundFormat, i: number, match: any) {
 
 function summarize(format: RoundFormat, match: any) {
   let a = 0, b = 0, thru = 0;
+  let runningMargin = 0; // positive = Team A leading, negative = Team B leading
+  let wasTeamADown3PlusBack9 = false;
+  let wasTeamAUp3PlusBack9 = false;
+
   for (const i of holesRange(match.holes ?? {})) {
     const res = decideHole(format, i, match);
     if (res === null) continue;
     thru = Math.max(thru, i);
-    if (res === "teamA") a++;
-    else if (res === "teamB") b++;
+    if (res === "teamA") { a++; runningMargin++; }
+    else if (res === "teamB") { b++; runningMargin--; }
+
+    // Track momentum on back 9 (holes 10-18)
+    if (i >= 10) {
+      if (runningMargin <= -3) wasTeamADown3PlusBack9 = true;
+      if (runningMargin >= 3) wasTeamAUp3PlusBack9 = true;
+    }
   }
   const leader = a > b ? "teamA" : b > a ? "teamB" : null;
   const margin = Math.abs(a - b);
@@ -235,7 +245,10 @@ function summarize(format: RoundFormat, match: any) {
   const closed = leader !== null && margin > holesLeft;
   const dormie = leader !== null && margin === holesLeft;
   const winner = (thru === 18 && a === b) ? "AS" : (leader ?? "AS");
-  return { holesWonA: a, holesWonB: b, thru, leader, margin, dormie, closed, winner };
+  return { 
+    holesWonA: a, holesWonB: b, thru, leader, margin, dormie, closed, winner,
+    wasTeamADown3PlusBack9, wasTeamAUp3PlusBack9
+  };
 }
 
 export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async (event) => {
@@ -256,7 +269,11 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
   const format = rSnap.data()?.format || "twoManBestBall";
 
   const s = summarize(format, after);
-  const status = { leader: s.leader, margin: s.margin, thru: s.thru, dormie: s.dormie, closed: s.closed };
+  const status = { 
+    leader: s.leader, margin: s.margin, thru: s.thru, dormie: s.dormie, closed: s.closed,
+    wasTeamADown3PlusBack9: s.wasTeamADown3PlusBack9,
+    wasTeamAUp3PlusBack9: s.wasTeamAUp3PlusBack9
+  };
   const result = { winner: s.winner, holesWonA: s.holesWonA, holesWonB: s.holesWonB };
 
   if (JSON.stringify(before.status) === JSON.stringify(status) && 
@@ -288,10 +305,15 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   
   let format = "unknown";
   let points = 1;
+  let courseId = "";
+  let day = 0;
   let playerTierLookup: Record<string, string> = {};
   let playerHandicapLookup: Record<string, number> = {};
   let teamAId = "teamA";
   let teamBId = "teamB";
+  let tournamentYear = 0;
+  let tournamentName = "";
+  let tournamentSeries = "";
 
   // Fetch Context (Round & Tournament)
   if (rId) {
@@ -300,6 +322,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       const rData = rSnap.data();
       format = rData?.format || "unknown";
       points = rData?.pointsValue ?? 1;
+      courseId = rData?.courseId || "";
+      day = rData?.day ?? 0;
     }
   }
   if (tId) {
@@ -308,6 +332,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       const d = tSnap.data()!;
       teamAId = d.teamA?.id || "teamA";
       teamBId = d.teamB?.id || "teamB";
+      tournamentYear = d.year || 0;
+      tournamentName = d.name || "";
+      tournamentSeries = d.series || "";
       
       const flattenTiers = (roster?: Record<string, string[]>) => {
         if (!roster) return;
@@ -336,10 +363,20 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const writeFact = (p: any, team: "teamA" | "teamB", opponentPlayers: any[], myTeamPlayers: any[]) => {
     if (!p?.playerId) return;
     
-    let outcome = "loss"; 
+    let outcome: "win" | "loss" | "halve" = "loss"; 
     let pts = 0;
     if (result.winner === "AS") { outcome = "halve"; pts = points / 2; }
     else if (result.winner === team) { outcome = "win"; pts = points; }
+
+    // Holes won/lost from this player's perspective
+    const holesWon = team === "teamA" ? (result.holesWonA || 0) : (result.holesWonB || 0);
+    const holesLost = team === "teamA" ? (result.holesWonB || 0) : (result.holesWonA || 0);
+
+    // Comeback/BlownLead: Was down/up 3+ on back 9
+    const wasDown3PlusBack9 = team === "teamA" ? status.wasTeamADown3PlusBack9 : status.wasTeamAUp3PlusBack9;
+    const wasUp3PlusBack9 = team === "teamA" ? status.wasTeamAUp3PlusBack9 : status.wasTeamADown3PlusBack9;
+    const comebackWin = outcome === "win" && wasDown3PlusBack9 === true;
+    const blownLead = outcome === "loss" && wasUp3PlusBack9 === true;
 
     const myTier = playerTierLookup[p.playerId] || "Unknown";
     const myTeamId = team === "teamA" ? teamAId : teamBId;
@@ -400,8 +437,24 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       partnerIds,
       partnerTiers,
 
+      // Match result details
+      holesWon,
+      holesLost,
       finalMargin: status.margin || 0,
       finalThru: status.thru || 18,
+
+      // Momentum stats (was down/up 3+ on back 9)
+      comebackWin,
+      blownLead,
+
+      // Round context
+      courseId,
+      day,
+
+      // Tournament context
+      tournamentYear,
+      tournamentName,
+      tournamentSeries,
       
       updatedAt: FieldValue.serverTimestamp(),
     });
