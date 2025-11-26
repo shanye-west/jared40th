@@ -1,10 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 
 export default function PullToRefresh({ children }: { children: React.ReactNode }) {
   const [startY, setStartY] = useState(0);
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   // Threshold to trigger refresh (in pixels)
   const THRESHOLD = 80;
@@ -63,7 +62,6 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
 
   return (
     <div 
-      ref={contentRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
