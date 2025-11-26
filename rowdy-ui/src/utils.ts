@@ -48,30 +48,3 @@ export function formatMatchStatus(
   // Live / In Progress
   return `${winnerName} ${safeMargin} UP (${safeThru})`;
 }
-
-import type { PlayerMatchFact } from "./types";
-
-/**
- * Extracts a normalized list of opponents from a match fact.
- * Strictly uses the 'opponentIds' array as the source of truth.
- */
-export function getOpponents(fact: PlayerMatchFact): { id: string; tier: string }[] {
-  if (fact.opponentIds && fact.opponentIds.length > 0) {
-    return fact.opponentIds.map((id, index) => ({
-      id,
-      // Safety check: ensure tier exists at same index, default to "Unknown"
-      tier: fact.opponentTiers?.[index] || "Unknown",
-    }));
-  }
-  return [];
-}
-
-export function getPartners(fact: PlayerMatchFact): { id: string; tier: string }[] {
-  if (fact.partnerIds && fact.partnerIds.length > 0) {
-    return fact.partnerIds.map((id, index) => ({
-      id,
-      tier: fact.partnerTiers?.[index] || "Unknown",
-    }));
-  }
-  return [];
-}
