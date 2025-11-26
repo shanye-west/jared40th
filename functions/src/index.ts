@@ -170,6 +170,56 @@ export const linkRoundToTournament = onDocumentWritten("rounds/{roundId}", async
   });
 });
 
+export const seedTournamentDefaults = onDocumentCreated("tournaments/{tournamentId}", async (event) => {
+  const ref = event.data?.ref;
+  const data = event.data?.data();
+  if (!ref || !data) return;
+
+  const toMerge: any = {};
+
+  if (data.year === undefined) toMerge.year = new Date().getFullYear();
+  if (data.name === undefined) toMerge.name = "";
+  if (data.series === undefined) toMerge.series = "";
+  if (data.active === undefined) toMerge.active = false;
+  if (!Array.isArray(data.roundIds)) toMerge.roundIds = [];
+  if (data.tournamentLogo === undefined) toMerge.tournamentLogo = "";
+
+  // Default teamA structure
+  if (!data.teamA || typeof data.teamA !== "object") {
+    toMerge.teamA = { id: "teamA", name: "", logo: "", color: "", rosterByTier: {}, handicapByPlayer: {} };
+  } else {
+    // Fill in missing teamA fields
+    const teamA: any = { ...data.teamA };
+    if (teamA.id === undefined) teamA.id = "teamA";
+    if (teamA.name === undefined) teamA.name = "";
+    if (teamA.logo === undefined) teamA.logo = "";
+    if (teamA.color === undefined) teamA.color = "";
+    if (teamA.rosterByTier === undefined) teamA.rosterByTier = {};
+    if (teamA.handicapByPlayer === undefined) teamA.handicapByPlayer = {};
+    toMerge.teamA = teamA;
+  }
+
+  // Default teamB structure
+  if (!data.teamB || typeof data.teamB !== "object") {
+    toMerge.teamB = { id: "teamB", name: "", logo: "", color: "", rosterByTier: {}, handicapByPlayer: {} };
+  } else {
+    // Fill in missing teamB fields
+    const teamB: any = { ...data.teamB };
+    if (teamB.id === undefined) teamB.id = "teamB";
+    if (teamB.name === undefined) teamB.name = "";
+    if (teamB.logo === undefined) teamB.logo = "";
+    if (teamB.color === undefined) teamB.color = "";
+    if (teamB.rosterByTier === undefined) teamB.rosterByTier = {};
+    if (teamB.handicapByPlayer === undefined) teamB.handicapByPlayer = {};
+    toMerge.teamB = teamB;
+  }
+
+  if (Object.keys(toMerge).length > 0) {
+    toMerge._seededAt = FieldValue.serverTimestamp();
+    await ref.set(toMerge, { merge: true });
+  }
+});
+
 export const seedCourseDefaults = onDocumentCreated("courses/{courseId}", async (event) => {
   const ref = event.data?.ref;
   const data = event.data?.data();
