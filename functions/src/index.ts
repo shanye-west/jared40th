@@ -470,8 +470,16 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let runningMargin = 0;
   
   // Track balls used for best ball format (per player index)
-  const teamABallsUsed = [0, 0]; // [player0, player1]
+  const teamABallsUsed = [0, 0]; // [player0, player1] - total (includes ties)
   const teamBBallsUsed = [0, 0];
+  const teamABallsUsedSolo = [0, 0]; // strictly better than partner
+  const teamBBallsUsedSolo = [0, 0];
+  const teamABallsUsedShared = [0, 0]; // tied with partner
+  const teamBBallsUsedShared = [0, 0];
+  const teamABallsUsedSoloWonHole = [0, 0]; // solo ball AND team won hole
+  const teamBBallsUsedSoloWonHole = [0, 0];
+  const teamABallsUsedSoloPush = [0, 0]; // solo ball AND hole was halved
+  const teamBBallsUsedSoloPush = [0, 0];
   
   // DRIVE_TRACKING: Track drives used for scramble/shamble
   const teamADrivesUsed = [0, 0];
@@ -535,8 +543,23 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         const a1Stroke = clamp01(after.teamAPlayers?.[1]?.strokesReceived?.[i-1]);
         const a0Net = aArr[0] - a0Stroke;
         const a1Net = aArr[1] - a1Stroke;
+        // Total balls used (includes ties)
         if (a0Net <= a1Net) teamABallsUsed[0]++;
         if (a1Net <= a0Net) teamABallsUsed[1]++;
+        // Solo vs Shared
+        if (a0Net < a1Net) {
+          teamABallsUsedSolo[0]++;
+          if (holeResult === "teamA") teamABallsUsedSoloWonHole[0]++;
+          if (holeResult === "AS") teamABallsUsedSoloPush[0]++;
+        } else if (a1Net < a0Net) {
+          teamABallsUsedSolo[1]++;
+          if (holeResult === "teamA") teamABallsUsedSoloWonHole[1]++;
+          if (holeResult === "AS") teamABallsUsedSoloPush[1]++;
+        } else {
+          // Tied - both shared
+          teamABallsUsedShared[0]++;
+          teamABallsUsedShared[1]++;
+        }
       }
       
       if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
@@ -544,8 +567,23 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         const b1Stroke = clamp01(after.teamBPlayers?.[1]?.strokesReceived?.[i-1]);
         const b0Net = bArr[0] - b0Stroke;
         const b1Net = bArr[1] - b1Stroke;
+        // Total balls used (includes ties)
         if (b0Net <= b1Net) teamBBallsUsed[0]++;
         if (b1Net <= b0Net) teamBBallsUsed[1]++;
+        // Solo vs Shared
+        if (b0Net < b1Net) {
+          teamBBallsUsedSolo[0]++;
+          if (holeResult === "teamB") teamBBallsUsedSoloWonHole[0]++;
+          if (holeResult === "AS") teamBBallsUsedSoloPush[0]++;
+        } else if (b1Net < b0Net) {
+          teamBBallsUsedSolo[1]++;
+          if (holeResult === "teamB") teamBBallsUsedSoloWonHole[1]++;
+          if (holeResult === "AS") teamBBallsUsedSoloPush[1]++;
+        } else {
+          // Tied - both shared
+          teamBBallsUsedShared[0]++;
+          teamBBallsUsedShared[1]++;
+        }
       }
     }
     
@@ -555,13 +593,43 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       const bArr = h.teamBPlayersGross;
       
       if (Array.isArray(aArr) && aArr[0] != null && aArr[1] != null) {
+        // Total balls used (includes ties)
         if (aArr[0] <= aArr[1]) teamABallsUsed[0]++;
         if (aArr[1] <= aArr[0]) teamABallsUsed[1]++;
+        // Solo vs Shared
+        if (aArr[0] < aArr[1]) {
+          teamABallsUsedSolo[0]++;
+          if (holeResult === "teamA") teamABallsUsedSoloWonHole[0]++;
+          if (holeResult === "AS") teamABallsUsedSoloPush[0]++;
+        } else if (aArr[1] < aArr[0]) {
+          teamABallsUsedSolo[1]++;
+          if (holeResult === "teamA") teamABallsUsedSoloWonHole[1]++;
+          if (holeResult === "AS") teamABallsUsedSoloPush[1]++;
+        } else {
+          // Tied - both shared
+          teamABallsUsedShared[0]++;
+          teamABallsUsedShared[1]++;
+        }
       }
       
       if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
+        // Total balls used (includes ties)
         if (bArr[0] <= bArr[1]) teamBBallsUsed[0]++;
         if (bArr[1] <= bArr[0]) teamBBallsUsed[1]++;
+        // Solo vs Shared
+        if (bArr[0] < bArr[1]) {
+          teamBBallsUsedSolo[0]++;
+          if (holeResult === "teamB") teamBBallsUsedSoloWonHole[0]++;
+          if (holeResult === "AS") teamBBallsUsedSoloPush[0]++;
+        } else if (bArr[1] < bArr[0]) {
+          teamBBallsUsedSolo[1]++;
+          if (holeResult === "teamB") teamBBallsUsedSoloWonHole[1]++;
+          if (holeResult === "AS") teamBBallsUsedSoloPush[1]++;
+        } else {
+          // Tied - both shared
+          teamBBallsUsedShared[0]++;
+          teamBBallsUsedShared[1]++;
+        }
       }
     }
     
@@ -684,10 +752,18 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       ? p.strokesReceived.reduce((sum: number, v: number) => sum + (v || 0), 0)
       : 0;
     
-    // NEW: ballsUsed - for best ball and shamble
+    // NEW: ballsUsed stats - for best ball and shamble
     let ballsUsed: number | null = null;
+    let ballsUsedSolo: number | null = null;
+    let ballsUsedShared: number | null = null;
+    let ballsUsedSoloWonHole: number | null = null;
+    let ballsUsedSoloPush: number | null = null;
     if (format === "twoManBestBall" || format === "twoManShamble") {
       ballsUsed = team === "teamA" ? teamABallsUsed[pIdx] : teamBBallsUsed[pIdx];
+      ballsUsedSolo = team === "teamA" ? teamABallsUsedSolo[pIdx] : teamBBallsUsedSolo[pIdx];
+      ballsUsedShared = team === "teamA" ? teamABallsUsedShared[pIdx] : teamBBallsUsedShared[pIdx];
+      ballsUsedSoloWonHole = team === "teamA" ? teamABallsUsedSoloWonHole[pIdx] : teamBBallsUsedSoloWonHole[pIdx];
+      ballsUsedSoloPush = team === "teamA" ? teamABallsUsedSoloPush[pIdx] : teamBBallsUsedSoloPush[pIdx];
     }
     
     // DRIVE_TRACKING: drivesUsed - only for scramble/shamble
@@ -807,6 +883,10 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     
     // Format-specific stats (only include if applicable)
     if (ballsUsed !== null) factData.ballsUsed = ballsUsed;
+    if (ballsUsedSolo !== null) factData.ballsUsedSolo = ballsUsedSolo;
+    if (ballsUsedShared !== null) factData.ballsUsedShared = ballsUsedShared;
+    if (ballsUsedSoloWonHole !== null) factData.ballsUsedSoloWonHole = ballsUsedSoloWonHole;
+    if (ballsUsedSoloPush !== null) factData.ballsUsedSoloPush = ballsUsedSoloPush;
     if (drivesUsed !== null) factData.drivesUsed = drivesUsed;
     
     // Scoring stats

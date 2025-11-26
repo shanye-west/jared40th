@@ -155,3 +155,100 @@ Phase 4 — PWA polish
 vite-plugin-pwa manifest + icons; registerType:'autoUpdate'.
 
 Offline read caching verification; install banners.
+
+---
+
+## Stats Reference
+
+Every stat tracked in `playerMatchFacts` and how it's calculated.
+
+### Core Match Stats
+
+| Stat | Calculation | Plain English |
+|------|-------------|---------------|
+| `outcome` | `"win"` / `"loss"` / `"halve"` based on match result | Did you win, lose, or tie the match? |
+| `pointsEarned` | Full `pointsValue` for win, half for halve, 0 for loss | Points you earned from this match |
+| `holesWon` | Count of holes where your team/side had the lower net (or gross for scramble) | How many holes you won |
+| `holesLost` | Count of holes where opponent had the lower score | How many holes you lost |
+| `holesHalved` | `finalThru - holesWon - holesLost` | How many holes ended in a tie |
+| `finalMargin` | Number of holes up/down when match ended | How many holes you won or lost by |
+| `finalThru` | Last hole played (1-18, may end early if closed) | What hole the match ended on |
+
+### Momentum Stats
+
+| Stat | Calculation | Plain English |
+|------|-------------|---------------|
+| `comebackWin` | `true` if you were down 3+ holes at any point on back 9 and still won | Did you mount a big comeback to win? |
+| `blownLead` | `true` if you were up 3+ holes at any point on back 9 and lost | Did you blow a big lead? |
+| `wasNeverBehind` | `true` if you never trailed at any point during the match | Were you always ahead or tied? |
+| `leadChanges` | Count of times the leader changed during the match | How many times did the lead swap? |
+| `winningHole` | Hole number where match was clinched (`null` if went 18 or halved) | What hole did the match end on? |
+
+### Ball Usage Stats (Best Ball & Shamble Only)
+
+These stats track when your individual score was used as the team score. Best Ball compares **net** scores; Shamble compares **gross** scores.
+
+| Stat | Calculation | Plain English |
+|------|-------------|---------------|
+| `ballsUsed` | Holes where your score ≤ partner's score (includes ties) | How many times was your ball "in play"? |
+| `ballsUsedSolo` | Holes where your score < partner's score (strictly better) | How many times did you carry the team alone? |
+| `ballsUsedShared` | Holes where your score = partner's score | How many times did you and your partner tie? |
+| `ballsUsedSoloWonHole` | Holes where you were solo AND your team won the hole | Times you single-handedly won a hole |
+| `ballsUsedSoloPush` | Holes where you were solo AND the hole was halved | Times you single-handedly pushed (tied) a hole |
+
+### Drive Usage Stats (Scramble & Shamble Only)
+
+| Stat | Calculation | Plain English |
+|------|-------------|---------------|
+| `drivesUsed` | Count of holes where your drive was selected | How many of your drives did the team use? |
+
+### Individual Scoring Stats (Singles & Best Ball Only)
+
+| Stat | Calculation | Plain English |
+|------|-------------|---------------|
+| `totalGross` | Sum of your gross scores for all holes played | Your raw score before handicap |
+| `totalNet` | Sum of `gross - strokesReceived` for each hole | Your score after handicap strokes |
+| `strokesVsParGross` | `totalGross - coursePar` | How many over/under par (gross)? E.g., +5 or -2 |
+| `strokesVsParNet` | `totalNet - coursePar` | How many over/under par (net)? |
+
+### Team Scoring Stats (Scramble & Shamble Only)
+
+| Stat | Calculation | Plain English |
+|------|-------------|---------------|
+| `teamTotalGross` | Sum of team gross scores for all holes played | The team's combined score |
+| `teamStrokesVsParGross` | `teamTotalGross - coursePar` | Team's strokes over/under par |
+
+### Handicap & Strokes Stats
+
+| Stat | Calculation | Plain English |
+|------|-------------|---------------|
+| `playerHandicap` | Player's handicap index from tournament settings | Your handicap going into this match |
+| `strokesGiven` | Sum of `strokesReceived` array (0s and 1s) | Total strokes you received in the match |
+
+### Context Stats
+
+| Stat | Source | Plain English |
+|------|--------|---------------|
+| `playerTier` | From `tournament.rosterByTier` (A/B/C/D) | What tier were you playing in? |
+| `partnerIds` / `partnerTiers` / `partnerHandicaps` | From match player arrays | Who was your partner and their details? |
+| `opponentIds` / `opponentTiers` / `opponentHandicaps` | From match player arrays | Who did you play against? |
+| `coursePar` | From course document | What was par for the course? |
+| `courseId` / `day` | From round document | Which course and which day? |
+| `tournamentYear` / `tournamentName` / `tournamentSeries` | From tournament document | What tournament was this? |
+
+### Aggregated Lifetime Stats (playerStats)
+
+| Stat | Calculation | Plain English |
+|------|-------------|---------------|
+| `wins` | Count of `outcome = "win"` across all matches | Total career wins |
+| `losses` | Count of `outcome = "loss"` across all matches | Total career losses |
+| `halves` | Count of `outcome = "halve"` across all matches | Total career ties |
+| `totalPoints` | Sum of `pointsEarned` across all matches | Total career points |
+| `matchesPlayed` | Count of all `playerMatchFacts` for this player | How many matches you've played |
+
+### Format-Specific Notes
+
+- **Singles**: 1v1, net scoring (`gross - strokesReceived`). Individual stats tracked.
+- **Two-Man Best Ball**: 2v2, each player plays their own ball, best **net** score per team counts. Ball usage stats tracked.
+- **Two-Man Shamble**: 2v2, players select a drive then play their own ball, best **gross** score counts (no handicap). Ball usage and drive stats tracked.
+- **Two-Man Scramble**: 2v2, team picks best shot each time, one team gross score. Drive stats tracked.

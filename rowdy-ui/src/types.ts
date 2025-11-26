@@ -145,7 +145,11 @@ export type PlayerMatchFact = {
   winningHole?: number | null; // Hole where match was won (null if went 18 or halved)
   
   // Format-specific stats
-  ballsUsed?: number;         // Best Ball/Shamble: holes where player's score was team's best
+  ballsUsed?: number;         // Best Ball/Shamble: holes where player's score was team's best (includes ties)
+  ballsUsedSolo?: number;     // Best Ball/Shamble: holes where player's score was strictly better than partner
+  ballsUsedShared?: number;   // Best Ball/Shamble: holes where player tied with partner
+  ballsUsedSoloWonHole?: number; // Best Ball/Shamble: solo ball AND team won the hole
+  ballsUsedSoloPush?: number; // Best Ball/Shamble: solo ball AND hole was halved (tied)
   drivesUsed?: number;        // DRIVE_TRACKING: Scramble/Shamble: drives used by this player
 
   // Individual scoring stats (twoManBestBall, singles only)
