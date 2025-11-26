@@ -7,9 +7,7 @@ import { formatMatchStatus } from "../utils";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 
-// ===== MATCH FLOW GRAPH COMPONENT (Recharts) =====
-
-import { LineChart, Line, XAxis, YAxis, ReferenceLine, ResponsiveContainer, ReferenceArea } from 'recharts';
+// ===== MATCH FLOW GRAPH COMPONENT (Pure SVG) =====
 
 type MatchFlowGraphProps = {
   marginHistory: number[];
@@ -22,79 +20,200 @@ type MatchFlowGraphProps = {
 function MatchFlowGraph({ marginHistory, teamAColor, teamBColor, teamAName, teamBName }: MatchFlowGraphProps) {
   if (!marginHistory || marginHistory.length === 0) return null;
 
+  // Chart dimensions
+  const height = 140;
+  const padding = { top: 20, right: 10, bottom: 25, left: 45 };
+  const chartWidth = 100 - padding.left - padding.right; // as percentage
+  const chartHeight = height - padding.top - padding.bottom;
+
   // Calculate max margin for y-axis scale (minimum 3 for reasonable scale)
   const maxMargin = Math.max(3, Math.max(...marginHistory.map(Math.abs)));
 
-  // Transform data for Recharts: add starting point at 0
-  const data = [
-    { hole: 0, margin: 0 },
-    ...marginHistory.map((margin, i) => ({ hole: i + 1, margin }))
-  ];
+  // Data points: start at 0, then each hole's margin
+  const data = [0, ...marginHistory];
+  const numHoles = marginHistory.length;
 
-  // Custom dot that colors based on margin
-  const renderDot = (props: any) => {
-    const { cx, cy, payload } = props;
-    if (payload.hole === 0) return null; // Don't show dot for starting point
-    const color = payload.margin > 0 ? teamAColor : payload.margin < 0 ? teamBColor : "#64748b";
-    return <circle cx={cx} cy={cy} r={4} fill={color} stroke="white" strokeWidth={1.5} />;
+  // Convert data point to SVG coordinates
+  const getX = (holeIndex: number) => {
+    // holeIndex 0 = start, 1-18 = holes
+    return padding.left + (holeIndex / numHoles) * chartWidth;
   };
+
+  const getY = (margin: number) => {
+    // margin > 0 = Team A up (toward top), margin < 0 = Team B up (toward bottom)
+    // Center line is at chartHeight/2
+    const centerY = padding.top + chartHeight / 2;
+    const scale = (chartHeight / 2 - 10) / maxMargin; // leave some padding
+    return centerY - margin * scale;
+  };
+
+  // Generate line segments with colors based on leader
+  const lineSegments = [];
+  for (let i = 0; i < data.length - 1; i++) {
+    const x1 = getX(i);
+    const y1 = getY(data[i]);
+    const x2 = getX(i + 1);
+    const y2 = getY(data[i + 1]);
+    
+    // Color based on who's leading at the END of the segment
+    const endMargin = data[i + 1];
+    let color = "#94a3b8"; // Gray for AS
+    if (endMargin > 0) color = teamAColor;
+    else if (endMargin < 0) color = teamBColor;
+    
+    lineSegments.push(
+      <line
+        key={`seg-${i}`}
+        x1={`${x1}%`}
+        y1={y1}
+        x2={`${x2}%`}
+        y2={y2}
+        stroke={color}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+      />
+    );
+  }
+
+  // Generate dots with status labels
+  const dotsAndLabels = data.slice(1).map((margin, i) => {
+    const x = getX(i + 1);
+    const y = getY(margin);
+    const color = margin > 0 ? teamAColor : margin < 0 ? teamBColor : "#94a3b8";
+    const absMargin = Math.abs(margin);
+    
+    return (
+      <g key={`dot-${i}`}>
+        <circle
+          cx={`${x}%`}
+          cy={y}
+          r={4}
+          fill={color}
+          stroke="white"
+          strokeWidth={1.5}
+        />
+        {margin !== 0 && (
+          <text
+            x={`${x}%`}
+            y={y - 8}
+            textAnchor="middle"
+            fontSize={7}
+            fontWeight={600}
+            fill={color}
+          >
+            {absMargin}UP
+          </text>
+        )}
+      </g>
+    );
+  });
+
+  // X-axis labels (hole numbers)
+  const xLabels = [1, 9, 18].filter(h => h <= numHoles).map(hole => (
+    <text
+      key={`x-${hole}`}
+      x={`${getX(hole)}%`}
+      y={height - 5}
+      textAnchor="middle"
+      fontSize={9}
+      fill="#94a3b8"
+    >
+      {hole}
+    </text>
+  ));
+
+  // Center Y coordinate
+  const centerY = padding.top + chartHeight / 2;
 
   return (
     <div className="card p-4">
       <h3 className="text-sm font-bold uppercase text-slate-500 tracking-wide text-center mb-3">
         Match Flow
       </h3>
-      
-      {/* Team labels */}
-      <div className="flex justify-between text-xs font-semibold mb-1 px-2">
-        <span style={{ color: teamAColor }}>{teamAName}</span>
-        <span style={{ color: teamBColor }}>{teamBName}</span>
-      </div>
 
-      <ResponsiveContainer width="100%" height={140}>
-        <LineChart data={data} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-          {/* Background shading for each team's territory */}
-          <ReferenceArea y1={0} y2={maxMargin} fill={teamAColor} fillOpacity={0.08} />
-          <ReferenceArea y1={-maxMargin} y2={0} fill={teamBColor} fillOpacity={0.08} />
-          
-          {/* Center line (All Square) */}
-          <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1.5} />
-          
-          {/* Front 9 / Back 9 separator */}
-          {marginHistory.length > 9 && (
-            <ReferenceLine x={9.5} stroke="#cbd5e1" strokeDasharray="3 3" />
-          )}
+      <svg width="100%" height={height} style={{ overflow: 'visible' }}>
+        {/* Background shading */}
+        <rect
+          x={`${padding.left}%`}
+          y={padding.top}
+          width={`${chartWidth}%`}
+          height={chartHeight / 2}
+          fill={teamAColor}
+          fillOpacity={0.06}
+        />
+        <rect
+          x={`${padding.left}%`}
+          y={centerY}
+          width={`${chartWidth}%`}
+          height={chartHeight / 2}
+          fill={teamBColor}
+          fillOpacity={0.06}
+        />
 
-          <XAxis 
-            dataKey="hole" 
-            type="number"
-            domain={[0, marginHistory.length]}
-            ticks={[1, 9, 10, marginHistory.length]}
-            tick={{ fontSize: 10, fill: '#94a3b8' }}
-            axisLine={{ stroke: '#e2e8f0' }}
-            tickLine={false}
-          />
-          
-          <YAxis 
-            domain={[-maxMargin, maxMargin]}
-            ticks={[-maxMargin, 0, maxMargin]}
-            tick={{ fontSize: 10, fill: '#94a3b8' }}
-            axisLine={false}
-            tickLine={false}
-            tickFormatter={(v) => v === 0 ? 'AS' : v > 0 ? `+${v}` : `${v}`}
-            width={25}
-          />
+        {/* Center line (All Square) */}
+        <line
+          x1={`${padding.left}%`}
+          y1={centerY}
+          x2={`${padding.left + chartWidth}%`}
+          y2={centerY}
+          stroke="#94a3b8"
+          strokeWidth={1}
+          strokeDasharray="4 4"
+        />
 
-          <Line 
-            type="monotone"
-            dataKey="margin" 
-            stroke="#334155" 
-            strokeWidth={2.5}
-            dot={renderDot}
-            activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
+        {/* Front 9 / Back 9 separator */}
+        {numHoles > 9 && (
+          <line
+            x1={`${getX(9.5)}%`}
+            y1={padding.top}
+            x2={`${getX(9.5)}%`}
+            y2={padding.top + chartHeight}
+            stroke="#cbd5e1"
+            strokeWidth={1}
+            strokeDasharray="3 3"
           />
-        </LineChart>
-      </ResponsiveContainer>
+        )}
+
+        {/* Y-axis labels */}
+        <text
+          x={`${padding.left - 3}%`}
+          y={padding.top + 10}
+          textAnchor="end"
+          fontSize={9}
+          fontWeight={600}
+          fill={teamAColor}
+        >
+          {teamAName}
+        </text>
+        <text
+          x={`${padding.left - 3}%`}
+          y={centerY + 4}
+          textAnchor="end"
+          fontSize={8}
+          fill="#94a3b8"
+        >
+          AS
+        </text>
+        <text
+          x={`${padding.left - 3}%`}
+          y={padding.top + chartHeight - 2}
+          textAnchor="end"
+          fontSize={9}
+          fontWeight={600}
+          fill={teamBColor}
+        >
+          {teamBName}
+        </text>
+
+        {/* Line segments */}
+        {lineSegments}
+
+        {/* Dots and labels */}
+        {dotsAndLabels}
+
+        {/* X-axis labels */}
+        {xLabels}
+      </svg>
     </div>
   );
 }
