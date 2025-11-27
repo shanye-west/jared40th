@@ -250,10 +250,10 @@ export default function Round() {
                 bgStyle = { backgroundColor: winnerColor };
                 textColor = "text-white";
               } else if (isClosed && winner === "AS") {
-                // Halved match - gradient from team A to team B
+                // Halved match - diagonal split (team A top-left, team B bottom-right)
                 const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
                 const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
-                bgStyle = { background: `linear-gradient(90deg, ${teamAColor} 0%, ${teamBColor} 100%)` };
+                bgStyle = { background: `linear-gradient(135deg, ${teamAColor} 50%, ${teamBColor} 50%)` };
                 textColor = "text-white";
               } else if (leader === 'teamA') {
                 borderColor = tournament?.teamA?.color || "var(--team-a-default)";
@@ -343,7 +343,7 @@ export default function Round() {
                             fontWeight: 700,
                             color: 'white'
                           }}>
-                            {`WIN ${statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText}`}
+                            {statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText}
                           </div>
                         </>
                       )
