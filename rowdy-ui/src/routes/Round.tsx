@@ -250,10 +250,10 @@ export default function Round() {
                 const winnerColor = winner === "teamA" 
                   ? (tournament?.teamA?.color || "var(--team-a-default)")
                   : (tournament?.teamB?.color || "var(--team-b-default)");
-                // Create pointed arrow overlay - point stops about 2/3 from center (so at ~67% of tile)
+                // Create pointed arrow overlay - point ends at 1/3 of the tile from winner's side
                 const clipPath = winner === "teamA" 
-                  ? "polygon(0 0, 50% 0, 67% 50%, 50% 100%, 0 100%)"  // Arrow pointing right
-                  : "polygon(100% 0, 50% 0, 33% 50%, 50% 100%, 100% 100%)"; // Arrow pointing left
+                  ? "polygon(0 0, 25% 0, 33% 50%, 25% 100%, 0 100%)"  // Arrow pointing right, point at 33%
+                  : "polygon(100% 0, 75% 0, 67% 50%, 75% 100%, 100% 100%)"; // Arrow pointing left, point at 67%
                 winnerOverlay = (
                   <div style={{
                     position: 'absolute',
