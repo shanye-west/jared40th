@@ -72,13 +72,15 @@ async function generateUsername(displayName: string, existingUsernames: Set<stri
 
 /**
  * Generate a unique document ID
- * Uses lowercase displayName with underscores: "shane_peterson"
+ * Format: "pFirstnameLastname" (e.g., "pShanePeterson")
  */
 function generateDocId(displayName: string): string {
-  return displayName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, ""); // Remove leading/trailing underscores
+  // Split into parts, capitalize each, join with no separator
+  const parts = displayName.trim().split(/\s+/);
+  const pascalCase = parts
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join("");
+  return `p${pascalCase}`;
 }
 
 async function seedPlayers(inputFile: string) {
