@@ -2,7 +2,8 @@
  * Seed Players Script
  * 
  * Creates player documents in Firestore with usernames and temp passwords.
- * Run with: npx ts-node scripts/seed-players.ts --input players.json
+ * Run with: npx ts-node scripts/seed-players.ts --input data/players.json
+ * Add --force to overwrite existing players.
  * 
  * Input JSON format:
  * [
@@ -83,7 +84,32 @@ function generateDocId(displayName: string): string {
   return `p${pascalCase}`;
 }
 
-async function seedPlayers(inputFile: string) {
+/**
+ * Validate all players in input
+ */
+function validatePlayers(players: PlayerInput[]): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const names = new Set<string>();
+
+  for (let i = 0; i < players.length; i++) {
+    const player = players[i];
+    
+    if (!player.displayName || typeof player.displayName !== "string" || player.displayName.trim() === "") {
+      errors.push(`Player at index ${i}: Missing or invalid 'displayName'`);
+      continue;
+    }
+
+    const normalizedName = player.displayName.trim().toLowerCase();
+    if (names.has(normalizedName)) {
+      errors.push(`Player at index ${i}: Duplicate name '${player.displayName}'`);
+    }
+    names.add(normalizedName);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+async function seedPlayers(inputFile: string, force: boolean) {
   // Read input file
   const inputPath = path.resolve(inputFile);
   if (!fs.existsSync(inputPath)) {
@@ -93,6 +119,18 @@ async function seedPlayers(inputFile: string) {
 
   const players: PlayerInput[] = JSON.parse(fs.readFileSync(inputPath, "utf8"));
   console.log(`📋 Found ${players.length} players to seed`);
+
+  // Validate ALL players first
+  console.log("🔍 Validating players...");
+  const validation = validatePlayers(players);
+  if (!validation.valid) {
+    console.error("\n❌ Validation failed! No players were created.\n");
+    for (const err of validation.errors) {
+      console.error(`  - ${err}`);
+    }
+    process.exit(1);
+  }
+  console.log("✅ All players validated successfully\n");
 
   // Get existing usernames to check for duplicates
   const existingUsernames = new Set<string>();
@@ -107,6 +145,7 @@ async function seedPlayers(inputFile: string) {
 
   // Track created players for output
   const createdPlayers: { displayName: string; username: string; docId: string }[] = [];
+  const updatedPlayers: { displayName: string; username: string; docId: string }[] = [];
   const skippedPlayers: string[] = [];
 
   // Create batch write
@@ -118,7 +157,7 @@ async function seedPlayers(inputFile: string) {
 
     // Check if player already exists
     const existingDoc = await docRef.get();
-    if (existingDoc.exists) {
+    if (existingDoc.exists && !force) {
       console.log(`⏭️  Skipping ${player.displayName} (already exists as ${docId})`);
       skippedPlayers.push(player.displayName);
       continue;
@@ -133,14 +172,21 @@ async function seedPlayers(inputFile: string) {
     };
 
     batch.set(docRef, playerDoc);
-    createdPlayers.push({ displayName: player.displayName, username, docId });
-    console.log(`✅ ${player.displayName} -> username: ${username}, id: ${docId}`);
+    
+    if (existingDoc.exists) {
+      updatedPlayers.push({ displayName: player.displayName, username, docId });
+      console.log(`🔄 ${player.displayName} -> username: ${username}, id: ${docId}`);
+    } else {
+      createdPlayers.push({ displayName: player.displayName, username, docId });
+      console.log(`✅ ${player.displayName} -> username: ${username}, id: ${docId}`);
+    }
   }
 
   // Commit batch
-  if (createdPlayers.length > 0) {
+  if (createdPlayers.length > 0 || updatedPlayers.length > 0) {
     await batch.commit();
-    console.log(`\n🎉 Created ${createdPlayers.length} players`);
+    if (createdPlayers.length > 0) console.log(`\n🎉 Created ${createdPlayers.length} players`);
+    if (updatedPlayers.length > 0) console.log(`\n🔄 Updated ${updatedPlayers.length} players`);
   }
 
   if (skippedPlayers.length > 0) {
@@ -153,35 +199,41 @@ async function seedPlayers(inputFile: string) {
   console.log("=".repeat(50));
   console.log("\nAll players use password: 1234\n");
   
-  for (const p of createdPlayers) {
+  const allPlayers = [...createdPlayers, ...updatedPlayers];
+  for (const p of allPlayers) {
     console.log(`${p.displayName}`);
     console.log(`  Username: ${p.username}`);
     console.log("");
   }
 
-  // Write credentials to file
-  const outputPath = path.join(path.dirname(inputPath), "credentials.txt");
-  let output = "PLAYER LOGIN CREDENTIALS\n";
-  output += "========================\n\n";
-  output += "All players use password: 1234\n\n";
-  output += "After logging in with your username, you'll be prompted to set up your email and permanent password.\n\n";
-  output += "-".repeat(40) + "\n\n";
-  
-  for (const p of createdPlayers) {
-    output += `${p.displayName}\n`;
-    output += `  Username: ${p.username}\n\n`;
-  }
+  // Write credentials to file (only if we created/updated players)
+  if (allPlayers.length > 0) {
+    const outputPath = path.join(path.dirname(inputPath), "credentials.txt");
+    let output = "PLAYER LOGIN CREDENTIALS\n";
+    output += "========================\n\n";
+    output += "All players use password: 1234\n\n";
+    output += "After logging in with your username, you'll be prompted to set up your email and permanent password.\n\n";
+    output += "-".repeat(40) + "\n\n";
+    
+    for (const p of allPlayers) {
+      output += `${p.displayName}\n`;
+      output += `  Username: ${p.username}\n\n`;
+    }
 
-  fs.writeFileSync(outputPath, output);
-  console.log(`\n📄 Credentials saved to: ${outputPath}`);
+    fs.writeFileSync(outputPath, output);
+    console.log(`\n📄 Credentials saved to: ${outputPath}`);
+  }
 }
 
 // Parse command line arguments
 const args = process.argv.slice(2);
 const inputIndex = args.indexOf("--input");
+const force = args.includes("--force");
 
 if (inputIndex === -1 || !args[inputIndex + 1]) {
-  console.log("Usage: npx ts-node scripts/seed-players.ts --input players.json");
+  console.log("Usage: npx ts-node scripts/seed-players.ts --input data/players.json [--force]");
+  console.log("\nOptions:");
+  console.log("  --force    Overwrite existing players");
   console.log("\nExample players.json:");
   console.log('[');
   console.log('  { "displayName": "Shane Peterson" },');
@@ -192,7 +244,7 @@ if (inputIndex === -1 || !args[inputIndex + 1]) {
 
 const inputFile = args[inputIndex + 1];
 
-seedPlayers(inputFile)
+seedPlayers(inputFile, force)
   .then(() => {
     console.log("\n✅ Done!");
     process.exit(0);
