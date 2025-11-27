@@ -242,32 +242,13 @@ export default function Round() {
               let bgStyle: React.CSSProperties = {};
               let textColor = "text-slate-900";
               
-              // For winner overlay with pointed arrow
-              let winnerOverlay: React.ReactNode = null;
-              
               if (isClosed && winner && winner !== "AS") {
-                // Completed match with a winner - pointed arrow overlay
+                // Completed match with a winner - full team color background
                 const winnerColor = winner === "teamA" 
                   ? (tournament?.teamA?.color || "var(--team-a-default)")
                   : (tournament?.teamB?.color || "var(--team-b-default)");
-                // Create pointed arrow overlay - point ends at 3/7 of the tile from winner's side (~43%)
-                const clipPath = winner === "teamA" 
-                  ? "polygon(0 0, 35% 0, 43% 50%, 35% 100%, 0 100%)"  // Arrow pointing right, point at 43%
-                  : "polygon(100% 0, 65% 0, 57% 50%, 65% 100%, 100% 100%)"; // Arrow pointing left, point at 57%
-                winnerOverlay = (
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: winnerColor,
-                    clipPath,
-                    pointerEvents: 'none',
-                    borderRadius: 'inherit'
-                  }} />
-                );
-                textColor = "text-slate-900";
+                bgStyle = { backgroundColor: winnerColor };
+                textColor = "text-white";
               } else if (isClosed && winner === "AS") {
                 // Halved match - grey background with team color borders
                 bgStyle = { 
@@ -300,7 +281,6 @@ export default function Round() {
                   to={`/match/${m.id}`} 
                   className="card card-hover"
                   style={{ 
-                    position: 'relative',
                     display: "grid", 
                     gridTemplateColumns: "1fr auto 1fr",
                     gap: 12,
@@ -314,11 +294,8 @@ export default function Round() {
                     ...bgStyle
                   }}
                 >
-                  {/* Winner overlay with pointed arrow */}
-                  {winnerOverlay}
-                  
                   {/* Left: Team A Players */}
-                  <div className={`text-left text-sm leading-tight ${textColor}`} style={{ position: 'relative', zIndex: 1 }}>
+                  <div className={`text-left text-sm leading-tight ${textColor}`}>
                     {(m.teamAPlayers || []).map((p, i) => (
                         <div key={i} className="font-semibold">
                             {getPlayerName(p.playerId)}
@@ -327,7 +304,7 @@ export default function Round() {
                   </div>
 
                   {/* Center: Status - fixed height for consistency, content vertically centered */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 52, position: 'relative', zIndex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 52 }}>
                     {isClosed ? (
                       // Completed match
                       winner === 'AS' ? (
@@ -357,7 +334,7 @@ export default function Round() {
                           <div style={{ 
                             fontSize: '0.65rem', 
                             fontWeight: 600, 
-                            color: '#64748b',
+                            color: 'rgba(255,255,255,0.85)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                           }}>
@@ -370,14 +347,14 @@ export default function Round() {
                             whiteSpace: 'nowrap',
                             fontSize: '0.9rem',
                             fontWeight: 700,
-                            color: '#334155'
+                            color: 'white'
                           }}>
                             {statusText.includes("wins") ? statusText.split(" wins ")[1] : statusText}
                           </div>
                           <div style={{ 
                             fontSize: '0.65rem', 
                             fontWeight: 600, 
-                            color: '#64748b',
+                            color: 'rgba(255,255,255,0.85)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                           }}>
@@ -453,7 +430,7 @@ export default function Round() {
                   </div>
 
                   {/* Right: Team B Players */}
-                  <div className={`text-right text-sm leading-tight ${textColor}`} style={{ position: 'relative', zIndex: 1 }}>
+                  <div className={`text-right text-sm leading-tight ${textColor}`}>
                     {(m.teamBPlayers || []).map((p, i) => (
                         <div key={i} className="font-semibold">
                             {getPlayerName(p.playerId)}
