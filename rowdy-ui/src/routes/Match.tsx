@@ -924,6 +924,67 @@ export default function Match() {
     return null;
   }
 
+  // For twoManBestBall: get the team's low net score for a hole
+  // For twoManShamble: get the team's low gross score for a hole
+  function getTeamLowScore(hole: typeof holes[0], team: "A" | "B"): number | null {
+    if (format !== "twoManBestBall" && format !== "twoManShamble") return null;
+    
+    const { input } = hole;
+    const holeIdx = hole.num - 1;
+    const arr = team === "A" ? input?.teamAPlayersGross : input?.teamBPlayersGross;
+    
+    if (!Array.isArray(arr)) return null;
+    
+    const p0Gross = arr[0];
+    const p1Gross = arr[1];
+    
+    if (format === "twoManShamble") {
+      // Shamble: best GROSS (no strokes)
+      if (p0Gross == null && p1Gross == null) return null;
+      if (p0Gross == null) return p1Gross;
+      if (p1Gross == null) return p0Gross;
+      return Math.min(p0Gross, p1Gross);
+    }
+    
+    // Best Ball: calculate net scores
+    const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
+    const p0Stroke = (roster?.[0]?.strokesReceived?.[holeIdx] ?? 0) > 0 ? 1 : 0;
+    const p1Stroke = (roster?.[1]?.strokesReceived?.[holeIdx] ?? 0) > 0 ? 1 : 0;
+    
+    const p0Net = p0Gross != null ? p0Gross - p0Stroke : null;
+    const p1Net = p1Gross != null ? p1Gross - p1Stroke : null;
+    
+    // Return the lower net score
+    if (p0Net == null && p1Net == null) return null;
+    if (p0Net == null) return p1Net;
+    if (p1Net == null) return p0Net;
+    return Math.min(p0Net, p1Net);
+  }
+
+  // Calculate team totals for low score (net for best ball, gross for shamble)
+  const teamLowScoreTotals = useMemo(() => {
+    if (format !== "twoManBestBall" && format !== "twoManShamble") return null;
+    
+    const front = holes.slice(0, 9);
+    const back = holes.slice(9, 18);
+    
+    const sumLowScore = (arr: typeof holes, team: "A" | "B") => {
+      let total = 0;
+      let hasAny = false;
+      arr.forEach(h => {
+        const v = getTeamLowScore(h, team);
+        if (v != null) { total += v; hasAny = true; }
+      });
+      return hasAny ? total : null;
+    };
+    
+    return {
+      getOut: (team: "A" | "B") => sumLowScore(front, team),
+      getIn: (team: "A" | "B") => sumLowScore(back, team),
+      getTotal: (team: "A" | "B") => sumLowScore(holes, team),
+    };
+  }, [holes, format, match]);
+
   async function saveHole(k: string, nextInput: any) {
     if (!match?.id || roundLocked) return;
     try {
@@ -1735,6 +1796,45 @@ export default function Match() {
                   );
                 })}
 
+                {/* Team A Score Row (Best Ball: low net, Shamble: low gross) */}
+                {(format === "twoManBestBall" || format === "twoManShamble") && (
+                  <tr style={{ backgroundColor: teamAColor }}>
+                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: teamAColor }}>
+                      {tournament?.teamA?.name || "Team A"}
+                    </td>
+                    {/* Front 9 low score */}
+                    {holes.slice(0, 9).map(h => {
+                      const lowScore = getTeamLowScore(h, "A");
+                      return (
+                        <td key={`teamA-${h.k}`} className="py-1 text-center text-white font-bold text-sm">
+                          {lowScore ?? ""}
+                        </td>
+                      );
+                    })}
+                    {/* OUT total */}
+                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
+                      {teamLowScoreTotals?.getOut("A") ?? "–"}
+                    </td>
+                    {/* Back 9 low score */}
+                    {holes.slice(9, 18).map((h, i) => {
+                      const lowScore = getTeamLowScore(h, "A");
+                      return (
+                        <td key={`teamA-${h.k}`} className={`py-1 text-center text-white font-bold text-sm ${i === 0 ? "border-l-2 border-white/30" : ""}`}>
+                          {lowScore ?? ""}
+                        </td>
+                      );
+                    })}
+                    {/* IN total */}
+                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
+                      {teamLowScoreTotals?.getIn("A") ?? "–"}
+                    </td>
+                    {/* TOTAL */}
+                    <td className="py-1 text-center text-white font-extrabold text-base" style={{ backgroundColor: "rgba(0,0,0,0.25)" }}>
+                      {teamLowScoreTotals?.getTotal("A") ?? "–"}
+                    </td>
+                  </tr>
+                )}
+
                 {/* MATCH STATUS ROW - Between Team A and Team B */}
                 <tr className="bg-white border-y-2 border-slate-300">
                   <td className="sticky left-0 z-10 bg-white text-left px-3 py-1.5 text-slate-600 text-xs font-bold uppercase tracking-wide">
@@ -1779,6 +1879,45 @@ export default function Match() {
                   {/* TOTAL status - always blank */}
                   <td className="py-1 bg-slate-200"></td>
                 </tr>
+
+                {/* Team B Score Row (Best Ball: low net, Shamble: low gross) */}
+                {(format === "twoManBestBall" || format === "twoManShamble") && (
+                  <tr style={{ backgroundColor: teamBColor }}>
+                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide" style={{ backgroundColor: teamBColor }}>
+                      {tournament?.teamB?.name || "Team B"}
+                    </td>
+                    {/* Front 9 low score */}
+                    {holes.slice(0, 9).map(h => {
+                      const lowScore = getTeamLowScore(h, "B");
+                      return (
+                        <td key={`teamB-${h.k}`} className="py-1 text-center text-white font-bold text-sm">
+                          {lowScore ?? ""}
+                        </td>
+                      );
+                    })}
+                    {/* OUT total */}
+                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
+                      {teamLowScoreTotals?.getOut("B") ?? "–"}
+                    </td>
+                    {/* Back 9 low score */}
+                    {holes.slice(9, 18).map((h, i) => {
+                      const lowScore = getTeamLowScore(h, "B");
+                      return (
+                        <td key={`teamB-${h.k}`} className={`py-1 text-center text-white font-bold text-sm ${i === 0 ? "border-l-2 border-white/30" : ""}`}>
+                          {lowScore ?? ""}
+                        </td>
+                      );
+                    })}
+                    {/* IN total */}
+                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
+                      {teamLowScoreTotals?.getIn("B") ?? "–"}
+                    </td>
+                    {/* TOTAL */}
+                    <td className="py-1 text-center text-white font-extrabold text-base" style={{ backgroundColor: "rgba(0,0,0,0.25)" }}>
+                      {teamLowScoreTotals?.getTotal("B") ?? "–"}
+                    </td>
+                  </tr>
+                )}
 
                 {/* Team B Player Rows */}
                 {playerRows.filter(pr => pr.team === "B").map((pr, rowIdx, teamRows) => {
