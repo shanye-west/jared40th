@@ -242,14 +242,31 @@ export default function Round() {
               let bgStyle: React.CSSProperties = {};
               let textColor = "text-slate-900";
               
+              // For winner overlay with pointed arrow
+              let winnerOverlay: React.ReactNode = null;
+              
               if (isClosed && winner && winner !== "AS") {
-                // Completed match with a winner - gradient from middle to winner's side
+                // Completed match with a winner - pointed arrow overlay
                 const winnerColor = winner === "teamA" 
                   ? (tournament?.teamA?.color || "var(--team-a-default)")
                   : (tournament?.teamB?.color || "var(--team-b-default)");
-                // Gradient direction: teamA wins = left side gets color, teamB wins = right side gets color
-                const gradientDir = winner === "teamA" ? "90deg" : "-90deg";
-                bgStyle = { background: `linear-gradient(${gradientDir}, ${winnerColor} 0%, ${winnerColor}33 50%, transparent 50%)` };
+                // Create pointed arrow overlay - point stops about 2/3 from center (so at ~67% of tile)
+                const clipPath = winner === "teamA" 
+                  ? "polygon(0 0, 50% 0, 67% 50%, 50% 100%, 0 100%)"  // Arrow pointing right
+                  : "polygon(100% 0, 50% 0, 33% 50%, 50% 100%, 100% 100%)"; // Arrow pointing left
+                winnerOverlay = (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: `linear-gradient(${winner === 'teamA' ? '90deg' : '-90deg'}, ${winnerColor} 0%, ${winnerColor}66 100%)`,
+                    clipPath,
+                    pointerEvents: 'none',
+                    borderRadius: 'inherit'
+                  }} />
+                );
                 textColor = "text-slate-900";
               } else if (isClosed && winner === "AS") {
                 // Halved match - grey background with team color borders
@@ -283,6 +300,7 @@ export default function Round() {
                   to={`/match/${m.id}`} 
                   className="card card-hover"
                   style={{ 
+                    position: 'relative',
                     display: "grid", 
                     gridTemplateColumns: "1fr auto 1fr",
                     gap: 12,
@@ -296,8 +314,11 @@ export default function Round() {
                     ...bgStyle
                   }}
                 >
+                  {/* Winner overlay with pointed arrow */}
+                  {winnerOverlay}
+                  
                   {/* Left: Team A Players */}
-                  <div className={`text-left text-sm leading-tight ${textColor}`}>
+                  <div className={`text-left text-sm leading-tight ${textColor}`} style={{ position: 'relative', zIndex: 1 }}>
                     {(m.teamAPlayers || []).map((p, i) => (
                         <div key={i} className="font-semibold">
                             {getPlayerName(p.playerId)}
@@ -306,7 +327,7 @@ export default function Round() {
                   </div>
 
                   {/* Center: Status - fixed height for consistency, content vertically centered */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 52 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 52, position: 'relative', zIndex: 1 }}>
                     {isClosed ? (
                       // Completed match
                       winner === 'AS' ? (
@@ -420,7 +441,7 @@ export default function Round() {
                   </div>
 
                   {/* Right: Team B Players */}
-                  <div className={`text-right text-sm leading-tight ${textColor}`}>
+                  <div className={`text-right text-sm leading-tight ${textColor}`} style={{ position: 'relative', zIndex: 1 }}>
                     {(m.teamBPlayers || []).map((p, i) => (
                         <div key={i} className="font-semibold">
                             {getPlayerName(p.playerId)}
