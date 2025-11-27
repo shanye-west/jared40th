@@ -261,24 +261,14 @@ export default function Round() {
                 bgStyle = { background: `linear-gradient(-90deg, ${borderColor}11 0%, transparent 30%)` };
               }
 
-              // Badge color based on match state and leader (only for non-closed matches)
-              let badgeBgColor: string;
-              const badgeTextColor = "white";
-              
-              if (!isStarted) {
-                badgeBgColor = "#1e293b"; // slate-800
-              } else if (leader === 'teamA') {
-                badgeBgColor = tournament?.teamA?.color || "var(--team-a-default)";
+              // Team color for in-progress status text
+              let statusColor: string;
+              if (leader === 'teamA') {
+                statusColor = tournament?.teamA?.color || "var(--team-a-default)";
               } else if (leader === 'teamB') {
-                badgeBgColor = tournament?.teamB?.color || "var(--team-b-default)";
+                statusColor = tournament?.teamB?.color || "var(--team-b-default)";
               } else {
-                badgeBgColor = "#94a3b8"; // slate-400
-              }
-
-              // Format display text - remove (thru) from in-progress status
-              let displayStatus = statusText;
-              if (isStarted && !isClosed && statusText.includes("(")) {
-                displayStatus = statusText.replace(/\s*\(\d+\)$/, "");
+                statusColor = "#94a3b8"; // slate-400
               }
 
               return (
@@ -348,20 +338,49 @@ export default function Round() {
                           }
                         </div>
                       </>
-                    ) : (
-                      // In progress or not started: show badge
-                      <div 
-                        style={{ 
+                    ) : isStarted && leader ? (
+                      // In progress with leader: team name + margin in team color (no pill)
+                      <>
+                        <div style={{ 
+                          fontSize: '0.65rem', 
+                          fontWeight: 600, 
+                          color: statusColor,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}>
+                          {leader === 'teamA' 
+                            ? (tournament?.teamA?.name || 'Team A')
+                            : (tournament?.teamB?.name || 'Team B')
+                          }
+                        </div>
+                        <div style={{ 
                           whiteSpace: 'nowrap',
-                          padding: '4px 10px',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          backgroundColor: badgeBgColor,
-                          color: badgeTextColor
-                        }}
-                      >
-                        {displayStatus}
+                          fontSize: '0.9rem',
+                          fontWeight: 700,
+                          color: statusColor
+                        }}>
+                          {m.status?.margin} UP
+                        </div>
+                      </>
+                    ) : isStarted ? (
+                      // In progress, All Square: grey text (no pill)
+                      <div style={{ 
+                        whiteSpace: 'nowrap',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        color: '#94a3b8'
+                      }}>
+                        ALL SQUARE
+                      </div>
+                    ) : (
+                      // Not started: subtle grey text
+                      <div style={{ 
+                        whiteSpace: 'nowrap',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: '#94a3b8'
+                      }}>
+                        Not Started
                       </div>
                     )}
                   </div>
