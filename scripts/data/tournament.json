@@ -1,0 +1,37 @@
+{
+  "id": "2025-rowdycup",
+  "year": 2025,
+  "name": "Rowdy Cup 2025",
+  "series": "rowdyCup",
+  "active": true,
+  "tournamentLogo": "",
+  "teamA": {
+    "id": "teamA",
+    "name": "Rancheros",
+    "logo": "",
+    "color": "#1e3a5f",
+    "rosterByTier": {
+      "A": ["pShanePeterson", "pJohnSmith"],
+      "B": [],
+      "C": [],
+      "D": []
+    },
+    "handicapByPlayer": {
+      "pShanePeterson": 7.4,
+      "pJohnSmith": 12.2
+    }
+  },
+  "teamB": {
+    "id": "teamB",
+    "name": "Coyotes",
+    "logo": "",
+    "color": "#8b0000",
+    "rosterByTier": {
+      "A": [],
+      "B": [],
+      "C": [],
+      "D": []
+    },
+    "handicapByPlayer": {}
+  }
+}

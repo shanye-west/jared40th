@@ -79,6 +79,8 @@ export type CourseDoc = {
   name: string;
   tees?: string; // e.g., "Blue", "White"
   par?: number; // Total course par (e.g., 72)
+  rating?: number; // Course rating (e.g., 70.5)
+  slope?: number; // Slope rating (e.g., 121)
   holes: HoleInfo[];
 };
 
@@ -104,6 +106,7 @@ export type MatchDoc = {
   };
   teamAPlayers?: { playerId: string; strokesReceived: number[] }[];
   teamBPlayers?: { playerId: string; strokesReceived: number[] }[];
+  courseHandicaps?: number[]; // Course handicaps for all players in match order [teamA..., teamB...]
 };
 
 export type PlayerMatchFact = {
