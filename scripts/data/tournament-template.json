@@ -1,15 +1,15 @@
 {
-  "id": "2025-rowdycup",
+  "id": "", //2025RowdyCup or 2025ChristmasClassic
   "year": 2025,
-  "name": "Rowdy Cup 2025",
-  "series": "rowdyCup",
-  "active": true,
-  "tournamentLogo": "",
+  "name": "", //"Rowdy Cup 2025" or "Christmas Classic 2025"
+  "series": "rowdyCup", //rowdyCup or christmasClassic
+  "active": false,
+  "tournamentLogo": "", //URL from firebase storage
   "roundIds": [],
   "teamA": {
     "id": "teamA",
     "name": "Team A Name",
-    "logo": "",
+    "logo": "", //URL from firebase storage
     "color": "#1e3a5f",
     "rosterByTier": {
       "A": [],
@@ -22,7 +22,7 @@
   "teamB": {
     "id": "teamB",
     "name": "Team B Name",
-    "logo": "",
+    "logo": "", //URL from firebase storage
     "color": "#8b0000",
     "rosterByTier": {
       "A": [],
