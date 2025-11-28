@@ -11,6 +11,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { MatchFlowGraph } from "../components/match/MatchFlowGraph";
 import { PostMatchStats } from "../components/match/PostMatchStats";
 import { useMatchData } from "../hooks/useMatchData";
+import { useDebouncedSave } from "../hooks/useDebouncedSave";
 
 // --- MEMOIZED COMPONENTS ---
 
@@ -339,7 +340,7 @@ export default function Match() {
     };
   }, [holes, format, match]);
 
-  // Memoized save function
+  // Memoized save function (used for immediate saves like drive selection)
   const saveHole = useCallback(async (k: string, nextInput: any) => {
     if (!match?.id || roundLocked || !canEdit) return;
     try {
@@ -348,6 +349,10 @@ export default function Match() {
       console.error("Save failed", e);
     }
   }, [match?.id, roundLocked, canEdit]);
+
+  // Debounced save for score inputs - prevents Firestore writes on every keystroke
+  // Uses 400ms delay so typing "45" only fires one save with "45", not two saves
+  const { debouncedSave: debouncedSaveHole } = useDebouncedSave(saveHole, 400);
 
   // DRIVE_TRACKING: Get current drive selection for a hole
   function getDriveValue(hole: typeof holes[0], team: "A" | "B"): 0 | 1 | null {
@@ -532,7 +537,7 @@ export default function Match() {
           ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
           ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
         };
-        saveHole(holeKey, newInput);
+        debouncedSaveHole(holeKey, newInput);
         return;
       }
       
@@ -541,7 +546,7 @@ export default function Match() {
           teamAPlayerGross: team === "A" ? value : (input?.teamAPlayerGross ?? null),
           teamBPlayerGross: team === "B" ? value : (input?.teamBPlayerGross ?? null),
         };
-        saveHole(holeKey, newInput);
+        debouncedSaveHole(holeKey, newInput);
         return;
       }
       
@@ -553,17 +558,17 @@ export default function Match() {
       else bArr[pIdx] = value;
       
       if (format === "twoManShamble") {
-        saveHole(holeKey, { 
+        debouncedSaveHole(holeKey, { 
           teamAPlayersGross: aArr, 
           teamBPlayersGross: bArr,
           ...(input?.teamADrive != null && { teamADrive: input.teamADrive }),
           ...(input?.teamBDrive != null && { teamBDrive: input.teamBDrive }),
         });
       } else {
-        saveHole(holeKey, { teamAPlayersGross: aArr, teamBPlayersGross: bArr });
+        debouncedSaveHole(holeKey, { teamAPlayersGross: aArr, teamBPlayersGross: bArr });
       }
     };
-  }, [holes, format, saveHole]);
+  }, [holes, format, debouncedSaveHole]);
 
   // Create stable handlers for each player row
   const cellChangeHandlerA0 = useMemo(() => createCellChangeHandler("A", 0), [createCellChangeHandler]);
