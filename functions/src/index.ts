@@ -646,8 +646,17 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     let teamStrokesVsParGross: number | null = null;
     
     // Get player's course handicap from match document
-    // Array order: [teamA[0], teamA[1], teamB[0], teamB[1]]
-    const courseHcpIndex = team === "teamA" ? pIdx : pIdx + 2;
+    // Array structure depends on format:
+    // - Singles: [teamA, teamB] (2 elements)
+    // - 2-player formats: [teamA[0], teamA[1], teamB[0], teamB[1]] (4 elements)
+    let courseHcpIndex: number;
+    if (format === "singles") {
+      // Singles: index 0 = teamA, index 1 = teamB
+      courseHcpIndex = team === "teamA" ? 0 : 1;
+    } else {
+      // 2-player formats: [teamA[0], teamA[1], teamB[0], teamB[1]]
+      courseHcpIndex = team === "teamA" ? pIdx : pIdx + 2;
+    }
     const playerCourseHandicap = matchCourseHandicaps[courseHcpIndex] ?? 0;
     
     if (format === "twoManBestBall" || format === "singles") {
