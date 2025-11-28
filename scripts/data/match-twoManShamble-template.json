@@ -2,6 +2,7 @@
   "id": "2025-rowdycup-day1-match1",
   "roundId": "2025-rowdycup-day1",
   "tournamentId": "2025-rowdycup",
+  "matchNumber": 1,
   "courseHandicaps": [0, 0, 0, 0],
   "teamAPlayers": [
     {

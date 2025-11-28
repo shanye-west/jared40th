@@ -58,6 +58,7 @@ export const seedMatchBoilerplate = onDocumentCreated("matches/{matchId}", async
 
   await matchRef.set({
     tournamentId, roundId,
+    matchNumber: match.matchNumber ?? 0, // For ordering matches on Round page
     teamAPlayers: teamA, teamBPlayers: teamB,
     status: match.status ?? defaultStatus(),
     holes,

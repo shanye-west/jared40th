@@ -10,6 +10,7 @@
  *   "id": "2025-rowdycup-day1-match1",
  *   "roundId": "2025-rowdycup-day1",
  *   "tournamentId": "2025-rowdycup",
+ *   "matchNumber": 1,  // Optional: for ordering matches on Round page
  *   "courseHandicaps": [9, 14, 7, 17],
  *   "teamAPlayers": [
  *     { "playerId": "pPlayer1", "strokesReceived": [0,1,0,...] }

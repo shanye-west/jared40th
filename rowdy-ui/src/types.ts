@@ -88,6 +88,7 @@ export type MatchDoc = {
   id: string;
   roundId: string;
   tournamentId?: string;
+  matchNumber?: number; // For ordering matches on Round page (like day for rounds)
   holes?: Record<string, { input: any }>;
   result?: { 
     winner?: "teamA" | "teamB" | "AS";
