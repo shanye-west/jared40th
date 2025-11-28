@@ -46,7 +46,7 @@ export function PostMatchStats({
     : 0;
 
   // Determine which stat categories apply to this format
-  const showIndividualScoring = format === "singles" || format === "twoManBestBall";
+  const showIndividualScoring = format === "twoManBestBall";
   const showTeamScoring = format === "twoManScramble" || format === "twoManShamble";
   const showBallUsage = format === "twoManBestBall" || format === "twoManShamble";
   const showDrives = format === "twoManScramble" || format === "twoManShamble";
@@ -148,6 +148,186 @@ export function PostMatchStats({
   // Get first fact from either team for match-level stats (they should be consistent)
   const sampleFact = teamAFacts[0] || teamBFacts[0];
 
+  // Story stats
+  const teamAWon = teamAFacts[0]?.outcome === "win";
+  const teamBWon = teamBFacts[0]?.outcome === "win";
+  const teamAComebackWin = teamAFacts[0]?.comebackWin;
+  const teamBComebackWin = teamBFacts[0]?.comebackWin;
+  const teamABlownLead = teamAFacts[0]?.blownLead;
+  const teamBBlownLead = teamBFacts[0]?.blownLead;
+  const teamANeverBehind = teamAFacts[0]?.wasNeverBehind && !teamBFacts[0]?.wasNeverBehind;
+  const teamBNeverBehind = teamBFacts[0]?.wasNeverBehind && !teamAFacts[0]?.wasNeverBehind;
+  
+  // Clutch win: won on hole 18 (winningHole === 18 means decided on final hole)
+  const clutchWinTeamA = teamAWon && sampleFact?.winningHole === 18;
+  const clutchWinTeamB = teamBWon && sampleFact?.winningHole === 18;
+
+  // Check if any story stats exist
+  const hasStoryStats = teamAComebackWin || teamBComebackWin || teamABlownLead || teamBBlownLead || 
+                        teamANeverBehind || teamBNeverBehind || clutchWinTeamA || clutchWinTeamB;
+
+  // Story badge component
+  const StoryBadge = ({ icon, title, description, teamColor }: { 
+    icon: string; 
+    title: string; 
+    description: string;
+    teamColor: string;
+  }) => (
+    <div className="flex items-start gap-2 py-2 px-3 bg-slate-50 rounded-lg">
+      <span className="text-lg">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-sm" style={{ color: teamColor }}>{title}</div>
+        <div className="text-xs text-slate-500">{description}</div>
+      </div>
+    </div>
+  );
+
+  // Centered match-level stat row
+  const MatchLevelStat = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div className="flex items-center justify-center gap-2 py-1.5">
+      <span className="text-slate-600 font-semibold">{value}</span>
+      <span className="text-xs text-slate-500 font-medium">{label}</span>
+    </div>
+  );
+
+  // --- SINGLES FORMAT ---
+  if (format === "singles") {
+    // Check if we have any stats to show
+    const hasScoring = teamAFacts[0]?.totalGross != null || teamBFacts[0]?.totalGross != null;
+    const hasLargestLead = largestLeadA > 0 || largestLeadB > 0;
+    const hasLeadChanges = sampleFact?.leadChanges != null && sampleFact.leadChanges > 0;
+
+    if (!hasScoring && !hasLargestLead && !hasLeadChanges && !hasStoryStats) return null;
+
+    return (
+      <div className="card p-4 space-y-4">
+        <h3 className="text-sm font-bold uppercase text-slate-500 tracking-wide text-center">
+          Match Stats
+        </h3>
+
+        {/* Team Headers */}
+        <div className="flex items-center pb-2 border-b border-slate-200">
+          <div className="flex-1 text-right pr-3">
+            <span className="text-xs font-bold uppercase" style={{ color: teamAColor }}>{teamAName}</span>
+          </div>
+          <div className="w-24 shrink-0" />
+          <div className="flex-1 text-left pl-3">
+            <span className="text-xs font-bold uppercase" style={{ color: teamBColor }}>{teamBName}</span>
+          </div>
+        </div>
+
+        {/* SCORING (Singles) */}
+        {hasScoring && (
+          <div>
+            {/* Gross row */}
+            <StatRow
+              label="Gross"
+              valueA={renderCombined(teamAFacts[0]?.totalGross, teamAFacts[0]?.strokesVsParGross)}
+              valueB={renderCombined(teamBFacts[0]?.totalGross, teamBFacts[0]?.strokesVsParGross)}
+            />
+
+            {/* Net row (highlight) */}
+            <StatRow
+              label="Net"
+              valueA={renderCombined(teamAFacts[0]?.totalNet, teamAFacts[0]?.strokesVsParNet)}
+              valueB={renderCombined(teamBFacts[0]?.totalNet, teamBFacts[0]?.strokesVsParNet)}
+              highlight
+            />
+          </div>
+        )}
+
+        {/* LARGEST LEAD */}
+        {hasLargestLead && (
+          <div className="border-t border-slate-200 pt-3">
+            <StatRow 
+              label="Largest Lead" 
+              valueA={largestLeadA > 0 ? largestLeadA : null} 
+              valueB={largestLeadB > 0 ? largestLeadB : null} 
+            />
+          </div>
+        )}
+
+        {/* MATCH-LEVEL STATS (centered) */}
+        {hasLeadChanges && (
+          <div className="border-t border-slate-200 pt-3">
+            <MatchLevelStat label="Lead Changes" value={sampleFact?.leadChanges} />
+          </div>
+        )}
+
+        {/* STORY STATS (conditional badges) */}
+        {hasStoryStats && (
+          <div className="border-t border-slate-200 pt-3 space-y-2">
+            {clutchWinTeamA && (
+              <StoryBadge 
+                icon="⚡" 
+                title="Clutch Win" 
+                description="Won on 18 to take the match"
+                teamColor={teamAColor}
+              />
+            )}
+            {clutchWinTeamB && (
+              <StoryBadge 
+                icon="⚡" 
+                title="Clutch Win" 
+                description="Won on 18 to take the match"
+                teamColor={teamBColor}
+              />
+            )}
+            {teamAComebackWin && (
+              <StoryBadge 
+                icon="🔥" 
+                title="Comeback Win" 
+                description="Rallied from 3+ down on the back 9"
+                teamColor={teamAColor}
+              />
+            )}
+            {teamBComebackWin && (
+              <StoryBadge 
+                icon="🔥" 
+                title="Comeback Win" 
+                description="Rallied from 3+ down on the back 9"
+                teamColor={teamBColor}
+              />
+            )}
+            {teamABlownLead && (
+              <StoryBadge 
+                icon="💔" 
+                title="Blown Lead" 
+                description="Lost 3+ lead on the back 9"
+                teamColor={teamAColor}
+              />
+            )}
+            {teamBBlownLead && (
+              <StoryBadge 
+                icon="💔" 
+                title="Blown Lead" 
+                description="Lost 3+ lead on the back 9"
+                teamColor={teamBColor}
+              />
+            )}
+            {teamANeverBehind && (
+              <StoryBadge 
+                icon="🏆" 
+                title="Never Behind" 
+                description="Led or tied the entire match"
+                teamColor={teamAColor}
+              />
+            )}
+            {teamBNeverBehind && (
+              <StoryBadge 
+                icon="🏆" 
+                title="Never Behind" 
+                description="Led or tied the entire match"
+                teamColor={teamBColor}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- NON-SINGLES FORMATS (Best Ball, Scramble, Shamble) ---
   return (
     <div className="card p-4 space-y-4">
       <h3 className="text-sm font-bold uppercase text-slate-500 tracking-wide text-center">
@@ -186,77 +366,37 @@ export function PostMatchStats({
           valueA={teamAFacts[0]?.holesHalved} 
           valueB={teamBFacts[0]?.holesHalved} 
         />
-        <StatRow 
-          label="Final Thru" 
-          valueA={sampleFact?.finalThru} 
-          valueB={sampleFact?.finalThru} 
-        />
         {marginHistory && marginHistory.length > 0 && (
-          <>
-            <StatRow 
-              label="Largest Lead" 
-              valueA={largestLeadA > 0 ? largestLeadA : "–"} 
-              valueB={largestLeadB > 0 ? largestLeadB : "–"} 
-            />
-          </>
+          <StatRow 
+            label="Largest Lead" 
+            valueA={largestLeadA > 0 ? largestLeadA : "–"} 
+            valueB={largestLeadB > 0 ? largestLeadB : "–"} 
+          />
         )}
       </div>
 
-      {/* INDIVIDUAL SCORING (Singles & Best Ball) */}
+      {/* INDIVIDUAL SCORING (Best Ball) */}
       {showIndividualScoring && (
         <div className="border-t border-slate-200 pt-3">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
             Scoring
           </div>
-          {format === "singles" ? (
-            // Singles: one player per team (Gross shown first)
-            <>
-              {/* Gross row */}
-              <StatRow
-                label="Gross"
-                valueA={renderCombined(teamAFacts[0]?.totalGross, teamAFacts[0]?.strokesVsParGross)}
-                valueB={renderCombined(teamBFacts[0]?.totalGross, teamBFacts[0]?.strokesVsParGross)}
-              />
-
-              {/* Net row (highlight) */}
-              <StatRow
-                label="Net"
-                valueA={renderCombined(teamAFacts[0]?.totalNet, teamAFacts[0]?.strokesVsParNet)}
-                valueB={renderCombined(teamBFacts[0]?.totalNet, teamBFacts[0]?.strokesVsParNet)}
-                highlight
-              />
-
-              <StatRow
-                label="Strokes Received"
-                valueA={teamAFacts[0]?.strokesGiven}
-                valueB={teamBFacts[0]?.strokesGiven}
-              />
-            </>
-          ) : (
-            // Best Ball: two players per team
-            <>
-              <PlayerNamesHeader />
-              {/* Gross row (per player) */}
-              <PlayerStatRow
-                label="Gross"
-                teamA={teamAFacts.map(f => renderCombined(f?.totalGross, f?.strokesVsParGross))}
-                teamB={teamBFacts.map(f => renderCombined(f?.totalGross, f?.strokesVsParGross))}
-              />
-
-              {/* Net row (per player) */}
-              <PlayerStatRow
-                label="Net"
-                teamA={teamAFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
-                teamB={teamBFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
-              />
-
-              <PlayerStatRow
-                label="Strokes Recv'd"
-                teamA={teamAFacts.map(f => f.strokesGiven)}
-                teamB={teamBFacts.map(f => f.strokesGiven)}
-              />
-            </>
-          )}
+          <PlayerNamesHeader />
+          <PlayerStatRow
+            label="Gross"
+            teamA={teamAFacts.map(f => renderCombined(f?.totalGross, f?.strokesVsParGross))}
+            teamB={teamBFacts.map(f => renderCombined(f?.totalGross, f?.strokesVsParGross))}
+          />
+          <PlayerStatRow
+            label="Net"
+            teamA={teamAFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
+            teamB={teamBFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
+          />
+          <PlayerStatRow
+            label="Strokes Recv'd"
+            teamA={teamAFacts.map(f => f.strokesGiven)}
+            teamB={teamBFacts.map(f => f.strokesGiven)}
+          />
         </div>
       )}
 
@@ -330,37 +470,41 @@ export function PostMatchStats({
         </div>
       )}
 
-      {/* MOMENTUM STATS (All formats) */}
+      {/* MOMENTUM STATS (non-singles) */}
       <div className="border-t border-slate-200 pt-3">
         <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
           Momentum
         </div>
-        <StatRow 
-          label="Lead Changes" 
-          valueA={sampleFact?.leadChanges} 
-          valueB={sampleFact?.leadChanges} 
-        />
-        <StatRow 
-          label="Never Behind" 
-          valueA={teamAFacts[0]?.wasNeverBehind ? "✓" : "–"} 
-          valueB={teamBFacts[0]?.wasNeverBehind ? "✓" : "–"} 
-        />
-        <StatRow 
-          label="Comeback Win" 
-          valueA={teamAFacts[0]?.comebackWin ? "✓" : "–"} 
-          valueB={teamBFacts[0]?.comebackWin ? "✓" : "–"} 
-        />
-        <StatRow 
-          label="Blown Lead" 
-          valueA={teamAFacts[0]?.blownLead ? "✓" : "–"} 
-          valueB={teamBFacts[0]?.blownLead ? "✓" : "–"} 
-        />
-        {sampleFact?.winningHole && (
-          <StatRow 
-            label="Closed on Hole" 
-            valueA={sampleFact.winningHole} 
-            valueB={sampleFact.winningHole} 
-          />
+        {sampleFact?.leadChanges != null && sampleFact.leadChanges > 0 && (
+          <MatchLevelStat label="Lead Changes" value={sampleFact.leadChanges} />
+        )}
+        {hasStoryStats && (
+          <div className="space-y-2 mt-2">
+            {clutchWinTeamA && (
+              <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamAColor} />
+            )}
+            {clutchWinTeamB && (
+              <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamBColor} />
+            )}
+            {teamAComebackWin && (
+              <StoryBadge icon="🔥" title="Comeback Win" description="Rallied from 3+ down on the back 9" teamColor={teamAColor} />
+            )}
+            {teamBComebackWin && (
+              <StoryBadge icon="🔥" title="Comeback Win" description="Rallied from 3+ down on the back 9" teamColor={teamBColor} />
+            )}
+            {teamABlownLead && (
+              <StoryBadge icon="💔" title="Blown Lead" description="Lost 3+ lead on the back 9" teamColor={teamAColor} />
+            )}
+            {teamBBlownLead && (
+              <StoryBadge icon="💔" title="Blown Lead" description="Lost 3+ lead on the back 9" teamColor={teamBColor} />
+            )}
+            {teamANeverBehind && (
+              <StoryBadge icon="🏆" title="Never Behind" description="Led or tied the entire match" teamColor={teamAColor} />
+            )}
+            {teamBNeverBehind && (
+              <StoryBadge icon="🏆" title="Never Behind" description="Led or tied the entire match" teamColor={teamBColor} />
+            )}
+          </div>
         )}
       </div>
     </div>
