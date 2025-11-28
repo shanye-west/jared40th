@@ -661,9 +661,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     
     if (format === "twoManBestBall" || format === "singles") {
       const playerGrossArr = team === "teamA" ? teamAPlayerGross : teamBPlayerGross;
-      const playerNetArr = team === "teamA" ? teamAPlayerNet : teamBPlayerNet;
       totalGross = playerGrossArr[pIdx];
-      totalNet = playerNetArr[pIdx];
+      // totalNet = totalGross - playerCourseHandicap (course handicap, not match strokes)
+      totalNet = totalGross - playerCourseHandicap;
       strokesVsParGross = totalGross - coursePar;
       // strokesVsParNet uses course handicap from match document (integer)
       strokesVsParNet = totalGross - playerCourseHandicap - coursePar;
