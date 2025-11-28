@@ -7,8 +7,8 @@ import type { RoundFormat, MatchData, MatchStatus, MatchResult, PlayerInMatch } 
 
 // --- SCORING HELPERS ---
 
-function clamp01(n: unknown) { return Number(n) === 1 ? 1 : 0; }
-function isNum(n: any): n is number { return typeof n === "number" && Number.isFinite(n); }
+export function clamp01(n: unknown) { return Number(n) === 1 ? 1 : 0; }
+export function isNum(n: any): n is number { return typeof n === "number" && Number.isFinite(n); }
 function to2(arr: any[]) { return [isNum(arr?.[0]) ? arr[0] : null, isNum(arr?.[1]) ? arr[1] : null]; }
 
 export function holesRange(obj: Record<string, any>) {
