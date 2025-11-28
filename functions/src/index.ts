@@ -25,7 +25,9 @@ import {
   summarize, 
   buildStatusAndResult,
   decideHole,
-  holesRange
+  holesRange,
+  clamp01,
+  isNum
 } from "./scoring/matchScoring.js";
 
 initializeApp();
@@ -221,10 +223,6 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
 // STATS ENGINE
 // Generates PlayerMatchFact documents when matches close
 // ============================================================================
-
-// Helper functions for stats calculation
-function clamp01(n: unknown) { return Number(n) === 1 ? 1 : 0; }
-function isNum(n: any): n is number { return typeof n === "number" && Number.isFinite(n); }
 
 export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (event) => {
   const matchId = event.params.matchId;
