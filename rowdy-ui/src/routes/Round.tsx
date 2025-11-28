@@ -100,7 +100,7 @@ export default function Round() {
       (snap) => {
         const ms = snap.docs
           .map(d => ({ id: d.id, ...d.data() } as MatchDoc))
-          .sort((a, b) => a.id.localeCompare(b.id));
+          .sort((a, b) => (a.matchNumber ?? 0) - (b.matchNumber ?? 0) || a.id.localeCompare(b.id));
         setMatches(ms);
         setMatchesLoaded(true);
       },
