@@ -1085,14 +1085,14 @@ export default function Match() {
                       whiteSpace: 'nowrap',
                       fontSize: '1rem',
                       fontWeight: 700,
-                      color: '#94a3b8'
+                      color: '#64748b'
                     }}>
                       ALL SQUARE
                     </div>
                     <div style={{ 
                       fontSize: '0.65rem', 
                       fontWeight: 600, 
-                      color: '#94a3b8',
+                      color: '#64748b',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em'
                     }}>
