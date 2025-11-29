@@ -10,7 +10,6 @@
     "id": "teamA",
     "name": "Team A Name",
     "logo": "", //URL from firebase storage
-    ,
     "captainId": "", // playerId of team captain
     "coCaptainId": "" // playerId of team co-captain
     "color": "#1e3a5f", //"#165B33"
@@ -26,7 +25,6 @@
     "id": "teamB",
     "name": "Team B Name",
     "logo": "", //URL from firebase storage
-    ,
     "captainId": "", // playerId of team captain
     "coCaptainId": "" // playerId of team co-captain
     "color": "#8b0000", //"#BB2528"
