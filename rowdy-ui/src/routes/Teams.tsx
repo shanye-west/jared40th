@@ -168,8 +168,8 @@ export default function Teams() {
 
             return (
               <div key={tier}>
-                {/* Tier header (single letter) */}
-                <div className="section-header">
+                {/* Tier header (single letter) - keep font size, reduce vertical padding */}
+                <div className="section-header py-0 text-xs">
                   {tier}
                 </div>
 
@@ -183,7 +183,7 @@ export default function Teams() {
                   return (
                     <div 
                       key={pid} 
-                      className="flex justify-between items-center px-4 py-3 border-b border-slate-200 hover:bg-slate-50 transition-colors duration-150"
+                      className="flex justify-between items-center px-4 py-2 border-b border-slate-200 hover:bg-slate-50 transition-colors duration-150"
                     >
                       <div className="flex items-baseline gap-2">
                         <span className="font-semibold">{name}</span>
