@@ -9,9 +9,7 @@
  * [
  *   {
  *     "id": "pShanePeterson",
- *     "displayName": "Shane Peterson",
- *     "username": "shanepeterson",
- *     "tempPassword": "1234"
+ *     "displayName": "Shane Peterson"
  *   }
  * ]
  */
@@ -37,8 +35,6 @@ const db = admin.firestore();
 type PlayerInput = {
   id: string;
   displayName: string;
-  username: string;
-  tempPassword: string;
 };
 
 async function seedPlayers(inputFile: string, force: boolean) {
@@ -57,8 +53,7 @@ async function seedPlayers(inputFile: string, force: boolean) {
     const p = players[i];
     if (!p.id) errors.push(`Player ${i}: missing 'id'`);
     if (!p.displayName) errors.push(`Player ${i}: missing 'displayName'`);
-    if (!p.username) errors.push(`Player ${i}: missing 'username'`);
-    if (!p.tempPassword) errors.push(`Player ${i}: missing 'tempPassword'`);
+    // username and tempPassword are no longer required
   }
 
   if (errors.length > 0) {
@@ -83,8 +78,6 @@ async function seedPlayers(inputFile: string, force: boolean) {
     batch.set(docRef, {
       id: player.id,
       displayName: player.displayName,
-      username: player.username,
-      tempPassword: player.tempPassword,
     });
 
     if (existing.exists) {
