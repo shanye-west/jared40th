@@ -484,18 +484,18 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         }
       }
       
-      // Ham & Egg tracking for Best Ball (NET scores)
-      // One player net par or better, other net bogey or worse on same hole
+      // Ham & Egg tracking for Best Ball
+      // One player NET par or better, other player NET double bogey or worse
       const hp = courseHoles.find(ch => ch.number === i)?.par ?? 4;
       if (Array.isArray(aArr) && aArr[0] != null && aArr[1] != null) {
         const a0Stroke = clamp01(after.teamAPlayers?.[0]?.strokesReceived?.[i-1]);
         const a1Stroke = clamp01(after.teamAPlayers?.[1]?.strokesReceived?.[i-1]);
         const a0Net = aArr[0] - a0Stroke;
         const a1Net = aArr[1] - a1Stroke;
-        const a0VsPar = a0Net - hp;
-        const a1VsPar = a1Net - hp;
-        // Ham & Egg: one <= 0 (par or better) AND other >= 1 (bogey or worse)
-        if ((a0VsPar <= 0 && a1VsPar >= 1) || (a1VsPar <= 0 && a0VsPar >= 1)) {
+        const a0NetVsPar = a0Net - hp;
+        const a1NetVsPar = a1Net - hp;
+        // Ham & Egg: one NET <= 0 (par or better) AND other NET >= 2 (double bogey or worse)
+        if ((a0NetVsPar <= 0 && a1NetVsPar >= 2) || (a1NetVsPar <= 0 && a0NetVsPar >= 2)) {
           teamAHamAndEggCount++;
         }
       }
@@ -504,9 +504,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         const b1Stroke = clamp01(after.teamBPlayers?.[1]?.strokesReceived?.[i-1]);
         const b0Net = bArr[0] - b0Stroke;
         const b1Net = bArr[1] - b1Stroke;
-        const b0VsPar = b0Net - hp;
-        const b1VsPar = b1Net - hp;
-        if ((b0VsPar <= 0 && b1VsPar >= 1) || (b1VsPar <= 0 && b0VsPar >= 1)) {
+        const b0NetVsPar = b0Net - hp;
+        const b1NetVsPar = b1Net - hp;
+        if ((b0NetVsPar <= 0 && b1NetVsPar >= 2) || (b1NetVsPar <= 0 && b0NetVsPar >= 2)) {
           teamBHamAndEggCount++;
         }
       }
@@ -558,20 +558,20 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       }
       
       // Ham & Egg tracking for Shamble (GROSS scores, since no strokes)
-      // One player gross par or better, other gross bogey or worse on same hole
+      // One player gross par or better, other gross double bogey or worse
       const hp = courseHoles.find(ch => ch.number === i)?.par ?? 4;
       if (Array.isArray(aArr) && aArr[0] != null && aArr[1] != null) {
         const a0VsPar = aArr[0] - hp;
         const a1VsPar = aArr[1] - hp;
-        // Ham & Egg: one <= 0 (par or better) AND other >= 1 (bogey or worse)
-        if ((a0VsPar <= 0 && a1VsPar >= 1) || (a1VsPar <= 0 && a0VsPar >= 1)) {
+        // Ham & Egg: one <= 0 (par or better) AND other >= 2 (double bogey or worse)
+        if ((a0VsPar <= 0 && a1VsPar >= 2) || (a1VsPar <= 0 && a0VsPar >= 2)) {
           teamAHamAndEggCount++;
         }
       }
       if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
         const b0VsPar = bArr[0] - hp;
         const b1VsPar = bArr[1] - hp;
-        if ((b0VsPar <= 0 && b1VsPar >= 1) || (b1VsPar <= 0 && b0VsPar >= 1)) {
+        if ((b0VsPar <= 0 && b1VsPar >= 2) || (b1VsPar <= 0 && b0VsPar >= 2)) {
           teamBHamAndEggCount++;
         }
       }
