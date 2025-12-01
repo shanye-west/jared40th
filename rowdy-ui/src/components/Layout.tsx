@@ -87,6 +87,26 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
 
         {/* Right: Hamburger Menu */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", minWidth: 48, position: "relative" }}>
+          {/* Debug button: copy OfflineImage logs (tap on phone to copy) */}
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                const logs = (window as any).__offlineImageLogs || [];
+                await navigator.clipboard.writeText(JSON.stringify(logs, null, 2));
+                // Small visual feedback
+                // eslint-disable-next-line no-alert
+                alert(`Copied ${logs.length} OfflineImage log entries to clipboard`);
+              } catch (err) {
+                // eslint-disable-next-line no-alert
+                alert('Failed to copy logs. Open console and run window.__offlineImageLogs');
+              }
+            }}
+            title="Copy image debug logs"
+            style={{ marginRight: 6, padding: 6, background: 'transparent', border: 'none', cursor: 'pointer' }}
+          >
+            🐞
+          </button>
           <button 
             onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }} 
             className="btn-back" 
