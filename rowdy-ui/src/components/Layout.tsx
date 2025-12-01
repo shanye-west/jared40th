@@ -16,6 +16,7 @@ type LayoutProps = {
 export default function Layout({ title, series, showBack, tournamentLogo, children }: LayoutProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { player, logout, loading: authLoading } = useAuth();
   const { isOnline, wasOffline } = useOnlineStatusWithHistory();
 
@@ -140,14 +141,14 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
                 style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
                 onClick={() => setMenuOpen(false)}
               >
-                🏠 Home
+                Home
               </Link>
               <Link 
                 to="/teams" 
                 style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
                 onClick={() => setMenuOpen(false)}
               >
-                👥 Team Rosters
+                Team Rosters
               </Link>
               {/* menu items continue */}
               
@@ -159,6 +160,8 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
                       onClick={async () => {
                         setMenuOpen(false);
                         await logout();
+                        setShowLogoutConfirm(true);
+                        setTimeout(() => setShowLogoutConfirm(false), 3000);
                         navigate("/");
                       }}
                       style={{ 
@@ -175,7 +178,7 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
                         fontSize: "1rem"
                       }}
                     >
-                      🚪 Logout
+                      Logout
                     </button>
                   ) : (
                     <Link 
@@ -183,7 +186,7 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
                       style={{ display: "block", padding: "12px 16px", color: "#2563eb", textDecoration: "none", fontWeight: 600 }}
                       onClick={() => setMenuOpen(false)}
                     >
-                      🔐 Login
+                      Login
                     </Link>
                   )}
                 </>
@@ -234,6 +237,27 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
           >
             <span>✓</span>
             <span>Back online — syncing changes</span>
+          </div>
+        )}
+
+        {/* Logout Confirmation Banner (auto-dismisses after 3s) */}
+        {showLogoutConfirm && (
+          <div 
+            style={{
+              background: "#3b82f6",
+              color: "white",
+              padding: "8px 16px",
+              textAlign: "center",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <span>👋</span>
+            <span>You've been logged out</span>
           </div>
         )}
 
