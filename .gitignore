@@ -70,6 +70,10 @@ node_modules/
 
 # service-account for firebase functions
 service-account.json
+scripts/serviceAccountKey.json
+
+# firestore snapshot (exported prod data)
+scripts/data/firestore-snapshot.json
 
 # real data for seeding
 scripts/data/players.json

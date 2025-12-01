@@ -288,3 +288,57 @@ These stats track when your individual score was used as the team score. Best Ba
 - **Two-Man Best Ball**: 2v2, each player plays their own ball, best **net** score per team counts. Ball usage stats tracked.
 - **Two-Man Shamble**: 2v2, players select a drive then play their own ball, best **gross** score counts (no handicap). Ball usage and drive stats tracked.
 - **Two-Man Scramble**: 2v2, team picks best shot each time, one team gross score. Drive stats tracked.
+
+---
+
+## Export & Seed Firestore (Manual Workflow)
+
+Use these scripts to export a production Firestore snapshot to JSON and to seed a (clean) development Firestore from that snapshot. Both steps are intentionally manual so you control which project / key is used.
+
+Files & location
+- `scripts/exportFirestore.js` — exports all top-level collections to `scripts/data/firestore-snapshot.json`
+- `scripts/seedFirestore.js` — seeds Firestore from the snapshot (only runs on an EMPTY target DB)
+- `scripts/serviceAccountKey.json` — your service account key (DO NOT commit)
+
+Important safety rules
+- The `export` script reads from the project tied to the service account key you place at `scripts/serviceAccountKey.json`. Put your *PROD* key there when exporting.
+- The `seed` script writes to the project tied to the service account key you place at `scripts/serviceAccountKey.json`. Put your *DEV* key there when seeding.
+- The `seed` script will refuse to run unless the target Firestore is completely empty. You must manually delete all collections/documents in the Firebase Console before running the seed script.
+- Service account keys and the snapshot file are ignored in `.gitignore` (`scripts/serviceAccountKey.json`, `scripts/data/firestore-snapshot.json`).
+
+How to export (PROD → JSON)
+
+1. Download a service account key for your **PROD** project (Firebase Console → Project Settings → Service Accounts → Generate new private key).
+2. Save the key as `scripts/serviceAccountKey.json` in this repository (local only; it is gitignored).
+3. Run the export script from the repository root:
+
+```bash
+cd scripts
+npm run export
+```
+
+4. The script will produce `scripts/data/firestore-snapshot.json` containing all top-level collections and documents. Timestamps in the snapshot are serialized and will be restored as Firestore `Timestamp`s by the seed script.
+
+How to seed (JSON → DEV)
+
+1. In the Firebase Console, manually delete all data in your DEV Firestore project. The seed script will abort if it finds any existing documents.
+2. Download a service account key for your **DEV** project and save it as `scripts/serviceAccountKey.json` (replacing the prod key).
+3. Ensure `scripts/data/firestore-snapshot.json` exists (created by the export step).
+4. Run the seed script from the repository root:
+
+```bash
+cd scripts
+npm run seed
+```
+
+5. The script will run a safety check (database must be empty). If it passes, it writes every collection and document from the snapshot into the target Firestore.
+
+Notes & Limitations
+- The scripts discover and export all top-level collections automatically, and are future-proof if you add more collections.
+- These scripts do not traverse nested subcollections. You indicated you do not use subcollections; if that changes I can update the scripts to recurse subcollections.
+- Keep `scripts/serviceAccountKey.json` local and never commit it to source control. The repo `.gitignore` already ignores the key and the snapshot file.
+- If you want the seed script to allow an explicit override (for example, to permit seeding into a non-empty but known dev snapshot), I can add a `--force` flag with clear warnings.
+
+Questions or next steps
+- Want me to add a `--force` option (requires typing a confirmation phrase)?
+- Prefer TypeScript versions of the scripts instead of plain Node? I can convert them.
