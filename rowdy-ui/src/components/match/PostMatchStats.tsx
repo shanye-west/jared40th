@@ -53,6 +53,8 @@ export function PostMatchStats({
   // Ball usage applies to shamble/scramble only; exclude bestBall per UX request
   const showBallUsage = format === "twoManShamble" || format === "twoManScramble";
   const showDrives = format === "twoManScramble" || format === "twoManShamble";
+  // Ham & Egg applies to bestBall and shamble (team formats with individual scores)
+  const showHamAndEgg = format === "twoManBestBall" || format === "twoManShamble";
 
   // Build player id lists
   const teamAPlayerIds: string[] = teamAPlayers.map(p => p.playerId);
@@ -428,6 +430,15 @@ export function PostMatchStats({
             valueB={formatStrokesVsPar(teamBFacts[0]?.teamStrokesVsParGross)} 
           />
         </>
+      )}
+
+      {/* HAM & EGG (Best Ball & Shamble) */}
+      {showHamAndEgg && (
+        <StatRow 
+          label="🍳 Ham & Eggs" 
+          valueA={teamAFacts[0]?.hamAndEggCount ?? 0} 
+          valueB={teamBFacts[0]?.hamAndEggCount ?? 0} 
+        />
       )}
 
       {/* BALL USAGE (Shamble & Scramble only) */}
