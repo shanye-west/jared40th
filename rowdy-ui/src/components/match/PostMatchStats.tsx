@@ -450,8 +450,8 @@ export function PostMatchStats({
       
       {hasBadges && (
         <div className="pt-1">
-          {jekyllHydeA && <StoryBadge icon="🎭" title="Jekyll & Hyde" description="24+ stroke gap between best and worst ball" teamColor={teamAColor} />}
-          {jekyllHydeB && <StoryBadge icon="🎭" title="Jekyll & Hyde" description="24+ stroke gap between best and worst ball" teamColor={teamBColor} alignRight />}
+          {jekyllHydeA && <StoryBadge icon="🎭" title="Jekyll & Hyde" description="Great Best Ball Team | Horrible Worst Ball Team" teamColor={teamAColor} />}
+          {jekyllHydeB && <StoryBadge icon="🎭" title="Jekyll & Hyde" description="Great Best Ball Team | Horrible Worst Ball Team" teamColor={teamBColor} alignRight />}
           {clutchWinA && <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamAColor} />}
           {clutchWinB && <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamBColor} alignRight />}
           {comebackWinA && <StoryBadge icon="🔥" title="Comeback Win" description="Rallied from 3+ down on the back 9" teamColor={teamAColor} />}
