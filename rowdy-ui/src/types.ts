@@ -177,6 +177,7 @@ export type PlayerMatchFact = {
   ballsUsedShared?: number;   // Best Ball/Shamble: holes where player tied with partner
   ballsUsedSoloWonHole?: number; // Best Ball/Shamble: solo ball AND team won the hole
   ballsUsedSoloPush?: number; // Best Ball/Shamble: solo ball AND hole was halved (tied)
+  hamAndEggCount?: number;    // Best Ball/Shamble: holes where one player net par or better, other net bogey or worse
   drivesUsed?: number;        // DRIVE_TRACKING: Scramble/Shamble: drives used by this player
 
   // Individual scoring stats (twoManBestBall, singles only)

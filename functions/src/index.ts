@@ -334,6 +334,19 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     }
   }
 
+  // Fetch course holes data early (needed for ham-and-egg calculations in loop)
+  let courseHoles: { number: number; par: number }[] = [];
+  if (courseId) {
+    const cSnapEarly = await db.collection("courses").doc(courseId).get();
+    if (cSnapEarly.exists && Array.isArray(cSnapEarly.data()?.holes)) {
+      courseHoles = cSnapEarly.data()!.holes.map((h: any) => ({ number: h.number || 0, par: h.par || 4 }));
+    }
+  }
+  // Fallback to default pars if no course data
+  if (courseHoles.length === 0) {
+    courseHoles = Array.from({ length: 18 }, (_, idx) => ({ number: idx + 1, par: 4 }));
+  }
+
   // Calculate match-wide stats by iterating through holes
   const holesData = after.holes || {};
   let leadChanges = 0;
@@ -354,6 +367,10 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const teamBBallsUsedSoloWonHole = [0, 0];
   const teamABallsUsedSoloPush = [0, 0];
   const teamBBallsUsedSoloPush = [0, 0];
+  
+  // Ham & Egg tracking (bestBall & shamble): one player net par or better, other net bogey or worse
+  let teamAHamAndEggCount = 0;
+  let teamBHamAndEggCount = 0;
   
   // Drive tracking (scramble & shamble)
   const teamADrivesUsed = [0, 0];
@@ -466,6 +483,33 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           if (i === 18) { teamBBallUsedOn18[0] = true; teamBBallUsedOn18[1] = true; }
         }
       }
+      
+      // Ham & Egg tracking for Best Ball (NET scores)
+      // One player net par or better, other net bogey or worse on same hole
+      const hp = courseHoles.find(ch => ch.number === i)?.par ?? 4;
+      if (Array.isArray(aArr) && aArr[0] != null && aArr[1] != null) {
+        const a0Stroke = clamp01(after.teamAPlayers?.[0]?.strokesReceived?.[i-1]);
+        const a1Stroke = clamp01(after.teamAPlayers?.[1]?.strokesReceived?.[i-1]);
+        const a0Net = aArr[0] - a0Stroke;
+        const a1Net = aArr[1] - a1Stroke;
+        const a0VsPar = a0Net - hp;
+        const a1VsPar = a1Net - hp;
+        // Ham & Egg: one <= 0 (par or better) AND other >= 2 (bogey or worse)
+        if ((a0VsPar <= 0 && a1VsPar >= 2) || (a1VsPar <= 0 && a0VsPar >= 2)) {
+          teamAHamAndEggCount++;
+        }
+      }
+      if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
+        const b0Stroke = clamp01(after.teamBPlayers?.[0]?.strokesReceived?.[i-1]);
+        const b1Stroke = clamp01(after.teamBPlayers?.[1]?.strokesReceived?.[i-1]);
+        const b0Net = bArr[0] - b0Stroke;
+        const b1Net = bArr[1] - b1Stroke;
+        const b0VsPar = b0Net - hp;
+        const b1VsPar = b1Net - hp;
+        if ((b0VsPar <= 0 && b1VsPar >= 2) || (b1VsPar <= 0 && b0VsPar >= 2)) {
+          teamBHamAndEggCount++;
+        }
+      }
     }
     
     // Shamble ball usage tracking (GROSS scores)
@@ -510,6 +554,25 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           teamBBallsUsedShared[0]++;
           teamBBallsUsedShared[1]++;
           if (i === 18) { teamBBallUsedOn18[0] = true; teamBBallUsedOn18[1] = true; }
+        }
+      }
+      
+      // Ham & Egg tracking for Shamble (GROSS scores, since no strokes)
+      // One player gross par or better, other gross bogey or worse on same hole
+      const hp = courseHoles.find(ch => ch.number === i)?.par ?? 4;
+      if (Array.isArray(aArr) && aArr[0] != null && aArr[1] != null) {
+        const a0VsPar = aArr[0] - hp;
+        const a1VsPar = aArr[1] - hp;
+        // Ham & Egg: one <= 0 (par or better) AND other >= 2 (bogey or worse)
+        if ((a0VsPar <= 0 && a1VsPar >= 2) || (a1VsPar <= 0 && a0VsPar >= 2)) {
+          teamAHamAndEggCount++;
+        }
+      }
+      if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
+        const b0VsPar = bArr[0] - hp;
+        const b1VsPar = bArr[1] - hp;
+        if ((b0VsPar <= 0 && b1VsPar >= 2) || (b1VsPar <= 0 && b0VsPar >= 2)) {
+          teamBHamAndEggCount++;
         }
       }
     }
@@ -601,9 +664,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
   const batch = db.batch();
 
-  // Fetch course holes data for holePerformance
-  let courseHoles: { number: number; par: number }[] = [];
-
   // Determine which players in this match are captains
   const pA = after.teamAPlayers || [];
   const pB = after.teamBPlayers || [];
@@ -613,16 +673,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const teamACaptainInMatch = teamACaptainId && teamAPlayerIds.includes(teamACaptainId);
   const teamBCaptainInMatch = teamBCaptainId && teamBPlayerIds.includes(teamBCaptainId);
   const isCaptainVsCaptainMatch = teamACaptainInMatch && teamBCaptainInMatch;
-  if (courseId) {
-    const cSnap2 = await db.collection("courses").doc(courseId).get();
-    if (cSnap2.exists && Array.isArray(cSnap2.data()?.holes)) {
-      courseHoles = cSnap2.data()!.holes.map((h: any) => ({ number: h.number || 0, par: h.par || 4 }));
-    }
-  }
-  // Fallback to default pars if no course data
-  if (courseHoles.length === 0) {
-    courseHoles = Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4 }));
-  }
 
   const writeFact = (p: any, team: "teamA" | "teamB", pIdx: number, opponentPlayers: any[], myTeamPlayers: any[]) => {
     if (!p?.playerId) return;
@@ -676,6 +726,12 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     let drivesUsed: number | null = null;
     if (format === "twoManScramble" || format === "twoManShamble") {
       drivesUsed = team === "teamA" ? teamADrivesUsed[pIdx] : teamBDrivesUsed[pIdx];
+    }
+    
+    // Ham & Egg stats (team-level count, same for both players on a team)
+    let hamAndEggCount: number | null = null;
+    if (format === "twoManBestBall" || format === "twoManShamble") {
+      hamAndEggCount = team === "teamA" ? teamAHamAndEggCount : teamBHamAndEggCount;
     }
     
     // Scoring stats
@@ -894,6 +950,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (ballsUsedSoloPush !== null) factData.ballsUsedSoloPush = ballsUsedSoloPush;
     if (ballUsedOn18 !== null) factData.ballUsedOn18 = ballUsedOn18;
     if (drivesUsed !== null) factData.drivesUsed = drivesUsed;
+    if (hamAndEggCount !== null) factData.hamAndEggCount = hamAndEggCount;
     
     factData.coursePar = coursePar;
     factData.playerCourseHandicap = playerCourseHandicap;
