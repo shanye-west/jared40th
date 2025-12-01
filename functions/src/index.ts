@@ -494,8 +494,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         const a1Net = aArr[1] - a1Stroke;
         const a0VsPar = a0Net - hp;
         const a1VsPar = a1Net - hp;
-        // Ham & Egg: one <= 0 (par or better) AND other >= 2 (bogey or worse)
-        if ((a0VsPar <= 0 && a1VsPar >= 2) || (a1VsPar <= 0 && a0VsPar >= 2)) {
+        // Ham & Egg: one <= 0 (par or better) AND other >= 1 (bogey or worse)
+        if ((a0VsPar <= 0 && a1VsPar >= 1) || (a1VsPar <= 0 && a0VsPar >= 1)) {
           teamAHamAndEggCount++;
         }
       }
@@ -506,7 +506,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         const b1Net = bArr[1] - b1Stroke;
         const b0VsPar = b0Net - hp;
         const b1VsPar = b1Net - hp;
-        if ((b0VsPar <= 0 && b1VsPar >= 2) || (b1VsPar <= 0 && b0VsPar >= 2)) {
+        if ((b0VsPar <= 0 && b1VsPar >= 1) || (b1VsPar <= 0 && b0VsPar >= 1)) {
           teamBHamAndEggCount++;
         }
       }
@@ -563,15 +563,15 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       if (Array.isArray(aArr) && aArr[0] != null && aArr[1] != null) {
         const a0VsPar = aArr[0] - hp;
         const a1VsPar = aArr[1] - hp;
-        // Ham & Egg: one <= 0 (par or better) AND other >= 2 (bogey or worse)
-        if ((a0VsPar <= 0 && a1VsPar >= 2) || (a1VsPar <= 0 && a0VsPar >= 2)) {
+        // Ham & Egg: one <= 0 (par or better) AND other >= 1 (bogey or worse)
+        if ((a0VsPar <= 0 && a1VsPar >= 1) || (a1VsPar <= 0 && a0VsPar >= 1)) {
           teamAHamAndEggCount++;
         }
       }
       if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
         const b0VsPar = bArr[0] - hp;
         const b1VsPar = bArr[1] - hp;
-        if ((b0VsPar <= 0 && b1VsPar >= 2) || (b1VsPar <= 0 && b0VsPar >= 2)) {
+        if ((b0VsPar <= 0 && b1VsPar >= 1) || (b1VsPar <= 0 && b0VsPar >= 1)) {
           teamBHamAndEggCount++;
         }
       }
