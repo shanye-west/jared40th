@@ -63,7 +63,7 @@ Data (Firestore, simplified)
 
 tournaments/{id}: { active, name, teamA:{ id,name,color, rosterByTier:{A:[],B:[],C:[],D:[]} }, teamB:{...}, roundIds[] }
 
-players/{id}: { displayName?, username? }
+players/{id}: { displayName? }
 
 rounds/{id}: { tournamentId, day, format, course:{ name, holes:[{number,par,hcpIndex}] }, matchIds[] }
 
