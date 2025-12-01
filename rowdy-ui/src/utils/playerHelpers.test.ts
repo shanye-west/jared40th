@@ -9,12 +9,12 @@ import type { PlayerLookup } from "./playerHelpers";
 // --- Test data ---
 
 const mockPlayers: PlayerLookup = {
-  "player1": { id: "player1", displayName: "Shane West", username: "swest" },
-  "player2": { id: "player2", displayName: "John Smith", username: "jsmith" },
-  "player3": { id: "player3", displayName: "Mary Jane Watson", username: "mjw" },
-  "player4": { id: "player4", displayName: "Madonna", username: "madonna" },
-  "player5": { id: "player5", username: "onlyusername" },
-  "player6": { id: "player6", displayName: "", username: "emptyname" },
+  "player1": { id: "player1", displayName: "Shane West" },
+  "player2": { id: "player2", displayName: "John Smith" },
+  "player3": { id: "player3", displayName: "Mary Jane Watson" },
+  "player4": { id: "player4", displayName: "Madonna" },
+  "player5": { id: "player5" },
+  "player6": { id: "player6", displayName: "" },
   "player7": { id: "player7" },
 };
 
@@ -25,15 +25,15 @@ describe("getPlayerName", () => {
     expect(getPlayerName("player1", mockPlayers)).toBe("Shane West");
   });
 
-  it("falls back to username when displayName missing", () => {
-    expect(getPlayerName("player5", mockPlayers)).toBe("onlyusername");
+  it("falls back to Unknown when displayName missing", () => {
+    expect(getPlayerName("player5", mockPlayers)).toBe("Unknown");
   });
 
-  it("falls back to username when displayName empty", () => {
-    expect(getPlayerName("player6", mockPlayers)).toBe("emptyname");
+  it("falls back to Unknown when displayName empty", () => {
+    expect(getPlayerName("player6", mockPlayers)).toBe("Unknown");
   });
 
-  it("returns 'Unknown' when neither displayName nor username", () => {
+  it("returns 'Unknown' when displayName missing", () => {
     expect(getPlayerName("player7", mockPlayers)).toBe("Unknown");
   });
 
@@ -77,8 +77,8 @@ describe("getPlayerShortName", () => {
     expect(getPlayerShortName("", mockPlayers)).toBe("?");
   });
 
-  it("falls back to username for short name", () => {
-    expect(getPlayerShortName("player5", mockPlayers)).toBe("o.");
+  it("falls back to Unknown for short name", () => {
+    expect(getPlayerShortName("player5", mockPlayers)).toBe("U.");
   });
 });
 
@@ -110,8 +110,8 @@ describe("getPlayerInitials", () => {
     expect(getPlayerInitials("", mockPlayers)).toBe("?");
   });
 
-  it("handles lowercase names (returns uppercase)", () => {
-    expect(getPlayerInitials("player5", mockPlayers)).toBe("O");
+  it("handles fallback names (returns uppercase)", () => {
+    expect(getPlayerInitials("player5", mockPlayers)).toBe("U");
   });
 });
 
