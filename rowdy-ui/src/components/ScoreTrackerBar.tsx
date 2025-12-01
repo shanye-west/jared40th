@@ -157,6 +157,20 @@ export default function ScoreTrackerBar({
           }}
         />
       ))}
+
+      {/* Midpoint marker (black) to indicate points needed to win */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: "50%",
+          width: 2,
+          background: "#000",
+          transform: "translateX(-50%)",
+          zIndex: 3,
+        }}
+      />
     </div>
   );
 }

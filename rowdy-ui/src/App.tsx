@@ -214,6 +214,9 @@ export default function App() {
             {/* Score Tracker Bar (above logos) */}
             {totalPointsAvailable > 0 && (
               <div style={{ margin: "8px 0 12px 0" }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#000', marginBottom: 6 }}>
+                  {pointsToWinDisplay} points needed to win
+                </div>
                 <ScoreTrackerBar
                   totalPoints={totalPointsAvailable}
                   teamAConfirmed={stats.fA}
@@ -266,13 +269,8 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Center info: points needed + divider (black) */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#000', textTransform: 'none' }}>
-                  {pointsToWinDisplay} points needed to win
-                </div>
-                <div style={{ height: 40, width: 2, background: '#000', borderRadius: 2 }}></div>
-              </div>
+              {/* Center spacer (midpoint marker moved into ScoreTrackerBar) */}
+              <div style={{ height: 40, width: 2 }}></div>
 
               {/* Team B */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
