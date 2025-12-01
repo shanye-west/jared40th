@@ -54,13 +54,8 @@ service cloud.firestore {
 
       // New: allow public edits if the tournament explicitly enables openPublicEdits
       function isTournamentOpen() {
-        // Try to read tournamentId from resource (existing doc) first, fallback to incoming request resource
-        let tid = null;
-        if (resource.data.tournamentId != null) {
-          tid = resource.data.tournamentId;
-        } else if (request.resource != null && request.resource.data.tournamentId != null) {
-          tid = request.resource.data.tournamentId;
-        }
+        // Determine tournamentId from existing resource or incoming request without using 'if/else'
+        let tid = resource.data.tournamentId != null ? resource.data.tournamentId : (request.resource != null && request.resource.data.tournamentId != null ? request.resource.data.tournamentId : null);
         return tid != null &&
                exists(/databases/$(database)/documents/tournaments/$(tid)) &&
                get(/databases/$(database)/documents/tournaments/$(tid)).data.openPublicEdits == true;
