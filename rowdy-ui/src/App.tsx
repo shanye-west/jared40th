@@ -202,7 +202,7 @@ export default function App() {
           {/* HERO SCOREBOARD */}
           <section className="card" style={{ textAlign: 'center', padding: 24 }}>
             <h2 style={{ 
-              margin: "0 0 16px 0", 
+              margin: "0 0 8px 0", 
               fontSize: "0.85rem", 
               color: "var(--text-secondary)", 
               textTransform: "uppercase", 
@@ -213,8 +213,8 @@ export default function App() {
 
             {/* Score Tracker Bar (above logos) */}
             {totalPointsAvailable > 0 && (
-              <div style={{ margin: "8px 0 12px 0" }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#000', marginBottom: 6 }}>
+              <div style={{ margin: "6px 0 12px 0" }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
                   {pointsToWinDisplay} points needed to win
                 </div>
                 <ScoreTrackerBar
@@ -250,22 +250,7 @@ export default function App() {
                 </div>
                 <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
                   <span style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}>{stats.fA}</span>
-                  {stats.pA > 0 && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        left: '100%',
-                        bottom: '15%',
-                        fontSize: "0.35em",
-                        color: "#aaa",
-                        marginLeft: 3,
-                        fontWeight: 400,
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      (+{stats.pA})
-                    </span>
-                  )}
+                  {/* Pending points hidden on main scoreboard */}
                 </div>
               </div>
 
@@ -291,22 +276,7 @@ export default function App() {
                   {tournament.teamB?.name || "Team B"}
                 </div>
                 <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
-                  {stats.pB > 0 && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        right: '100%',
-                        bottom: '15%',
-                        fontSize: "0.35em",
-                        color: "#aaa",
-                        marginRight: 3,
-                        fontWeight: 400,
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      (+{stats.pB})
-                    </span>
-                  )}
+                  {/* Pending points hidden on main scoreboard */}
                   <span style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}>{stats.fB}</span>
                 </div>
               </div>
