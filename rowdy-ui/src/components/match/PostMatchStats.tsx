@@ -441,6 +441,25 @@ export function PostMatchStats({
         />
       )}
 
+      {/* JEKYLL & HYDE BADGES (Best Ball & Shamble) */}
+      {showHamAndEgg && teamAFacts[0]?.jekyllAndHyde && (
+        <StoryBadge 
+          icon="🎭" 
+          title="Jekyll & Hyde" 
+          description="24+ stroke gap between best and worst ball"
+          teamColor={teamAColor}
+        />
+      )}
+      {showHamAndEgg && teamBFacts[0]?.jekyllAndHyde && (
+        <StoryBadge 
+          icon="🎭" 
+          title="Jekyll & Hyde" 
+          description="24+ stroke gap between best and worst ball"
+          teamColor={teamBColor}
+          alignRight
+        />
+      )}
+
       {/* BALL USAGE (Shamble & Scramble only) */}
       {showBallUsage && (
         <>
