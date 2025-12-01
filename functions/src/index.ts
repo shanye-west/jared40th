@@ -372,6 +372,13 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let teamAHamAndEggCount = 0;
   let teamBHamAndEggCount = 0;
   
+  // Jekyll & Hyde tracking: compare worst ball total vs best ball total
+  // For bestBall: uses NET scores; for shamble: uses GROSS scores
+  let teamABestBallTotal = 0;
+  let teamBBestBallTotal = 0;
+  let teamAWorstBallTotal = 0;
+  let teamBWorstBallTotal = 0;
+  
   // Drive tracking (scramble & shamble)
   const teamADrivesUsed = [0, 0];
   const teamBDrivesUsed = [0, 0];
@@ -498,6 +505,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         if ((a0NetVsPar <= 0 && a1NetVsPar >= 2) || (a1NetVsPar <= 0 && a0NetVsPar >= 2)) {
           teamAHamAndEggCount++;
         }
+        // Jekyll & Hyde tracking: best ball (min NET) and worst ball (max NET) per hole
+        teamABestBallTotal += Math.min(a0Net, a1Net);
+        teamAWorstBallTotal += Math.max(a0Net, a1Net);
       }
       if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
         const b0Stroke = clamp01(after.teamBPlayers?.[0]?.strokesReceived?.[i-1]);
@@ -509,6 +519,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         if ((b0NetVsPar <= 0 && b1NetVsPar >= 2) || (b1NetVsPar <= 0 && b0NetVsPar >= 2)) {
           teamBHamAndEggCount++;
         }
+        // Jekyll & Hyde tracking: best ball (min NET) and worst ball (max NET) per hole
+        teamBBestBallTotal += Math.min(b0Net, b1Net);
+        teamBWorstBallTotal += Math.max(b0Net, b1Net);
       }
     }
     
@@ -567,6 +580,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         if ((a0VsPar <= 0 && a1VsPar >= 2) || (a1VsPar <= 0 && a0VsPar >= 2)) {
           teamAHamAndEggCount++;
         }
+        // Jekyll & Hyde tracking: best ball (min GROSS) and worst ball (max GROSS) per hole
+        teamABestBallTotal += Math.min(aArr[0], aArr[1]);
+        teamAWorstBallTotal += Math.max(aArr[0], aArr[1]);
       }
       if (Array.isArray(bArr) && bArr[0] != null && bArr[1] != null) {
         const b0VsPar = bArr[0] - hp;
@@ -574,6 +590,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         if ((b0VsPar <= 0 && b1VsPar >= 2) || (b1VsPar <= 0 && b0VsPar >= 2)) {
           teamBHamAndEggCount++;
         }
+        // Jekyll & Hyde tracking: best ball (min GROSS) and worst ball (max GROSS) per hole
+        teamBBestBallTotal += Math.min(bArr[0], bArr[1]);
+        teamBWorstBallTotal += Math.max(bArr[0], bArr[1]);
       }
     }
     
@@ -732,6 +751,14 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     let hamAndEggCount: number | null = null;
     if (format === "twoManBestBall" || format === "twoManShamble") {
       hamAndEggCount = team === "teamA" ? teamAHamAndEggCount : teamBHamAndEggCount;
+    }
+    
+    // Jekyll & Hyde: worst ball total - best ball total >= 24
+    let jekyllAndHyde: boolean | null = null;
+    if (format === "twoManBestBall" || format === "twoManShamble") {
+      const bestBallTotal = team === "teamA" ? teamABestBallTotal : teamBBestBallTotal;
+      const worstBallTotal = team === "teamA" ? teamAWorstBallTotal : teamBWorstBallTotal;
+      jekyllAndHyde = (worstBallTotal - bestBallTotal) >= 24;
     }
     
     // Scoring stats
@@ -951,6 +978,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (ballUsedOn18 !== null) factData.ballUsedOn18 = ballUsedOn18;
     if (drivesUsed !== null) factData.drivesUsed = drivesUsed;
     if (hamAndEggCount !== null) factData.hamAndEggCount = hamAndEggCount;
+    if (jekyllAndHyde === true) factData.jekyllAndHyde = true;
     
     factData.coursePar = coursePar;
     factData.playerCourseHandicap = playerCourseHandicap;
