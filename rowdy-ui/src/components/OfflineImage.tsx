@@ -40,6 +40,11 @@ export default function OfflineImage({
   const imgRef = useCallback((img: HTMLImageElement | null) => {
     if (img && img.complete && img.naturalHeight > 0) {
       setIsLoaded(true);
+      try {
+        (window as any).__offlineImageLogs = (window as any).__offlineImageLogs || [];
+        (window as any).__offlineImageLogs.push({ when: 'imgRef-cached', src: src });
+        console.debug('[OfflineImage] imgRef cached', src);
+      } catch (e) {}
     }
   }, []);
 
@@ -48,14 +53,27 @@ export default function OfflineImage({
     if (!displayedSrc) return;
     let cancelled = false;
     const loader = new Image();
+    try {
+      (window as any).__offlineImageLogs = (window as any).__offlineImageLogs || [];
+      (window as any).__offlineImageLogs.push({ when: 'preload-start', src: displayedSrc });
+      console.debug('[OfflineImage] preload start', displayedSrc);
+    } catch (e) {}
     loader.src = displayedSrc;
     loader.onload = () => {
       if (cancelled) return;
       setIsLoaded(true);
       setHasError(false);
+      try {
+        (window as any).__offlineImageLogs.push({ when: 'preload-onload', src: displayedSrc });
+        console.debug('[OfflineImage] preload onload', displayedSrc);
+      } catch (e) {}
     };
     loader.onerror = () => {
       if (cancelled) return;
+      try {
+        (window as any).__offlineImageLogs.push({ when: 'preload-onerror', src: displayedSrc });
+        console.debug('[OfflineImage] preload onerror', displayedSrc);
+      } catch (e) {}
       // Try fallbackSrc once if available and not already tried
       if (fallbackSrc && !triedFallbackSrc && displayedSrc !== fallbackSrc) {
         setTriedFallbackSrc(true);
@@ -69,6 +87,15 @@ export default function OfflineImage({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayedSrc]);
+
+  // Log render state for debugging
+  useEffect(() => {
+    try {
+      (window as any).__offlineImageLogs = (window as any).__offlineImageLogs || [];
+      (window as any).__offlineImageLogs.push({ when: 'render-state', src: displayedSrc, isLoaded, hasError, triedFallbackSrc });
+      console.debug('[OfflineImage] render state', { displayedSrc, isLoaded, hasError, triedFallbackSrc });
+    } catch (e) {}
+  }, [displayedSrc, isLoaded, hasError, triedFallbackSrc]);
 
   // If no src provided, but a fallbackSrc exists, try it; otherwise show fallback
   // If no src provided, try fallbackSrc via effect (avoid setState during render)
