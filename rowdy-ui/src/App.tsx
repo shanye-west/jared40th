@@ -202,7 +202,7 @@ export default function App() {
           {/* HERO SCOREBOARD */}
           <section className="card" style={{ textAlign: 'center', padding: 24 }}>
             <h2 style={{ 
-              margin: "0 0 8px 0", 
+              margin: "0 0 6px 0", 
               fontSize: "0.85rem", 
               color: "var(--text-secondary)", 
               textTransform: "uppercase", 
@@ -213,8 +213,8 @@ export default function App() {
 
             {/* Score Tracker Bar (above logos) */}
             {totalPointsAvailable > 0 && (
-              <div style={{ margin: "6px 0 12px 0" }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+              <div style={{ margin: "4px 0 16px 0" }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
                   {pointsToWinDisplay} points needed to win
                 </div>
                 <ScoreTrackerBar

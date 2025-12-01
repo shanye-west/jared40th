@@ -149,7 +149,7 @@ export default function Teams() {
     }
   }, [tournamentLoaded, tournament, factsLoaded]);
 
-  const renderRoster = (teamColor: string, roster?: TierMap, handicaps?: Record<string, number>) => {
+  const renderRoster = (teamColor: string, roster?: TierMap, handicaps?: Record<string, number>, captainId?: string, _coCaptainId?: string) => {
     if (!roster) return (
       <div className="card p-4 opacity-60">
         <div className="text-center text-slate-400">No roster defined.</div>
@@ -179,6 +179,7 @@ export default function Teams() {
                   const s = stats[pid];
                   const name = p?.displayName || "Unknown";
                   const hcp = handicaps?.[pid];
+                  const isCaptain = pid === captainId;
                   
                   return (
                     <div 
@@ -189,6 +190,23 @@ export default function Teams() {
                         <span className="font-semibold">{name}</span>
                         {hcp != null && (
                           <span className="text-xs text-slate-500">({Number(hcp).toFixed(1)})</span>
+                        )}
+                        {isCaptain && (
+                          <span 
+                            style={{ 
+                              fontSize: '0.65rem', 
+                              fontWeight: 700,
+                              color: teamColor,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              padding: '1px 5px',
+                              borderRadius: 4,
+                              background: `color-mix(in srgb, ${teamColor} 15%, white)`,
+                              marginLeft: 6,
+                            }}
+                          >
+                            Captain
+                          </span>
                         )}
                       </div>
                       <div className="text-sm text-slate-500 font-mono">
@@ -316,13 +334,17 @@ export default function Teams() {
           renderRoster(
             teamAColor, 
             tournament?.teamA?.rosterByTier,
-            tournament?.teamA?.handicapByPlayer
+            tournament?.teamA?.handicapByPlayer,
+            tournament?.teamA?.captainId,
+            tournament?.teamA?.coCaptainId
           )
         ) : (
           renderRoster(
             teamBColor, 
             tournament?.teamB?.rosterByTier,
-            tournament?.teamB?.handicapByPlayer
+            tournament?.teamB?.handicapByPlayer,
+            tournament?.teamB?.captainId,
+            tournament?.teamB?.coCaptainId
           )
         )}
 
