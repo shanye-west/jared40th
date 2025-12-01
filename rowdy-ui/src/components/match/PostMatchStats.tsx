@@ -366,19 +366,12 @@ export function PostMatchStats({
 
   // --- NON-SINGLES FORMATS (Best Ball, Scramble, Shamble) ---
   return (
-    <div className="card p-4 space-y-4">
-      <h3 className="text-sm font-bold uppercase text-slate-500 tracking-wide text-center">
-        Match Stats
-      </h3>
+    <div className="card p-0">
+      {/* compact list: no section headings or dividing lines; start with scoring/player rows */}
 
-      {/* Team Headers removed per UX: start directly with scoring and player names */}
-
-      {/* MATCH RESULT */}
+      {/* MATCH RESULT (hidden for bestBall via earlier condition) */}
       {format !== "twoManBestBall" && (
-        <div>
-          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
-            Match Result
-          </div>
+        <>
           <StatRow 
             label="Holes Won" 
             valueA={teamAFacts[0]?.holesWon} 
@@ -402,15 +395,12 @@ export function PostMatchStats({
               valueB={largestLeadB > 0 ? largestLeadB : "–"} 
             />
           )}
-        </div>
+        </>
       )}
 
       {/* INDIVIDUAL SCORING (Best Ball) */}
       {showIndividualScoring && (
-        <div className="border-t border-slate-200 pt-3">
-          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
-            Scoring
-          </div>
+        <>
           <PlayerNamesHeader />
           <PlayerStatRow
             label="Gross"
@@ -422,15 +412,12 @@ export function PostMatchStats({
             teamA={teamAFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
             teamB={teamBFacts.map(f => renderCombined(f?.totalNet, f?.strokesVsParNet))}
           />
-        </div>
+        </>
       )}
 
       {/* TEAM SCORING (Scramble & Shamble) */}
       {showTeamScoring && (
-        <div className="border-t border-slate-200 pt-3">
-          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
-            Team Scoring
-          </div>
+        <>
           <StatRow 
             label="Team Gross" 
             valueA={teamAFacts[0]?.teamTotalGross} 
@@ -442,15 +429,12 @@ export function PostMatchStats({
             valueA={formatStrokesVsPar(teamAFacts[0]?.teamStrokesVsParGross)} 
             valueB={formatStrokesVsPar(teamBFacts[0]?.teamStrokesVsParGross)} 
           />
-        </div>
+        </>
       )}
 
-      {/* BALL USAGE (Best Ball & Shamble) */}
+      {/* BALL USAGE (Shamble & Scramble only) */}
       {showBallUsage && (
-        <div className="border-t border-slate-200 pt-3">
-          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
-            Ball Usage
-          </div>
+        <>
           <PlayerNamesHeader />
           <PlayerStatRow 
             label="Balls Used" 
@@ -477,61 +461,55 @@ export function PostMatchStats({
             teamA={teamAFacts.map(f => f.ballsUsedSoloPush)} 
             teamB={teamBFacts.map(f => f.ballsUsedSoloPush)} 
           />
-        </div>
+        </>
       )}
 
       {/* DRIVE USAGE (Scramble & Shamble) */}
       {showDrives && (
-        <div className="border-t border-slate-200 pt-3">
-          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
-            Drives
-          </div>
+        <>
           <PlayerNamesHeader />
           <PlayerStatRow 
             label="Drives Used" 
             teamA={teamAFacts.map(f => f.drivesUsed)} 
             teamB={teamBFacts.map(f => f.drivesUsed)} 
           />
-        </div>
+        </>
       )}
 
       {/* MOMENTUM STATS (non-singles) */}
-      <div className="border-t border-slate-200 pt-3">
-        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2 text-center">
-          Momentum
-        </div>
+      <>
         {sampleFact?.leadChanges != null && sampleFact.leadChanges > 0 && (
           <MatchLevelStat label="Lead Changes" value={sampleFact.leadChanges} />
         )}
         {hasStoryStats && (
-          <div className="space-y-2 mt-2">
+          <div>
             {clutchWinTeamA && (
               <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamAColor} />
             )}
             {clutchWinTeamB && (
-              <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamBColor} />
+              <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamBColor} alignRight />
             )}
             {teamAComebackWin && (
               <StoryBadge icon="🔥" title="Comeback Win" description="Rallied from 3+ down on the back 9" teamColor={teamAColor} />
             )}
             {teamBComebackWin && (
-              <StoryBadge icon="🔥" title="Comeback Win" description="Rallied from 3+ down on the back 9" teamColor={teamBColor} />
+              <StoryBadge icon="🔥" title="Comeback Win" description="Rallied from 3+ down on the back 9" teamColor={teamBColor} alignRight />
             )}
             {teamABlownLead && (
               <StoryBadge icon="💔" title="Blown Lead" description="Lost 3+ lead on the back 9" teamColor={teamAColor} />
             )}
             {teamBBlownLead && (
-              <StoryBadge icon="💔" title="Blown Lead" description="Lost 3+ lead on the back 9" teamColor={teamBColor} />
+              <StoryBadge icon="💔" title="Blown Lead" description="Lost 3+ lead on the back 9" teamColor={teamBColor} alignRight />
             )}
             {teamANeverBehind && (
               <StoryBadge icon="🏆" title="Never Behind" description="Led or tied the entire match" teamColor={teamAColor} />
             )}
             {teamBNeverBehind && (
-              <StoryBadge icon="🏆" title="Never Behind" description="Led or tied the entire match" teamColor={teamBColor} />
+              <StoryBadge icon="🏆" title="Never Behind" description="Led or tied the entire match" teamColor={teamBColor} alignRight />
             )}
           </div>
         )}
-      </div>
+      </>
     </div>
   );
 }
