@@ -169,26 +169,26 @@ const ScoreInputCell = memo(function ScoreInputCell({
           {/* Outer circles for eagle+ (2+ under par) */}
           {circleCount >= 2 && (
             <div 
-              className="absolute rounded-full border-2 border-black"
-              style={{ width: '30px', height: '30px' }}
+              className="absolute rounded-full border border-black"
+              style={{ width: '32px', height: '32px' }}
             />
           )}
           {circleCount >= 3 && (
             <div 
-              className="absolute rounded-full border-2 border-black"
-              style={{ width: '34px', height: '34px' }}
+              className="absolute rounded-full border border-black"
+              style={{ width: '36px', height: '36px' }}
             />
           )}
           {circleCount >= 4 && (
             <div 
-              className="absolute rounded-full border-2 border-black"
-              style={{ width: '38px', height: '38px' }}
+              className="absolute rounded-full border border-black"
+              style={{ width: '40px', height: '40px' }}
             />
           )}
           {/* Inner circle for birdie (always shown when under par) */}
           <div 
-            className="absolute rounded-full border-2 border-black"
-            style={{ width: '26px', height: '26px' }}
+            className="absolute rounded-full border border-black"
+            style={{ width: '28px', height: '28px' }}
           />
         </div>
       )}
