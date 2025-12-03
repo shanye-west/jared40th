@@ -223,3 +223,67 @@ export type PlayerStatDoc = {
   matchesPlayed: number;
   lastUpdated?: any; // Firestore Timestamp
 };
+
+// =============================================================================
+// PLAYER STATS BY SERIES
+// Aggregated stats per player per tournament series (rowdyCup, christmasClassic)
+// =============================================================================
+
+export type TournamentSeries = "rowdyCup" | "christmasClassic";
+
+export type PlayerStatsBySeries = {
+  playerId: string;
+  series: TournamentSeries;
+  
+  // Core record
+  wins: number;
+  losses: number;
+  halves: number;
+  points: number;
+  matchesPlayed: number;
+  
+  // Format breakdown
+  formatBreakdown?: {
+    singles?: { wins: number; losses: number; halves: number; matches: number };
+    twoManBestBall?: { wins: number; losses: number; halves: number; matches: number };
+    twoManShamble?: { wins: number; losses: number; halves: number; matches: number };
+    twoManScramble?: { wins: number; losses: number; halves: number; matches: number };
+  };
+  
+  // Scoring stats (individual formats only: singles, bestBall)
+  totalGross?: number;        // Cumulative gross strokes
+  totalNet?: number;          // Cumulative net strokes
+  holesPlayed?: number;       // For calculating averages
+  strokesVsParGross?: number; // Cumulative strokes vs par (gross)
+  strokesVsParNet?: number;   // Cumulative strokes vs par (net)
+  
+  // Counting stats
+  birdies?: number;
+  eagles?: number;
+  holesWon?: number;
+  holesLost?: number;
+  holesHalved?: number;
+  
+  // Badge counters
+  comebackWins: number;
+  blownLeads: number;
+  neverBehindWins: number;   // Won without ever trailing
+  jekyllAndHydes: number;    // Worst ball - best ball >= 24
+  clutchWins: number;        // Match decided on 18th hole AND player's team won
+  
+  // Team format stats
+  drivesUsed?: number;
+  ballsUsed?: number;
+  ballsUsedSolo?: number;
+  hamAndEggs?: number;
+  
+  // Captain stats
+  captainWins?: number;
+  captainLosses?: number;
+  captainHalves?: number;
+  captainVsCaptainWins?: number;
+  captainVsCaptainLosses?: number;
+  captainVsCaptainHalves?: number;
+  
+  lastUpdated?: any; // Firestore Timestamp
+};

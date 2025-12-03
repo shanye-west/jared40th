@@ -22,7 +22,7 @@ A mobile-first PWA for a 12v12 Ryder Cup-style golf tournament. Players enter gr
 - `matches` - `teamAPlayers/teamBPlayers` with `strokesReceived[18]`; `holes` with format-specific inputs
 - `courses` - Hole data with `holes[18]` array containing `par`, `hcpIndex`; also `name`, `tees`, `par` (total course par)
 - `playerMatchFacts` - Immutable per-match stats per player (see PlayerMatchFact fields below)
-- `playerStats` - Aggregated lifetime stats with `lastUpdated` timestamp
+- `playerStats/{playerId}/bySeries/{series}` - Aggregated stats per player per tournament series (see PlayerStatsBySeries below)
 
 ## Match Formats & Scoring
 
@@ -60,6 +60,22 @@ Generated when a match closes (`status.closed = true`):
 - `opponentIds`, `opponentTiers`, `opponentHandicaps` - Opponent context
 - `courseId`, `day`, `tournamentYear`, `tournamentName`, `tournamentSeries` - Round/tournament context
 
+## PlayerStatsBySeries Fields
+Aggregated when `playerMatchFacts` are written. Stored in `playerStats/{playerId}/bySeries/{series}`:
+- `playerId`, `series` - References (series = "rowdyCup" | "christmasClassic")
+- `wins`, `losses`, `halves`, `points`, `matchesPlayed` - Core record
+- `formatBreakdown` - Win/loss/halve by format (singles, twoManBestBall, twoManShamble, twoManScramble)
+- `totalGross`, `totalNet`, `holesPlayed` - Cumulative scoring (individual formats only)
+- `strokesVsParGross`, `strokesVsParNet` - Cumulative strokes vs par
+- `birdies`, `eagles` - Counting stats from holePerformance
+- `holesWon`, `holesLost`, `holesHalved` - Aggregate hole results
+- `comebackWins`, `blownLeads`, `neverBehindWins` - Momentum badges
+- `jekyllAndHydes` - Team worst ball - best ball >= 24 (bestBall/shamble)
+- `clutchWins` - Match decided on 18th AND player's team won
+- `drivesUsed`, `ballsUsed`, `ballsUsedSolo`, `hamAndEggs` - Team format stats
+- `captainWins/Losses/Halves`, `captainVsCaptainWins/Losses/Halves` - Captain stats
+- `lastUpdated` - Timestamp
+
 ## Development Commands
 
 \`\`\`bash
@@ -96,7 +112,7 @@ useEffect(() => {
 - \`linkRoundToTournament\` - onWrite: adds roundId to tournament.roundIds
 - \`computeMatchOnWrite\` - onWrite: calculates \`status\` and \`result\`
 - \`updateMatchFacts\` - onWrite: generates \`playerMatchFacts\` when \`status.closed\`
-- \`aggregatePlayerStats\` - onWrite: updates \`playerStats\` from facts
+- \`aggregatePlayerStats\` - onWrite: updates \`playerStats/{playerId}/bySeries/{series}\` from facts
 
 ### Format-Aware Components
 Match.tsx renders different input layouts based on format:
