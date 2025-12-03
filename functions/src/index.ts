@@ -1003,27 +1003,173 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
 // ============================================================================
 // PLAYER STATS AGGREGATION
-// Aggregates PlayerMatchFact documents into PlayerStats
+// Aggregates PlayerMatchFact documents into PlayerStats by tournament series
+// Collection: playerStats/{playerId}/bySeries/{series}
 // ============================================================================
 
 export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}", async (event) => {
   const data = event.data?.after?.data() || event.data?.before?.data();
   if (!data?.playerId) return;
+  
+  const playerId = data.playerId;
+  const series = data.tournamentSeries;
+  
+  // If no series, skip aggregation (shouldn't happen but be safe)
+  if (!series) {
+    console.warn(`playerMatchFact ${event.params.factId} has no tournamentSeries, skipping aggregation`);
+    return;
+  }
 
-  const snap = await db.collection("playerMatchFacts").where("playerId", "==", data.playerId).get();
-  let wins = 0, losses = 0, halves = 0, totalPoints = 0, matchesPlayed = 0;
+  // Query all facts for this player in this series
+  const snap = await db.collection("playerMatchFacts")
+    .where("playerId", "==", playerId)
+    .where("tournamentSeries", "==", series)
+    .get();
+  
+  // Initialize stats
+  let wins = 0, losses = 0, halves = 0, points = 0, matchesPlayed = 0;
+  let totalGross = 0, totalNet = 0, holesPlayed = 0;
+  let strokesVsParGross = 0, strokesVsParNet = 0;
+  let birdies = 0, eagles = 0;
+  let holesWon = 0, holesLost = 0, holesHalved = 0;
+  let comebackWins = 0, blownLeads = 0, neverBehindWins = 0;
+  let jekyllAndHydes = 0, clutchWins = 0;
+  let drivesUsed = 0, ballsUsed = 0, ballsUsedSolo = 0, hamAndEggs = 0;
+  let captainWins = 0, captainLosses = 0, captainHalves = 0;
+  let captainVsCaptainWins = 0, captainVsCaptainLosses = 0, captainVsCaptainHalves = 0;
+  
+  // Format breakdown
+  const formatBreakdown: Record<string, { wins: number; losses: number; halves: number; matches: number }> = {
+    singles: { wins: 0, losses: 0, halves: 0, matches: 0 },
+    twoManBestBall: { wins: 0, losses: 0, halves: 0, matches: 0 },
+    twoManShamble: { wins: 0, losses: 0, halves: 0, matches: 0 },
+    twoManScramble: { wins: 0, losses: 0, halves: 0, matches: 0 },
+  };
 
   snap.forEach(d => {
     const f = d.data();
     matchesPlayed++;
-    totalPoints += (f.pointsEarned || 0);
-    if (f.outcome === "win") wins++;
-    else if (f.outcome === "loss") losses++;
-    else halves++;
+    points += (f.pointsEarned || 0);
+    
+    // Win/Loss/Halve
+    if (f.outcome === "win") {
+      wins++;
+      if (f.format && formatBreakdown[f.format]) formatBreakdown[f.format].wins++;
+    } else if (f.outcome === "loss") {
+      losses++;
+      if (f.format && formatBreakdown[f.format]) formatBreakdown[f.format].losses++;
+    } else {
+      halves++;
+      if (f.format && formatBreakdown[f.format]) formatBreakdown[f.format].halves++;
+    }
+    if (f.format && formatBreakdown[f.format]) formatBreakdown[f.format].matches++;
+    
+    // Hole results
+    holesWon += (f.holesWon || 0);
+    holesLost += (f.holesLost || 0);
+    holesHalved += (f.holesHalved || 0);
+    
+    // Scoring stats (only for individual formats)
+    if (f.format === "singles" || f.format === "twoManBestBall") {
+      if (typeof f.totalGross === "number") totalGross += f.totalGross;
+      if (typeof f.totalNet === "number") totalNet += f.totalNet;
+      if (typeof f.strokesVsParGross === "number") strokesVsParGross += f.strokesVsParGross;
+      if (typeof f.strokesVsParNet === "number") strokesVsParNet += f.strokesVsParNet;
+      holesPlayed += (f.finalThru || 18);
+      
+      // Count birdies and eagles from holePerformance
+      if (Array.isArray(f.holePerformance)) {
+        f.holePerformance.forEach((hp: any) => {
+          if (hp.gross != null && hp.par != null) {
+            const diff = hp.gross - hp.par;
+            if (diff === -1) birdies++;
+            else if (diff <= -2) eagles++;
+          }
+        });
+      }
+    }
+    
+    // Badge counters
+    if (f.comebackWin === true) comebackWins++;
+    if (f.blownLead === true) blownLeads++;
+    if (f.wasNeverBehind === true && f.outcome === "win") neverBehindWins++;
+    if (f.jekyllAndHyde === true) jekyllAndHydes++;
+    
+    // Clutch win: match decided on 18th AND player's team won
+    if (f.decidedOn18 === true && f.won18thHole === true) clutchWins++;
+    
+    // Team format stats
+    if (typeof f.drivesUsed === "number") drivesUsed += f.drivesUsed;
+    if (typeof f.ballsUsed === "number") ballsUsed += f.ballsUsed;
+    if (typeof f.ballsUsedSolo === "number") ballsUsedSolo += f.ballsUsedSolo;
+    if (typeof f.hamAndEggCount === "number") hamAndEggs += f.hamAndEggCount;
+    
+    // Captain stats
+    if (f.isCaptain === true) {
+      if (f.outcome === "win") captainWins++;
+      else if (f.outcome === "loss") captainLosses++;
+      else captainHalves++;
+      
+      if (f.captainVsCaptain === true) {
+        if (f.outcome === "win") captainVsCaptainWins++;
+        else if (f.outcome === "loss") captainVsCaptainLosses++;
+        else captainVsCaptainHalves++;
+      }
+    }
   });
 
-  await db.collection("playerStats").doc(data.playerId).set({
-    wins, losses, halves, totalPoints, matchesPlayed,
-    lastUpdated: FieldValue.serverTimestamp()
-  }, { merge: true });
+  // Build the stats document
+  const statsDoc: any = {
+    playerId,
+    series,
+    wins,
+    losses,
+    halves,
+    points,
+    matchesPlayed,
+    formatBreakdown,
+    holesWon,
+    holesLost,
+    holesHalved,
+    comebackWins,
+    blownLeads,
+    neverBehindWins,
+    jekyllAndHydes,
+    clutchWins,
+    lastUpdated: FieldValue.serverTimestamp(),
+  };
+  
+  // Only include scoring stats if we have individual format data
+  if (holesPlayed > 0) {
+    statsDoc.totalGross = totalGross;
+    statsDoc.totalNet = totalNet;
+    statsDoc.holesPlayed = holesPlayed;
+    statsDoc.strokesVsParGross = strokesVsParGross;
+    statsDoc.strokesVsParNet = strokesVsParNet;
+    statsDoc.birdies = birdies;
+    statsDoc.eagles = eagles;
+  }
+  
+  // Only include team format stats if we have them
+  if (drivesUsed > 0) statsDoc.drivesUsed = drivesUsed;
+  if (ballsUsed > 0) statsDoc.ballsUsed = ballsUsed;
+  if (ballsUsedSolo > 0) statsDoc.ballsUsedSolo = ballsUsedSolo;
+  if (hamAndEggs > 0) statsDoc.hamAndEggs = hamAndEggs;
+  
+  // Only include captain stats if player was ever captain
+  if (captainWins > 0 || captainLosses > 0 || captainHalves > 0) {
+    statsDoc.captainWins = captainWins;
+    statsDoc.captainLosses = captainLosses;
+    statsDoc.captainHalves = captainHalves;
+  }
+  if (captainVsCaptainWins > 0 || captainVsCaptainLosses > 0 || captainVsCaptainHalves > 0) {
+    statsDoc.captainVsCaptainWins = captainVsCaptainWins;
+    statsDoc.captainVsCaptainLosses = captainVsCaptainLosses;
+    statsDoc.captainVsCaptainHalves = captainVsCaptainHalves;
+  }
+
+  // Write to subcollection: playerStats/{playerId}/bySeries/{series}
+  await db.collection("playerStats").doc(playerId)
+    .collection("bySeries").doc(series)
+    .set(statsDoc, { merge: true });
 });
