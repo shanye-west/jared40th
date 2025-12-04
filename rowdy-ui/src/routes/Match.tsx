@@ -13,6 +13,7 @@ import { formatRoundType } from "../utils";
 import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
+import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
 import { useAuth } from "../contexts/AuthContext";
 import { 
   MatchFlowGraph, 
@@ -239,7 +240,7 @@ export default function Match() {
 
   // Debounced save for score inputs - prevents Firestore writes on every keystroke
   // Uses 400ms delay so typing "45" only fires one save with "45", not two saves
-  const { debouncedSave: debouncedSaveHole } = useDebouncedSave(saveHole, 400);
+  const { debouncedSave: debouncedSaveHole, saveStatus } = useDebouncedSave(saveHole, 400);
 
   // DRIVE_TRACKING: Get current drive selection for a hole
   function getDriveValue(hole: typeof holes[0], team: "A" | "B"): 0 | 1 | null {
@@ -673,7 +674,13 @@ export default function Match() {
 
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
         
-        <div className="card p-0 overflow-hidden">
+        <div className="card p-0 overflow-hidden relative">
+          {/* Save status indicator - top right corner */}
+          {canEdit && !isMatchClosed && (
+            <div className="absolute top-2 right-2 z-20">
+              <SaveStatusIndicator status={saveStatus} />
+            </div>
+          )}
           <div 
             className="overflow-x-auto"
             style={{ WebkitOverflowScrolling: "touch" }}
