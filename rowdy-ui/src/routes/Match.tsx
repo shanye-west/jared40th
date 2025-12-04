@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, memo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -7,25 +7,32 @@ import {
   SCORECARD_CELL_WIDTH, 
   SCORECARD_LABEL_WIDTH, 
   SCORECARD_TOTAL_COL_WIDTH,
-  MIN_DRIVES_PER_ROUND 
+  MIN_DRIVES_PER_ROUND,
 } from "../constants";
 import { formatRoundType } from "../utils";
 import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlayerShortNameFromLookup, getPlayerInitials as getPlayerInitialsFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { useAuth } from "../contexts/AuthContext";
-import { MatchFlowGraph } from "../components/match/MatchFlowGraph";
-import { PostMatchStats } from "../components/match/PostMatchStats";
+import { 
+  MatchFlowGraph, 
+  PostMatchStats,
+  PlayerScoreRow,
+  TeamScoreRow,
+  DriveSelectorsSection,
+  DrivesTrackerBanner,
+  type HoleData,
+} from "../components/match";
 import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { Modal, ModalActions } from "../components/Modal";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
-import { predictClose, computeRunningStatus, type HoleData, type HoleInput } from "../utils/matchScoring";
+import { predictClose, computeRunningStatus, type HoleData as MatchScoringHoleData, type HoleInput } from "../utils/matchScoring";
 
 // --- MATCH CLOSING HELPERS ---
 
 /**
- * Wrapper for predictClose that adapts the Match.tsx holes format to HoleData[]
+ * Wrapper for predictClose that adapts the Match.tsx holes format to MatchScoringHoleData[]
  */
 function wouldCloseMatch(
   holes: Array<{ k: string; num: number; input: any; par: number }>,
@@ -36,217 +43,11 @@ function wouldCloseMatch(
   teamBPlayers?: any[]
 ): { wouldClose: boolean; winner: "teamA" | "teamB" | "AS" | null; margin: number; thru: number } {
   // Convert holes to HoleData format and find pending hole number
-  const holeData: HoleData[] = holes.map(h => ({ num: h.num, input: h.input }));
+  const holeData: MatchScoringHoleData[] = holes.map(h => ({ num: h.num, input: h.input }));
   const pendingHoleNum = holes.find(h => h.k === pendingHoleKey)?.num ?? 0;
   
   return predictClose(holeData, pendingHoleNum, pendingInput, format, teamAPlayers, teamBPlayers);
 }
-
-// --- MEMOIZED COMPONENTS ---
-
-/** Props for ScoreInputCell */
-interface ScoreInputCellProps {
-  holeKey: string;
-  holeNum: number;
-  value: number | "";
-  par: number;
-  locked: boolean;
-  hasStroke: boolean;
-  hasDrive: boolean;
-  lowScoreStatus: 'solo' | 'tied' | null;
-  teamColor: 'A' | 'B';
-  onChange: (holeKey: string, value: number | null) => void;
-}
-
-/** Memoized score input cell - prevents re-render unless props change */
-const ScoreInputCell = memo(function ScoreInputCell({
-  holeKey,
-  holeNum,
-  value,
-  par,
-  locked,
-  hasStroke,
-  hasDrive,
-  lowScoreStatus,
-  teamColor,
-  onChange,
-}: ScoreInputCellProps) {
-  // Use team-specific colors for low score highlighting
-  const lowScoreBg = teamColor === 'A'
-    ? (lowScoreStatus === 'solo' ? 'bg-blue-100' : lowScoreStatus === 'tied' ? 'bg-blue-50' : '')
-    : (lowScoreStatus === 'solo' ? 'bg-red-100' : lowScoreStatus === 'tied' ? 'bg-red-50' : '');
-
-  // Calculate how many under par (only for birdies or better)
-  const underPar = typeof value === 'number' && par ? par - value : 0;
-  // Number of circles: 1 for birdie (1 under), 2 for eagle (2 under), etc.
-  const circleCount = underPar > 0 ? underPar : 0;
-
-  return (
-    <div className="relative flex flex-col items-center">
-      <input
-        type="number"
-        inputMode="numeric"
-        aria-label={`Score for hole ${holeNum}`}
-        className={`
-          w-10 h-10 text-center text-base font-semibold rounded-md border
-          focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
-          transition-colors duration-100
-          ${locked 
-            ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
-            : lowScoreBg ? `${lowScoreBg} border-slate-200 hover:border-slate-300` : "bg-white border-slate-200 hover:border-slate-300"
-          }
-        `}
-        value={value}
-        disabled={locked}
-        onChange={(e) => {
-          const val = e.target.value === "" ? null : Number(e.target.value);
-          onChange(holeKey, val);
-        }}
-      />
-      {/* Birdie/Eagle circles - centered over input */}
-      {circleCount > 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          {/* Outer circles for eagle+ (2+ under par) */}
-          {circleCount >= 2 && (
-            <div 
-              className="absolute rounded-full border border-black/70"
-              style={{ width: '34px', height: '34px' }}
-            />
-          )}
-          {circleCount >= 3 && (
-            <div 
-              className="absolute rounded-full border border-black/70"
-              style={{ width: '38px', height: '38px' }}
-            />
-          )}
-          {circleCount >= 4 && (
-            <div 
-              className="absolute rounded-full border border-black/70"
-              style={{ width: '42px', height: '42px' }}
-            />
-          )}
-          {/* Inner circle for birdie (always shown when under par) */}
-          <div 
-            className="absolute rounded-full border border-black/70"
-            style={{ width: '30px', height: '30px' }}
-          />
-        </div>
-      )}
-      {hasStroke && (
-        <div className="absolute top-1 right-1 w-2 h-2 bg-sky-400 rounded-full"></div>
-      )}
-      {hasDrive && (
-        <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold text-green-600">D</div>
-      )}
-    </div>
-  );
-});
-
-/** Props for PlayerScoreRow */
-interface PlayerScoreRowProps {
-  team: "A" | "B";
-  pIdx: number;
-  label: string;
-  color: string;
-  holes: Array<{ k: string; num: number; input: any; par: number; hcpIndex?: number; yards?: number }>;
-  isLastOfTeam: boolean;
-  isTeamB?: boolean; // For different bottom border style
-  trackDrives: boolean;
-  getCellValue: (holeKey: string) => number | "";
-  isHoleLocked: (holeNum: number) => boolean;
-  hasStroke: (holeIdx: number) => boolean;
-  getDriveValue: (holeKey: string) => 0 | 1 | null;
-  getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
-  onCellChange: (holeKey: string, value: number | null) => void;
-  outTotal: number | null;
-  inTotal: number | null;
-  totalScore: number | null;
-}
-
-/** Memoized player score row - renders 18 ScoreInputCells + totals */
-const PlayerScoreRow = memo(function PlayerScoreRow({
-  team,
-  pIdx,
-  label,
-  color,
-  holes,
-  isLastOfTeam,
-  isTeamB,
-  trackDrives,
-  getCellValue,
-  isHoleLocked,
-  hasStroke,
-  getDriveValue,
-  getLowScoreStatus,
-  onCellChange,
-  outTotal,
-  inTotal,
-  totalScore,
-}: PlayerScoreRowProps) {
-  // Team B last row has thicker border
-  const rowClassName = isTeamB && isLastOfTeam 
-    ? "border-b-2 border-slate-300" 
-    : isLastOfTeam 
-      ? "" 
-      : "border-b border-slate-100";
-
-  return (
-    <tr className={rowClassName}>
-      <td 
-        className="sticky left-0 z-10 bg-white text-left px-3 py-1 font-semibold whitespace-nowrap"
-        style={{ color }}
-      >
-        {label}
-      </td>
-      {/* Front 9 holes */}
-      {holes.slice(0, 9).map(h => (
-        <td key={h.k} className="p-0.5">
-          <ScoreInputCell
-            holeKey={h.k}
-            holeNum={h.num}
-            value={getCellValue(h.k)}
-            par={h.par}
-            locked={isHoleLocked(h.num)}
-            hasStroke={hasStroke(h.num - 1)}
-            hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
-            lowScoreStatus={getLowScoreStatus(h.k)}
-            teamColor={team}
-            onChange={onCellChange}
-          />
-        </td>
-      ))}
-      {/* OUT total */}
-      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
-        {outTotal ?? "–"}
-      </td>
-      {/* Back 9 holes */}
-      {holes.slice(9, 18).map((h, i) => (
-        <td key={h.k} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
-          <ScoreInputCell
-            holeKey={h.k}
-            holeNum={h.num}
-            value={getCellValue(h.k)}
-            par={h.par}
-            locked={isHoleLocked(h.num)}
-            hasStroke={hasStroke(h.num - 1)}
-            hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
-            lowScoreStatus={getLowScoreStatus(h.k)}
-            teamColor={team}
-            onChange={onCellChange}
-          />
-        </td>
-      ))}
-      {/* IN total */}
-      <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
-        {inTotal ?? "–"}
-      </td>
-      {/* TOTAL */}
-      <td className="py-1 bg-slate-200 font-bold text-slate-900 text-base">
-        {totalScore ?? "–"}
-      </td>
-    </tr>
-  );
-});
 
 export default function Match() {
   const { matchId } = useParams();
@@ -307,7 +108,7 @@ export default function Match() {
   }, [player, canEdit, tournament?.openPublicEdits, tournament?.active]);
 
   // Build holes data - use course from separate fetch or embedded in round
-  const holes = useMemo(() => {
+  const holes = useMemo((): HoleData[] => {
     const hMatch = match?.holes || {};
     // Try course from separate fetch first, then fall back to embedded round.course
     const hCourse = course?.holes || round?.course?.holes || [];
@@ -477,6 +278,11 @@ export default function Match() {
       setDriveModal(null);
     }
   }, [driveModal, updateDrive]);
+
+  // DRIVE_TRACKING: Handle click on drive selector cell
+  const handleDriveClick = useCallback((hole: HoleData, team: "A" | "B") => {
+    setDriveModal({ hole, team });
+  }, []);
 
   // DRIVE_TRACKING: Calculate drives used per player per team
   const drivesUsed = useMemo(() => {
@@ -706,7 +512,7 @@ export default function Match() {
 
   // Calculate running match status after each hole using shared scoring module
   const runningMatchStatus = useMemo(() => {
-    const holeData: HoleData[] = holes.map(h => ({ num: h.num, input: h.input }));
+    const holeData: MatchScoringHoleData[] = holes.map(h => ({ num: h.num, input: h.input }));
     return computeRunningStatus(holeData, format, match?.teamAPlayers, match?.teamBPlayers);
   }, [holes, format, match?.teamAPlayers, match?.teamBPlayers]);
 
@@ -852,59 +658,17 @@ export default function Match() {
 
         {/* DRIVE_TRACKING: Drives Tracker Banner */}
         {trackDrives && drivesUsed && drivesNeeded && !isMatchClosed && (
-          <div className="card p-3 space-y-2">
-            <div className="text-xs font-bold uppercase text-slate-500">Drives Tracker</div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              {/* Team A */}
-              <div>
-                <div className="font-semibold" style={{ color: teamAColor }}>{tournament?.teamA?.name || "Team A"}</div>
-                <div className="flex flex-col gap-1 mt-1">
-                  <div>
-                    <span className="text-slate-500">{getPlayerShortName(match.teamAPlayers?.[0]?.playerId)}:</span>{" "}
-                    <span className={`font-bold ${drivesNeeded.teamA[0] > 0 ? "text-red-500" : "text-green-600"}`}>
-                      {drivesUsed.teamA[0]}/{MIN_DRIVES_PER_ROUND}
-                    </span>
-                    {drivesNeeded.teamA[0] > 0 && (
-                      <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamA[0]}</span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{getPlayerShortName(match.teamAPlayers?.[1]?.playerId)}:</span>{" "}
-                    <span className={`font-bold ${drivesNeeded.teamA[1] > 0 ? "text-red-500" : "text-green-600"}`}>
-                      {drivesUsed.teamA[1]}/{MIN_DRIVES_PER_ROUND}
-                    </span>
-                    {drivesNeeded.teamA[1] > 0 && (
-                      <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamA[1]}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {/* Team B */}
-              <div>
-                <div className="font-semibold" style={{ color: teamBColor }}>{tournament?.teamB?.name || "Team B"}</div>
-                <div className="flex flex-col gap-1 mt-1">
-                  <div>
-                    <span className="text-slate-500">{getPlayerShortName(match.teamBPlayers?.[0]?.playerId)}:</span>{" "}
-                    <span className={`font-bold ${drivesNeeded.teamB[0] > 0 ? "text-red-500" : "text-green-600"}`}>
-                      {drivesUsed.teamB[0]}/{MIN_DRIVES_PER_ROUND}
-                    </span>
-                    {drivesNeeded.teamB[0] > 0 && (
-                      <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamB[0]}</span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-slate-500">{getPlayerShortName(match.teamBPlayers?.[1]?.playerId)}:</span>{" "}
-                    <span className={`font-bold ${drivesNeeded.teamB[1] > 0 ? "text-red-500" : "text-green-600"}`}>
-                      {drivesUsed.teamB[1]}/{MIN_DRIVES_PER_ROUND}
-                    </span>
-                    {drivesNeeded.teamB[1] > 0 && (
-                      <span className="text-red-500 text-xs ml-1">⚠️ Need {drivesNeeded.teamB[1]}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <DrivesTrackerBanner
+            teamAColor={teamAColor}
+            teamBColor={teamBColor}
+            teamAName={tournament?.teamA?.name || "Team A"}
+            teamBName={tournament?.teamB?.name || "Team B"}
+            teamAPlayers={match.teamAPlayers || []}
+            teamBPlayers={match.teamBPlayers || []}
+            drivesUsed={drivesUsed}
+            drivesNeeded={drivesNeeded}
+            getPlayerShortName={getPlayerShortName}
+          />
         )}
 
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
@@ -1060,41 +824,16 @@ export default function Match() {
 
                 {/* Team A Score Row (Best Ball: low net, Shamble: low gross) */}
                 {(format === "twoManBestBall" || format === "twoManShamble") && (
-                  <tr style={{ backgroundColor: teamAColor }}>
-                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis" style={{ backgroundColor: teamAColor }}>
-                      {tournament?.teamA?.name || "Team A"}
-                    </td>
-                    {/* Front 9 low score */}
-                    {holes.slice(0, 9).map(h => {
-                      const lowScore = getTeamLowScore(h, "A");
-                      return (
-                        <td key={`teamA-${h.k}`} className="py-1 text-center text-white font-bold text-sm">
-                          {lowScore ?? ""}
-                        </td>
-                      );
-                    })}
-                    {/* OUT total */}
-                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
-                      {teamLowScoreTotals?.getOut("A") ?? "–"}
-                    </td>
-                    {/* Back 9 low score */}
-                    {holes.slice(9, 18).map((h, i) => {
-                      const lowScore = getTeamLowScore(h, "A");
-                      return (
-                        <td key={`teamA-${h.k}`} className={`py-1 text-center text-white font-bold text-sm ${i === 0 ? "border-l-2 border-white/30" : ""}`}>
-                          {lowScore ?? ""}
-                        </td>
-                      );
-                    })}
-                    {/* IN total */}
-                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
-                      {teamLowScoreTotals?.getIn("A") ?? "–"}
-                    </td>
-                    {/* TOTAL */}
-                    <td className="py-1 text-center text-white font-extrabold text-base" style={{ backgroundColor: "rgba(0,0,0,0.25)" }}>
-                      {teamLowScoreTotals?.getTotal("A") ?? "–"}
-                    </td>
-                  </tr>
+                  <TeamScoreRow
+                    team="A"
+                    teamName={tournament?.teamA?.name || "Team A"}
+                    teamColor={teamAColor}
+                    holes={holes}
+                    getTeamLowScore={getTeamLowScore}
+                    outTotal={teamLowScoreTotals?.getOut("A") ?? null}
+                    inTotal={teamLowScoreTotals?.getIn("A") ?? null}
+                    totalScore={teamLowScoreTotals?.getTotal("A") ?? null}
+                  />
                 )}
 
                 {/* MATCH STATUS ROW - Between Team A and Team B */}
@@ -1144,41 +883,16 @@ export default function Match() {
 
                 {/* Team B Score Row (Best Ball: low net, Shamble: low gross) */}
                 {(format === "twoManBestBall" || format === "twoManShamble") && (
-                  <tr style={{ backgroundColor: teamBColor }}>
-                    <td className="sticky left-0 z-10 text-left px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis" style={{ backgroundColor: teamBColor }}>
-                      {tournament?.teamB?.name || "Team B"}
-                    </td>
-                    {/* Front 9 low score */}
-                    {holes.slice(0, 9).map(h => {
-                      const lowScore = getTeamLowScore(h, "B");
-                      return (
-                        <td key={`teamB-${h.k}`} className="py-1 text-center text-white font-bold text-sm">
-                          {lowScore ?? ""}
-                        </td>
-                      );
-                    })}
-                    {/* OUT total */}
-                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
-                      {teamLowScoreTotals?.getOut("B") ?? "–"}
-                    </td>
-                    {/* Back 9 low score */}
-                    {holes.slice(9, 18).map((h, i) => {
-                      const lowScore = getTeamLowScore(h, "B");
-                      return (
-                        <td key={`teamB-${h.k}`} className={`py-1 text-center text-white font-bold text-sm ${i === 0 ? "border-l-2 border-white/30" : ""}`}>
-                          {lowScore ?? ""}
-                        </td>
-                      );
-                    })}
-                    {/* IN total */}
-                    <td className="py-1 text-center text-white font-bold border-l-2 border-white/30" style={{ backgroundColor: "rgba(0,0,0,0.15)" }}>
-                      {teamLowScoreTotals?.getIn("B") ?? "–"}
-                    </td>
-                    {/* TOTAL */}
-                    <td className="py-1 text-center text-white font-extrabold text-base" style={{ backgroundColor: "rgba(0,0,0,0.25)" }}>
-                      {teamLowScoreTotals?.getTotal("B") ?? "–"}
-                    </td>
-                  </tr>
+                  <TeamScoreRow
+                    team="B"
+                    teamName={tournament?.teamB?.name || "Team B"}
+                    teamColor={teamBColor}
+                    holes={holes}
+                    getTeamLowScore={getTeamLowScore}
+                    outTotal={teamLowScoreTotals?.getOut("B") ?? null}
+                    inTotal={teamLowScoreTotals?.getIn("B") ?? null}
+                    totalScore={teamLowScoreTotals?.getTotal("B") ?? null}
+                  />
                 )}
 
                 {/* Team B Player Rows - Using memoized PlayerScoreRow */}
@@ -1207,162 +921,22 @@ export default function Match() {
 
                 {/* DRIVE SELECTOR ROWS - Inside scorecard table */}
                 {trackDrives && (
-                  <>
-                    {/* Team A Drive Row */}
-                    <tr style={{ backgroundColor: teamAColor + "15" }}>
-                      <td 
-                        className="sticky left-0 z-10 text-left px-3 py-1.5 font-semibold whitespace-nowrap text-xs"
-                        style={{ backgroundColor: teamAColor + "15", color: teamAColor }}
-                      >
-                        {tournament?.teamA?.name || "Team A"} Drive
-                      </td>
-                      {/* Front 9 */}
-                      {holes.slice(0, 9).map(h => {
-                        const locked = isHoleLocked(h.num);
-                        const currentDrive = getDriveValue(h, "A");
-                        const initials = currentDrive === 0 
-                          ? getPlayerInitials(match.teamAPlayers?.[0]?.playerId)
-                          : currentDrive === 1 
-                            ? getPlayerInitials(match.teamAPlayers?.[1]?.playerId)
-                            : null;
-                        return (
-                          <td key={`driveA-${h.k}`} className="p-0.5" style={{ width: cellWidth, minWidth: cellWidth }}>
-                            <button
-                              type="button"
-                              disabled={locked || isMatchClosed}
-                              onClick={() => setDriveModal({ hole: h, team: "A" })}
-                              className={`
-                                w-10 h-7 text-xs font-bold rounded border transition-colors
-                                ${locked || isMatchClosed
-                                  ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
-                                  : initials
-                                    ? "text-white border-transparent"
-                                    : "bg-white border-slate-300 text-slate-400 hover:border-slate-400 hover:bg-slate-50"
-                                }
-                              `}
-                              style={initials && !locked ? { backgroundColor: teamAColor } : {}}
-                            >
-                              {initials || "–"}
-                            </button>
-                          </td>
-                        );
-                      })}
-                      {/* OUT spacer */}
-                      <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
-                      {/* Back 9 */}
-                      {holes.slice(9, 18).map((h, i) => {
-                        const locked = isHoleLocked(h.num);
-                        const currentDrive = getDriveValue(h, "A");
-                        const initials = currentDrive === 0 
-                          ? getPlayerInitials(match.teamAPlayers?.[0]?.playerId)
-                          : currentDrive === 1 
-                            ? getPlayerInitials(match.teamAPlayers?.[1]?.playerId)
-                            : null;
-                        return (
-                          <td key={`driveA-${h.k}`} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`} style={{ width: cellWidth, minWidth: cellWidth }}>
-                            <button
-                              type="button"
-                              disabled={locked || isMatchClosed}
-                              onClick={() => setDriveModal({ hole: h, team: "A" })}
-                              className={`
-                                w-10 h-7 text-xs font-bold rounded border transition-colors
-                                ${locked || isMatchClosed
-                                  ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
-                                  : initials
-                                    ? "text-white border-transparent"
-                                    : "bg-white border-slate-300 text-slate-400 hover:border-slate-400 hover:bg-slate-50"
-                                }
-                              `}
-                              style={initials && !locked ? { backgroundColor: teamAColor } : {}}
-                            >
-                              {initials || "–"}
-                            </button>
-                          </td>
-                        );
-                      })}
-                      {/* IN spacer */}
-                      <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
-                      {/* TOT spacer */}
-                      <td className="bg-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
-                    </tr>
-                    {/* Team B Drive Row */}
-                    <tr style={{ backgroundColor: teamBColor + "15" }}>
-                      <td 
-                        className="sticky left-0 z-10 text-left px-3 py-1.5 font-semibold whitespace-nowrap text-xs"
-                        style={{ backgroundColor: teamBColor + "15", color: teamBColor }}
-                      >
-                        {tournament?.teamB?.name || "Team B"} Drive
-                      </td>
-                      {/* Front 9 */}
-                      {holes.slice(0, 9).map(h => {
-                        const locked = isHoleLocked(h.num);
-                        const currentDrive = getDriveValue(h, "B");
-                        const initials = currentDrive === 0 
-                          ? getPlayerInitials(match.teamBPlayers?.[0]?.playerId)
-                          : currentDrive === 1 
-                            ? getPlayerInitials(match.teamBPlayers?.[1]?.playerId)
-                            : null;
-                        return (
-                          <td key={`driveB-${h.k}`} className="p-0.5" style={{ width: cellWidth, minWidth: cellWidth }}>
-                            <button
-                              type="button"
-                              disabled={locked || isMatchClosed}
-                              onClick={() => setDriveModal({ hole: h, team: "B" })}
-                              className={`
-                                w-10 h-7 text-xs font-bold rounded border transition-colors
-                                ${locked || isMatchClosed
-                                  ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
-                                  : initials
-                                    ? "text-white border-transparent"
-                                    : "bg-white border-slate-300 text-slate-400 hover:border-slate-400 hover:bg-slate-50"
-                                }
-                              `}
-                              style={initials && !locked ? { backgroundColor: teamBColor } : {}}
-                            >
-                              {initials || "–"}
-                            </button>
-                          </td>
-                        );
-                      })}
-                      {/* OUT spacer */}
-                      <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
-                      {/* Back 9 */}
-                      {holes.slice(9, 18).map((h, i) => {
-                        const locked = isHoleLocked(h.num);
-                        const currentDrive = getDriveValue(h, "B");
-                        const initials = currentDrive === 0 
-                          ? getPlayerInitials(match.teamBPlayers?.[0]?.playerId)
-                          : currentDrive === 1 
-                            ? getPlayerInitials(match.teamBPlayers?.[1]?.playerId)
-                            : null;
-                        return (
-                          <td key={`driveB-${h.k}`} className={`p-0.5 ${i === 0 ? "border-l-2 border-slate-200" : ""}`} style={{ width: cellWidth, minWidth: cellWidth }}>
-                            <button
-                              type="button"
-                              disabled={locked || isMatchClosed}
-                              onClick={() => setDriveModal({ hole: h, team: "B" })}
-                              className={`
-                                w-10 h-7 text-xs font-bold rounded border transition-colors
-                                ${locked || isMatchClosed
-                                  ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default"
-                                  : initials
-                                    ? "text-white border-transparent"
-                                    : "bg-white border-slate-300 text-slate-400 hover:border-slate-400 hover:bg-slate-50"
-                                }
-                              `}
-                              style={initials && !locked ? { backgroundColor: teamBColor } : {}}
-                            >
-                              {initials || "–"}
-                            </button>
-                          </td>
-                        );
-                      })}
-                      {/* IN spacer */}
-                      <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
-                      {/* TOT spacer */}
-                      <td className="bg-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
-                    </tr>
-                  </>
+                  <DriveSelectorsSection
+                    holes={holes}
+                    teamAColor={teamAColor}
+                    teamBColor={teamBColor}
+                    teamAName={tournament?.teamA?.name || "Team A"}
+                    teamBName={tournament?.teamB?.name || "Team B"}
+                    teamAPlayers={match.teamAPlayers || []}
+                    teamBPlayers={match.teamBPlayers || []}
+                    cellWidth={cellWidth}
+                    totalColWidth={totalColWidth}
+                    isMatchClosed={isMatchClosed}
+                    isHoleLocked={isHoleLocked}
+                    getDriveValue={getDriveValue}
+                    getPlayerInitials={getPlayerInitials}
+                    onDriveClick={handleDriveClick}
+                  />
                 )}
               </tbody>
             </table>
