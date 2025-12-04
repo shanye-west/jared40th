@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useRoundData } from "../hooks/useRoundData";
 import { formatRoundType } from "../utils";
@@ -7,7 +8,7 @@ import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 
-export default function Round() {
+function RoundComponent() {
   const { roundId } = useParams();
   
   const {
@@ -211,3 +212,5 @@ export default function Round() {
     </Layout>
   );
 }
+
+export default memo(RoundComponent);

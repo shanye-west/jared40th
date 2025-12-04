@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import type { RoundFormat } from "../types";
+import type { RoundFormat, HoleInputLoose } from "../types";
 import { 
   SCORECARD_CELL_WIDTH, 
   SCORECARD_LABEL_WIDTH, 
@@ -56,13 +56,13 @@ export default function Match() {
   // Use custom hook for all data fetching
   const { match, round, course, tournament, players, matchFacts, loading, error } = useMatchData(matchId);
   
-  // DRIVE_TRACKING: Modal state for drive picker - using any for hole to avoid circular type reference
-  const [driveModal, setDriveModal] = useState<{ hole: any; team: "A" | "B" } | null>(null);
+  // DRIVE_TRACKING: Modal state for drive picker
+  const [driveModal, setDriveModal] = useState<{ hole: HoleData; team: "A" | "B" } | null>(null);
   
   // CONFIRM CLOSE: Modal state for confirming match close
   const [confirmCloseModal, setConfirmCloseModal] = useState<{
     holeKey: string;
-    pendingInput: any;
+    pendingInput: HoleInputLoose;
     winner: "teamA" | "teamB" | "AS" | null;
     margin: number;
     thru: number;
@@ -161,14 +161,14 @@ export default function Match() {
     };
   }, [holes, format]);
 
-  // Player name helpers - wrap shared utilities with local players state
-  const getPlayerName = (pid?: string) => getPlayerNameFromLookup(pid, players);
-  const getPlayerShortName = (pid?: string) => getPlayerShortNameFromLookup(pid, players);
-  const getPlayerInitials = (pid?: string) => getPlayerInitialsFromLookup(pid, players);
+  // Player name helpers - memoized to prevent re-creation on every render
+  const getPlayerName = useCallback((pid?: string) => getPlayerNameFromLookup(pid, players), [players]);
+  const getPlayerShortName = useCallback((pid?: string) => getPlayerShortNameFromLookup(pid, players), [players]);
+  const getPlayerInitials = useCallback((pid?: string) => getPlayerInitialsFromLookup(pid, players), [players]);
 
   // For twoManBestBall: get the team's low net score for a hole
   // For twoManShamble: get the team's low gross score for a hole
-  function getTeamLowScore(hole: typeof holes[0], team: "A" | "B"): number | null {
+  const getTeamLowScore = useCallback((hole: HoleData, team: "A" | "B"): number | null => {
     if (format !== "twoManBestBall" && format !== "twoManShamble") return null;
     
     const { input } = hole;
@@ -201,7 +201,7 @@ export default function Match() {
     if (p0Net == null) return p1Net;
     if (p1Net == null) return p0Net;
     return Math.min(p0Net, p1Net);
-  }
+  }, [format, match?.teamAPlayers, match?.teamBPlayers]);
 
   // Calculate team totals for low score (net for best ball, gross for shamble)
   const teamLowScoreTotals = useMemo(() => {

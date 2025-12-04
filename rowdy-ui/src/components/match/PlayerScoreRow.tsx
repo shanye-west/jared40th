@@ -1,11 +1,12 @@
 import { memo } from "react";
 import { ScoreInputCell } from "./ScoreInputCell";
+import type { HoleInputLoose } from "../../types";
 
 /** Hole data structure used by PlayerScoreRow */
 export interface HoleData {
   k: string;
   num: number;
-  input: any;
+  input: HoleInputLoose;
   par: number;
   hcpIndex?: number;
   yards?: number;
