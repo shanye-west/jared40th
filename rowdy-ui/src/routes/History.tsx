@@ -10,8 +10,9 @@ import type { TournamentDoc } from "../types";
 type TournamentSeries = "rowdyCup" | "christmasClassic";
 
 const SERIES_CONFIG: Record<TournamentSeries, { label: string; icon: string; color: string }> = {
-  rowdyCup: { label: "Rowdy Cup", icon: "🏆", color: "var(--brand-primary)" },
-  christmasClassic: { label: "Christmas Classic", icon: "🎄", color: "#dc2626" },
+  // Use public SVG assets for series logos
+  rowdyCup: { label: "Rowdy Cup", icon: "/images/rowdycup-logo.svg", color: "var(--brand-primary)" },
+  christmasClassic: { label: "Christmas Classic", icon: "/images/rowdycup-logo-christmas.svg", color: "#dc2626" },
 };
 
 export default function History() {
@@ -97,8 +98,13 @@ export default function History() {
                     transition: "all 0.2s ease",
                   }}
                 >
-                  <span style={{ fontSize: "1.2rem" }}>{config.icon}</span>
-                  <span style={{ 
+                  <OfflineImage
+                    src={config.icon}
+                    alt={config.label}
+                    fallbackIcon={series === "rowdyCup" ? "🏆" : "🎄"}
+                    style={{ width: 28, height: 28, objectFit: "contain" }}
+                  />
+                      <span style={{ 
                     fontWeight: 700, 
                     fontSize: "0.95rem",
                     color: isSelected ? config.color : "var(--text-secondary)",
@@ -127,7 +133,12 @@ export default function History() {
               border: "1px solid var(--divider)",
             }}
           >
-            <span style={{ fontSize: "1.2rem" }}>{SERIES_CONFIG[availableSeries[0]].icon}</span>
+            <OfflineImage
+              src={SERIES_CONFIG[availableSeries[0]].icon}
+              alt={SERIES_CONFIG[availableSeries[0]].label}
+              fallbackIcon={availableSeries[0] === "rowdyCup" ? "🏆" : "🎄"}
+              style={{ width: 28, height: 28, objectFit: "contain" }}
+            />
             <span style={{ 
               fontWeight: 700, 
               fontSize: "0.95rem",
