@@ -14,6 +14,7 @@ import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlay
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
+import { MatchPageSkeleton } from "../components/Skeleton";
 import { useAuth } from "../contexts/AuthContext";
 import { 
   MatchFlowGraph, 
@@ -56,6 +57,28 @@ export default function Match() {
   
   // Use custom hook for all data fetching
   const { match, round, course, tournament, players, matchFacts, loading, error } = useMatchData(matchId);
+  
+  // Track horizontal scroll position for scroll indicator
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    
+    const checkScroll = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = node;
+      // Show indicator if there's more content to the right (with small buffer)
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    };
+    
+    checkScroll();
+    node.addEventListener('scroll', checkScroll, { passive: true });
+    // Also check on resize
+    window.addEventListener('resize', checkScroll);
+    
+    return () => {
+      node.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, []);
   
   // DRIVE_TRACKING: Modal state for drive picker
   const [driveModal, setDriveModal] = useState<{ hole: HoleData; team: "A" | "B" } | null>(null);
@@ -522,9 +545,9 @@ export default function Match() {
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
 
   if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="spinner-lg"></div>
-    </div>
+    <Layout title="Loading..." showBack>
+      <MatchPageSkeleton />
+    </Layout>
   );
   
   if (error) return (
@@ -681,7 +704,19 @@ export default function Match() {
               <SaveStatusIndicator status={saveStatus} />
             </div>
           )}
+          
+          {/* Horizontal scroll indicator - shows when more content to the right */}
+          {canScrollRight && (
+            <div 
+              className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to right, transparent, rgba(0,0,0,0.15))',
+              }}
+            />
+          )}
+          
           <div 
+            ref={scrollContainerRef}
             className="overflow-x-auto"
             style={{ WebkitOverflowScrolling: "touch" }}
           >

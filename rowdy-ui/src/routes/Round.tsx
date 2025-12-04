@@ -7,6 +7,7 @@ import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
+import { RoundPageSkeleton } from "../components/Skeleton";
 
 function RoundComponent() {
   const { roundId } = useParams();
@@ -29,9 +30,9 @@ function RoundComponent() {
   const getPlayerShortName = (pid: string) => getPlayerShortNameFromLookup(pid, players);
 
   if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="spinner-lg"></div>
-    </div>
+    <Layout title="Loading..." showBack>
+      <RoundPageSkeleton />
+    </Layout>
   );
   if (error) return (
     <div className="p-5 text-center text-red-600">
