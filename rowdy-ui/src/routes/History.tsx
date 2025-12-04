@@ -10,8 +10,8 @@ import type { TournamentDoc } from "../types";
 type TournamentSeries = "rowdyCup" | "christmasClassic";
 
 const SERIES_CONFIG: Record<TournamentSeries, { label: string; icon: string; color: string }> = {
-  // Use public SVG assets for series logos
-  rowdyCup: { label: "Rowdy Cup", icon: "/images/rowdycup-logo.svg", color: "var(--brand-primary)" },
+  // Use public assets for series logos
+  rowdyCup: { label: "Rowdy Cup", icon: "/images/rc-logo.png", color: "var(--brand-primary)" },
   christmasClassic: { label: "Christmas Classic", icon: "/images/rowdycup-logo-christmas.svg", color: "#dc2626" },
 };
 
@@ -67,6 +67,7 @@ export default function History() {
           <div 
             style={{ 
               display: "grid", 
+              // Make tabs equal-width
               gridTemplateColumns: `repeat(${availableSeries.length}, 1fr)`, 
               borderRadius: 12, 
               overflow: "hidden",
@@ -84,10 +85,11 @@ export default function History() {
                   onClick={() => setSelectedSeries(series)}
                   style={{
                     display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 8,
-                    padding: "14px 12px",
+                    gap: 6,
+                    padding: "12px 10px",
                     border: "none",
                     borderLeft: idx > 0 ? "1px solid var(--divider)" : "none",
                     cursor: "pointer",
@@ -102,14 +104,15 @@ export default function History() {
                     src={config.icon}
                     alt={config.label}
                     fallbackIcon={series === "rowdyCup" ? "🏆" : "🎄"}
-                    style={{ width: 28, height: 28, objectFit: "contain" }}
+                    style={{ width: 36, height: 36, objectFit: "contain" }}
                   />
-                      <span style={{ 
+                  <span style={{ 
                     fontWeight: 700, 
                     fontSize: "0.95rem",
                     color: isSelected ? config.color : "var(--text-secondary)",
                     textTransform: "uppercase",
                     letterSpacing: "0.03em",
+                    whiteSpace: "nowrap",
                   }}>
                     {config.label}
                   </span>
@@ -145,6 +148,7 @@ export default function History() {
               color: SERIES_CONFIG[availableSeries[0]].color,
               textTransform: "uppercase",
               letterSpacing: "0.03em",
+              whiteSpace: "nowrap",
             }}>
               {SERIES_CONFIG[availableSeries[0]].label}
             </span>
