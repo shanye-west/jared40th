@@ -834,6 +834,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
     // Build holePerformance array
     const holePerformance: any[] = [];
+    // per-player scoring counters
+    let birdies = 0;
+    let eagles = 0;
     for (const holeNum of holesRange(holesData)) {
       const h = holesData[String(holeNum)]?.input ?? {};
       const holeInfo = courseHoles.find(ch => ch.number === holeNum) || { number: holeNum, par: 4 };
@@ -858,6 +861,12 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           const strokeVal = clamp01(p.strokesReceived?.[holeNum - 1]);
           holeData.strokes = strokeVal as 0 | 1;
           holeData.net = gross - strokeVal;
+        }
+        // Count birdies/eagles for singles
+        if (holeData.gross != null && holeInfo.par != null) {
+          const diff = holeData.gross - holeInfo.par;
+          if (diff === -1) birdies++;
+          else if (diff <= -2) eagles++;
         }
       } else if (format === "twoManBestBall") {
         const arr = team === "teamA" ? h.teamAPlayersGross : h.teamBPlayersGross;
@@ -891,12 +900,24 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
         }
         const driveVal = team === "teamA" ? h.teamADrive : h.teamBDrive;
         holeData.driveUsed = driveVal === pIdx;
+        // Count birdies/eagles for shamble (individual gross available)
+        if (holeData.gross != null && holeInfo.par != null) {
+          const diff = holeData.gross - holeInfo.par;
+          if (diff === -1) birdies++;
+          else if (diff <= -2) eagles++;
+        }
       } else if (format === "twoManScramble") {
         // Scramble: team gross, has driveUsed
         const gross = team === "teamA" ? h.teamAGross : h.teamBGross;
         holeData.gross = gross ?? null;
         const driveVal = team === "teamA" ? h.teamADrive : h.teamBDrive;
         holeData.driveUsed = driveVal === pIdx;
+        // For scramble, attribute birdies/eagles to all team players (team gross applies to whole team)
+        if (holeData.gross != null && holeInfo.par != null) {
+          const diff = holeData.gross - holeInfo.par;
+          if (diff === -1) birdies++;
+          else if (diff <= -2) eagles++;
+        }
       }
       
       holePerformance.push(holeData);
@@ -991,6 +1012,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     
     // Add holePerformance array
     factData.holePerformance = holePerformance;
+    // Add birdie/eagle counters if any
+    if (birdies > 0) factData.birdies = birdies;
+    if (eagles > 0) factData.eagles = eagles;
 
     batch.set(db.collection("playerMatchFacts").doc(`${matchId}_${p.playerId}`), factData);
   };

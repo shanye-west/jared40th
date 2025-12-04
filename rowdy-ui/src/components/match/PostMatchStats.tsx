@@ -34,6 +34,12 @@ function countBirdies(fact: PlayerMatchFact | undefined): number {
   return fact.holePerformance.filter(hp => hp.gross != null && hp.par != null && hp.gross < hp.par).length;
 }
 
+/** Count eagles from holePerformance array (gross <= par-2) */
+function countEagles(fact: PlayerMatchFact | undefined): number {
+  if (!fact?.holePerformance) return 0;
+  return fact.holePerformance.filter(hp => hp.gross != null && hp.par != null && (hp.gross - hp.par) <= -2).length;
+}
+
 /** Shorten full name to first-initial + last name (e.g. "J. Smith") */
 function shortName(fullName?: string): string {
   if (!fullName) return "";
@@ -241,14 +247,17 @@ export function PostMatchStats({
   
   if (format === "singles") {
     const birdiesA = countBirdies(factA);
+    const eaglesA = countEagles(factA);
     const birdiesB = countBirdies(factB);
+    const eaglesB = countEagles(factB);
     const hasScoring = factA?.totalGross != null || factB?.totalGross != null;
     const hasLeadChanges = (factA?.leadChanges ?? 0) > 0;
     const hasLargestLead = largestLeadA > 0 || largestLeadB > 0;
     const hasBirdies = birdiesA > 0 || birdiesB > 0;
+    const hasEagles = eaglesA > 0 || eaglesB > 0;
     const hasBadges = clutchWinA || clutchWinB || comebackWinA || comebackWinB || neverBehindA || neverBehindB;
     
-    if (!hasScoring && !hasLeadChanges && !hasLargestLead && !hasBirdies && !hasBadges) return null;
+    if (!hasScoring && !hasLeadChanges && !hasLargestLead && !hasBirdies && !hasEagles && !hasBadges) return null;
     
     return (
       <div className="card p-0">
@@ -286,6 +295,14 @@ export function PostMatchStats({
           <TeamStatRow label="Birdies" {...colors}
             valueA={birdiesA > 0 ? birdiesA : null}
             valueB={birdiesB > 0 ? birdiesB : null}
+          />
+        )}
+
+        {/* Eagles */}
+        {hasEagles && (
+          <TeamStatRow label="Eagles" {...colors}
+            valueA={eaglesA > 0 ? eaglesA : null}
+            valueB={eaglesB > 0 ? eaglesB : null}
           />
         )}
 
@@ -337,6 +354,22 @@ export function PostMatchStats({
   const hasLeadChanges = (factA?.leadChanges ?? 0) > 0;
   const hasBadges = clutchWinA || clutchWinB || comebackWinA || comebackWinB || 
                     neverBehindA || neverBehindB || jekyllHydeA || jekyllHydeB;
+
+  // Player-level birdie/eagle counts
+  const playerBirdies = [
+    teamAFacts[0] ? (teamAFacts[0].birdies ?? 0) : 0,
+    teamAFacts[1] ? (teamAFacts[1].birdies ?? 0) : 0,
+    teamBFacts[0] ? (teamBFacts[0].birdies ?? 0) : 0,
+    teamBFacts[1] ? (teamBFacts[1].birdies ?? 0) : 0,
+  ];
+  const playerEagles = [
+    teamAFacts[0] ? (teamAFacts[0].eagles ?? 0) : 0,
+    teamAFacts[1] ? (teamAFacts[1].eagles ?? 0) : 0,
+    teamBFacts[0] ? (teamBFacts[0].eagles ?? 0) : 0,
+    teamBFacts[1] ? (teamBFacts[1].eagles ?? 0) : 0,
+  ];
+  const anyBirdies = playerBirdies.some(v => v > 0);
+  const anyEagles = playerEagles.some(v => v > 0);
 
   return (
     <div className="card p-0">
@@ -402,6 +435,20 @@ export function PostMatchStats({
             teamA={[teamAFacts[0]?.ballsUsedSolo, teamAFacts[1]?.ballsUsedSolo]}
             teamB={[teamBFacts[0]?.ballsUsedSolo, teamBFacts[1]?.ballsUsedSolo]}
           />
+          {/* Birdies */}
+          {anyBirdies && (
+            <PlayerStatRow label="Birdies" {...colors}
+              teamA={[playerBirdies[0] > 0 ? playerBirdies[0] : null, playerBirdies[1] > 0 ? playerBirdies[1] : null]}
+              teamB={[playerBirdies[2] > 0 ? playerBirdies[2] : null, playerBirdies[3] > 0 ? playerBirdies[3] : null]}
+            />
+          )}
+          {/* Eagles */}
+          {anyEagles && (
+            <PlayerStatRow label="Eagles" {...colors}
+              teamA={[playerEagles[0] > 0 ? playerEagles[0] : null, playerEagles[1] > 0 ? playerEagles[1] : null]}
+              teamB={[playerEagles[2] > 0 ? playerEagles[2] : null, playerEagles[3] > 0 ? playerEagles[3] : null]}
+            />
+          )}
         </>
       )}
 
