@@ -351,15 +351,18 @@ export default function Match() {
   
   // Check if current user can edit this match. Also allow editing when
   // the tournament is explicitly opened for public edits (feature toggle).
-  const canEdit = !!tournament?.openPublicEdits || canEditMatch(teamAPlayerIds, teamBPlayerIds);
+  // Inactive tournaments (historical) are always read-only.
+  const canEdit = tournament?.active !== false && (!!tournament?.openPublicEdits || canEditMatch(teamAPlayerIds, teamBPlayerIds));
   
   // Reason why user can't edit (for displaying message)
   const editBlockReason = useMemo(() => {
+    // Historical tournaments are read-only
+    if (tournament?.active === false) return "historical";
     // If the tournament allows public edits, don't force login messaging
     if (!player && !tournament?.openPublicEdits) return "login";
     if (!canEdit) return "not-rostered";
     return null;
-  }, [player, canEdit, tournament?.openPublicEdits]);
+  }, [player, canEdit, tournament?.openPublicEdits, tournament?.active]);
 
   // Build holes data - use course from separate fetch or embedded in round
   const holes = useMemo(() => {
@@ -961,8 +964,11 @@ export default function Match() {
             </div>
 
             {/* Auth status - positioned to the right, inline with pill */}
-            {editBlockReason && !roundLocked && !isMatchClosed && (
+            {editBlockReason && (editBlockReason === "historical" || (!roundLocked && !isMatchClosed)) && (
               <div className="absolute right-0 top-1/2 -translate-y-1/2 text-xs pr-2" style={{ color: "#94a3b8" }}>
+                {editBlockReason === "historical" && (
+                  <span>📜 View only</span>
+                )}
                 {editBlockReason === "login" && (
                   <Link to="/login" className="underline hover:text-slate-600">Login to edit</Link>
                 )}
