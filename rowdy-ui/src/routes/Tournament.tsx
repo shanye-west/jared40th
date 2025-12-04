@@ -1,8 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { collection, doc, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
-import type { TournamentDoc, RoundDoc, MatchDoc, CourseDoc } from "../types";
+import { useTournamentData } from "../hooks/useTournamentData";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import ScoreBlock from "../components/ScoreBlock";
@@ -17,172 +14,15 @@ import { formatRoundType } from "../utils";
 export default function Tournament() {
   const { tournamentId } = useParams<{ tournamentId: string }>();
   
-  const [loading, setLoading] = useState(true);
-  const [tournament, setTournament] = useState<TournamentDoc | null>(null);
-  const [rounds, setRounds] = useState<RoundDoc[]>([]);
-  const [matchesByRound, setMatchesByRound] = useState<Record<string, MatchDoc[]>>({});
-  const [courses, setCourses] = useState<Record<string, CourseDoc>>({});
-
-  // Track loading states
-  const [tournamentLoaded, setTournamentLoaded] = useState(false);
-  const [roundsLoaded, setRoundsLoaded] = useState(false);
-  const [matchesLoaded, setMatchesLoaded] = useState(false);
-
-  // 1) Subscribe to the specific tournament
-  useEffect(() => {
-    if (!tournamentId) {
-      setTournamentLoaded(true);
-      return;
-    }
-
-    const unsub = onSnapshot(
-      doc(db, "tournaments", tournamentId),
-      (snap) => {
-        if (snap.exists()) {
-          setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
-        } else {
-          setTournament(null);
-        }
-        setTournamentLoaded(true);
-      },
-      (err) => {
-        console.error("Tournament subscription error:", err);
-        setTournamentLoaded(true);
-      }
-    );
-    return () => unsub();
-  }, [tournamentId]);
-
-  // 2) Subscribe to rounds when tournament is available
-  useEffect(() => {
-    if (!tournamentId) {
-      setRounds([]);
-      setRoundsLoaded(tournamentLoaded);
-      return;
-    }
-
-    const unsub = onSnapshot(
-      query(collection(db, "rounds"), where("tournamentId", "==", tournamentId)),
-      (snap) => {
-        let rds = snap.docs.map(d => ({ id: d.id, ...d.data() } as RoundDoc));
-        rds = rds.sort((a, b) => (a.day ?? 0) - (b.day ?? 0) || a.id.localeCompare(b.id));
-        setRounds(rds);
-        setRoundsLoaded(true);
-      },
-      (err) => {
-        console.error("Rounds subscription error:", err);
-        setRoundsLoaded(true);
-      }
-    );
-    return () => unsub();
-  }, [tournamentId, tournamentLoaded]);
-
-  // 3) Subscribe to ALL matches for this tournament
-  useEffect(() => {
-    if (!tournamentId) {
-      setMatchesByRound({});
-      setMatchesLoaded(tournamentLoaded);
-      return;
-    }
-
-    const unsub = onSnapshot(
-      query(collection(db, "matches"), where("tournamentId", "==", tournamentId)),
-      (snap) => {
-        const bucket: Record<string, MatchDoc[]> = {};
-        snap.docs.forEach(d => {
-          const match = { id: d.id, ...d.data() } as MatchDoc;
-          if (match.roundId) {
-            if (!bucket[match.roundId]) bucket[match.roundId] = [];
-            bucket[match.roundId].push(match);
-          }
-        });
-        setMatchesByRound(bucket);
-        setMatchesLoaded(true);
-      },
-      (err) => {
-        console.error("Matches subscription error:", err);
-        setMatchesLoaded(true);
-      }
-    );
-    return () => unsub();
-  }, [tournamentId, tournamentLoaded]);
-
-  // 4) Subscribe to courses
-  useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, "courses"),
-      (snap) => {
-        const lookup: Record<string, CourseDoc> = {};
-        snap.docs.forEach(d => {
-          lookup[d.id] = { id: d.id, ...d.data() } as CourseDoc;
-        });
-        setCourses(lookup);
-      },
-      (err) => console.error("Courses subscription error:", err)
-    );
-    return () => unsub();
-  }, []);
-
-  // Compute loading state
-  useEffect(() => {
-    if (tournamentLoaded && (!tournament || (roundsLoaded && matchesLoaded))) {
-      setLoading(false);
-    }
-  }, [tournamentLoaded, tournament, roundsLoaded, matchesLoaded]);
-
-  // Build coursesByRound lookup
-  const coursesByRound = useMemo(() => {
-    const result: Record<string, CourseDoc | null> = {};
-    rounds.forEach(r => {
-      result[r.id] = r.courseId ? (courses[r.courseId] || null) : null;
-    });
-    return result;
-  }, [rounds, courses]);
-
-  // Stats Calculation
-  const { stats, roundStats, totalPointsAvailable } = useMemo(() => {
-    let fA = 0, fB = 0, pA = 0, pB = 0;
-    let totalPts = 0;
-    const rStats: Record<string, { fA: number; fB: number; pA: number; pB: number }> = {};
-
-    const roundPvLookup: Record<string, number> = {};
-    rounds.forEach(r => { 
-      rStats[r.id] = { fA: 0, fB: 0, pA: 0, pB: 0 }; 
-      roundPvLookup[r.id] = r.pointsValue ?? 1;
-    });
-
-    const allMatches = Object.values(matchesByRound).flat();
-
-    for (const m of allMatches) {
-      const pv = m.roundId ? (roundPvLookup[m.roundId] ?? 1) : 1;
-      const w = m.result?.winner;
-      
-      const ptsA = w === "teamA" ? pv : w === "AS" ? pv / 2 : 0;
-      const ptsB = w === "teamB" ? pv : w === "AS" ? pv / 2 : 0;
-
-      const isClosed = m.status?.closed === true;
-      const isStarted = (m.status?.thru ?? 0) > 0;
-
-      if (isClosed) { fA += ptsA; fB += ptsB; }
-      else if (isStarted) { pA += ptsA; pB += ptsB; }
-
-      if (m.roundId && rStats[m.roundId]) {
-        if (isClosed) {
-          rStats[m.roundId].fA += ptsA;
-          rStats[m.roundId].fB += ptsB;
-        } else if (isStarted) {
-          rStats[m.roundId].pA += ptsA;
-          rStats[m.roundId].pB += ptsB;
-        }
-      }
-
-      totalPts += pv;
-    }
-
-    const finalTotalPts = tournament?.totalPointsAvailable ?? totalPts;
-
-    return { stats: { fA, fB, pA, pB }, roundStats: rStats, totalPointsAvailable: finalTotalPts };
-  }, [matchesByRound, rounds, tournament?.totalPointsAvailable]);
+  const {
+    loading,
+    tournament,
+    rounds,
+    coursesByRound,
+    stats,
+    roundStats,
+    totalPointsAvailable,
+  } = useTournamentData({ tournamentId });
 
   if (loading) {
     return (
@@ -234,10 +74,10 @@ export default function Tournament() {
               </div>
               <ScoreTrackerBar
                 totalPoints={totalPointsAvailable}
-                teamAConfirmed={stats.fA}
-                teamBConfirmed={stats.fB}
-                teamAPending={stats.pA}
-                teamBPending={stats.pB}
+                teamAConfirmed={stats.teamAConfirmed}
+                teamBConfirmed={stats.teamBConfirmed}
+                teamAPending={stats.teamAPending}
+                teamBPending={stats.teamBPending}
                 teamAColor={tournament.teamA?.color}
                 teamBColor={tournament.teamB?.color}
               />
@@ -262,7 +102,7 @@ export default function Tournament() {
                 {tournament.teamA?.name || "Team A"}
               </div>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
-                <span style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}>{stats.fA}</span>
+                <span style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}>{stats.teamAConfirmed}</span>
               </div>
             </div>
 
@@ -286,7 +126,7 @@ export default function Tournament() {
                 {tournament.teamB?.name || "Team B"}
               </div>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
-                <span style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}>{stats.fB}</span>
+                <span style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}>{stats.teamBConfirmed}</span>
               </div>
             </div>
           </div>
@@ -327,8 +167,8 @@ export default function Tournament() {
                   />
                   <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
                     <ScoreBlock
-                      final={rs?.fA ?? 0}
-                      proj={rs?.pA ?? 0}
+                      final={rs?.teamAConfirmed ?? 0}
+                      proj={rs?.teamAPending ?? 0}
                       color={tournament.teamA?.color}
                     />
                   </span>
@@ -347,8 +187,8 @@ export default function Tournament() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>  
                   <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
                     <ScoreBlock
-                      final={rs?.fB ?? 0}
-                      proj={rs?.pB ?? 0}
+                      final={rs?.teamBConfirmed ?? 0}
+                      proj={rs?.teamBPending ?? 0}
                       color={tournament.teamB?.color}
                       projLeft
                     />
