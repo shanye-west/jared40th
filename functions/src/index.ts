@@ -887,6 +887,12 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           } else {
             holeData.partnerNet = null;
           }
+          }
+          // Count birdies/eagles for best ball from individual GROSS scores
+          if (holeData.gross != null && holeInfo.par != null) {
+            const diff = holeData.gross - holeInfo.par;
+            if (diff === -1) birdies++;
+            else if (diff <= -2) eagles++;
         }
       } else if (format === "twoManShamble") {
         // Shamble: individual gross, no net/strokes, but has driveUsed
@@ -1000,6 +1006,14 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     if (drivesUsed !== null) factData.drivesUsed = drivesUsed;
     if (hamAndEggCount !== null) factData.hamAndEggCount = hamAndEggCount;
     if (jekyllAndHyde === true) factData.jekyllAndHyde = true;
+    
+    // Best Ball & Worst Ball totals (for bestBall/shamble team comparison)
+    if (format === "twoManBestBall" || format === "twoManShamble") {
+      const bestBallTotal = team === "teamA" ? teamABestBallTotal : teamBBestBallTotal;
+      const worstBallTotal = team === "teamA" ? teamAWorstBallTotal : teamBWorstBallTotal;
+      factData.bestBallTotal = bestBallTotal;
+      factData.worstBallTotal = worstBallTotal;
+    }
     
     factData.coursePar = coursePar;
     factData.playerCourseHandicap = playerCourseHandicap;
