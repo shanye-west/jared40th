@@ -887,6 +887,12 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
           } else {
             holeData.partnerNet = null;
           }
+          }
+          // Count birdies/eagles for best ball from individual GROSS scores
+          if (holeData.gross != null && holeInfo.par != null) {
+            const diff = holeData.gross - holeInfo.par;
+            if (diff === -1) birdies++;
+            else if (diff <= -2) eagles++;
         }
       } else if (format === "twoManShamble") {
         // Shamble: individual gross, no net/strokes, but has driveUsed
