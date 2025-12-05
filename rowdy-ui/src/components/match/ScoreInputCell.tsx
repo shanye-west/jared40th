@@ -70,13 +70,12 @@ export const ScoreInputCell = memo(function ScoreInputCell({
 
   // When picker opens, compute its position relative to the viewport so we can portal it.
   useLayoutEffect(() => {
-    if (showPicker) {
-      const container = document.getElementById('scorecard-container');
-      const rect = container ? container.getBoundingClientRect() : null;
+    if (showPicker && buttonRef.current) {
+      const btnRect = buttonRef.current.getBoundingClientRect();
       // center horizontally in viewport
       const left = window.innerWidth / 2;
-      // position directly below the bottom of the scorecard (or fallback below button)
-      const top = rect ? rect.bottom + 8 : (buttonRef.current ? buttonRef.current.getBoundingClientRect().bottom + 8 : window.innerHeight / 2);
+      // position directly below the tapped cell
+      const top = btnRect.bottom + 8; // 8px gap below the cell
       setPickerPos({ left, top });
     } else {
       setPickerPos(null);
