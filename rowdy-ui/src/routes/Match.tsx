@@ -14,6 +14,7 @@ import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlay
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
+import { ConnectionBanner } from "../components/ConnectionBanner";
 import { MatchPageSkeleton } from "../components/Skeleton";
 import { useAuth } from "../contexts/AuthContext";
 import { 
@@ -27,6 +28,8 @@ import {
 } from "../components/match";
 import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
+import { useNetworkStatus, getSyncStatus } from "../hooks/useNetworkStatus";
+import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
 import { Modal, ModalActions } from "../components/Modal";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
 import { predictClose, computeRunningStatus, type HoleData as MatchScoringHoleData, type HoleInput } from "../utils/matchScoring";
@@ -55,8 +58,21 @@ export default function Match() {
   const { matchId } = useParams();
   const { canEditMatch, player } = useAuth();
   
-  // Use custom hook for all data fetching
-  const { match, round, course, tournament, players, matchFacts, loading, error } = useMatchData(matchId);
+  // Use custom hook for all data fetching (now includes sync status)
+  const { 
+    match, round, course, tournament, players, matchFacts, 
+    loading, error, 
+    hasPendingWrites: matchHasPendingWrites, 
+    isFromCache 
+  } = useMatchData(matchId);
+  
+  // Network status for offline awareness
+  const networkStatus = useNetworkStatus();
+  const syncStatus = getSyncStatus({
+    ...networkStatus,
+    hasPendingWrites: matchHasPendingWrites || networkStatus.hasPendingWrites,
+    isFromCache,
+  });
   
   // Track horizontal scroll position for scroll indicator
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -263,7 +279,10 @@ export default function Match() {
 
   // Debounced save for score inputs - prevents Firestore writes on every keystroke
   // Uses 400ms delay so typing "45" only fires one save with "45", not two saves
-  const { debouncedSave: debouncedSaveHole, saveStatus } = useDebouncedSave(saveHole, 400);
+  const { debouncedSave: debouncedSaveHole, saveStatus, flushAll } = useDebouncedSave(saveHole, 400);
+  
+  // Flush all pending saves when app goes to background (critical for offline reliability)
+  useVisibilityFlush(flushAll);
 
   // DRIVE_TRACKING: Get current drive selection for a hole
   function getDriveValue(hole: typeof holes[0], team: "A" | "B"): 0 | 1 | null {
@@ -695,13 +714,20 @@ export default function Match() {
           />
         )}
 
+        {/* Connection status banner - shows when offline or syncing */}
+        <ConnectionBanner syncStatus={syncStatus} />
+
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
         
         <div className="card p-0 overflow-hidden relative">
           {/* Save status indicator - top right corner */}
           {canEdit && !isMatchClosed && (
             <div className="absolute top-2 right-2 z-20">
-              <SaveStatusIndicator status={saveStatus} />
+              <SaveStatusIndicator 
+                status={saveStatus} 
+                isOnline={networkStatus.isOnline}
+                hasPendingWrites={matchHasPendingWrites}
+              />
             </div>
           )}
           

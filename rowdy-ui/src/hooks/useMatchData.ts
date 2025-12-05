@@ -14,6 +14,10 @@ export interface UseMatchDataResult {
   matchFacts: PlayerMatchFact[];
   loading: boolean;
   error: string | null;
+  /** Whether the match data has pending writes waiting to sync */
+  hasPendingWrites: boolean;
+  /** Whether the match data came from local cache (not server) */
+  isFromCache: boolean;
 }
 
 /**
@@ -36,6 +40,10 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const [matchFacts, setMatchFacts] = useState<PlayerMatchFact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Offline/sync status tracking
+  const [hasPendingWrites, setHasPendingWrites] = useState(false);
+  const [isFromCache, setIsFromCache] = useState(false);
 
   // 1. Listen to MATCH and fetch players
   useEffect(() => {
@@ -46,6 +54,11 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     const unsub = onSnapshot(
       doc(db, "matches", matchId),
       (mSnap) => {
+        // Track sync status from snapshot metadata
+        const meta = mSnap.metadata;
+        setHasPendingWrites(meta.hasPendingWrites);
+        setIsFromCache(meta.fromCache);
+        
         if (!mSnap.exists()) { 
           setMatch(null); 
           setLoading(false); 
@@ -171,6 +184,8 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     matchFacts,
     loading,
     error,
+    hasPendingWrites,
+    isFromCache,
   };
 }
 
