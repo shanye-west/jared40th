@@ -1,4 +1,5 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { ScoreNumberPicker } from "./ScoreNumberPicker";
 
 /** Props for ScoreInputCell */
@@ -29,6 +30,9 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   onChange,
 }: ScoreInputCellProps) {
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerPos, setPickerPos] = useState<{left: number; top: number} | null>(null);
+  const [collapseSignal, setCollapseSignal] = useState(0);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   
   // Use team-specific colors for low score highlighting
   const lowScoreBg = teamColor === 'A'
@@ -50,7 +54,13 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   // Handle number selection from picker
   const handleSelect = useCallback((num: number) => {
     onChange(holeKey, num);
-    setShowPicker(false);
+    // If user selected a small number (1-9) close the picker for quick entry.
+    if (num >= 1 && num <= 9) {
+      setShowPicker(false);
+    } else {
+      // For 10-15: keep the picker open but collapse the extended view back to 1-9
+      setCollapseSignal((s) => s + 1);
+    }
   }, [holeKey, onChange]);
   
   // Handle clear from picker
@@ -64,12 +74,26 @@ export const ScoreInputCell = memo(function ScoreInputCell({
     setShowPicker(false);
   }, []);
 
+  // When picker opens, compute its position relative to the viewport so we can portal it.
+  useLayoutEffect(() => {
+    if (showPicker && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      // place picker below the cell, centered horizontally
+      const left = rect.left + rect.width / 2;
+      const top = rect.bottom + 8; // 8px gap
+      setPickerPos({ left, top });
+    } else {
+      setPickerPos(null);
+    }
+  }, [showPicker]);
+
   return (
     <div className="relative flex flex-col items-center">
       {/* Score display cell - tap to open picker */}
       <button
         type="button"
         aria-label={`Score for hole ${holeNum}${value ? `: ${value}` : ''}`}
+        ref={buttonRef}
         className={`
           w-11 h-11 text-center text-base font-semibold rounded-md border
           transition-colors duration-100 select-none
@@ -87,15 +111,17 @@ export const ScoreInputCell = memo(function ScoreInputCell({
       </button>
       
       {/* Number picker popover */}
-      {showPicker && (
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-50">
+      {showPicker && pickerPos && createPortal(
+        <div style={{ position: 'fixed', left: pickerPos.left, top: pickerPos.top, transform: 'translateX(-50%)', zIndex: 9999 }}>
           <ScoreNumberPicker
             value={value}
             onSelect={handleSelect}
             onClear={handleClear}
             onClose={handleClose}
+            collapseSignal={collapseSignal}
           />
-        </div>
+        </div>,
+        document.body
       )}
       {/* Birdie/Eagle circles - centered over input */}
       {circleCount > 0 && (
