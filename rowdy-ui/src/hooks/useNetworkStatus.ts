@@ -1,54 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 export interface NetworkStatus {
   /** Whether the browser reports being online */
   isOnline: boolean;
-  /** Whether there are Firestore writes waiting to sync */
-  hasPendingWrites: boolean;
-  /** Whether the current data came from cache (not server) */
-  isFromCache: boolean;
-  /** Timestamp of last successful server sync */
-  lastSyncedAt: Date | null;
-  /** Update pending writes status (called by data hooks) */
-  setPendingWrites: (pending: boolean) => void;
-  /** Update cache status (called by data hooks) */
-  setFromCache: (fromCache: boolean) => void;
-  /** Mark a successful sync */
-  markSynced: () => void;
 }
 
 /**
- * Hook to track network connectivity and Firestore sync status.
+ * Simple hook to track browser online/offline status.
  * 
- * Provides:
- * - Browser online/offline status
- * - Firestore pending writes tracking
- * - Cache vs server data awareness
- * - Last sync timestamp
- * 
- * Usage:
- * ```tsx
- * const { isOnline, hasPendingWrites, isFromCache } = useNetworkStatus();
- * 
- * // In your Firestore snapshot handler:
- * onSnapshot(docRef, (snap) => {
- *   setPendingWrites(snap.metadata.hasPendingWrites);
- *   setFromCache(snap.metadata.fromCache);
- *   if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites) {
- *     markSynced();
- *   }
- * });
- * ```
+ * Firestore handles persistence and sync automatically via persistentLocalCache.
+ * This hook just tells us if we're online so we can show appropriate UI.
  */
 export function useNetworkStatus(): NetworkStatus {
   const [isOnline, setIsOnline] = useState(() => 
     typeof navigator !== "undefined" ? navigator.onLine : true
   );
-  const [hasPendingWrites, setHasPendingWrites] = useState(false);
-  const [isFromCache, setIsFromCache] = useState(false);
-  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
-  // Listen to browser online/offline events
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -62,55 +29,5 @@ export function useNetworkStatus(): NetworkStatus {
     };
   }, []);
 
-  const setPendingWrites = useCallback((pending: boolean) => {
-    setHasPendingWrites(pending);
-  }, []);
-
-  const setFromCache = useCallback((fromCache: boolean) => {
-    setIsFromCache(fromCache);
-  }, []);
-
-  const markSynced = useCallback(() => {
-    setLastSyncedAt(new Date());
-    setHasPendingWrites(false);
-    setIsFromCache(false);
-  }, []);
-
-  return {
-    isOnline,
-    hasPendingWrites,
-    isFromCache,
-    lastSyncedAt,
-    setPendingWrites,
-    setFromCache,
-    markSynced,
-  };
-}
-
-/**
- * Derived sync status for UI display
- */
-export type SyncStatus = 
-  | "online"           // Online, no pending writes, data from server
-  | "syncing"          // Online, has pending writes
-  | "offline"          // Offline
-  | "offline-pending"  // Offline with pending writes (needs attention)
-  | "cached";          // Online but viewing cached data
-
-export function getSyncStatus(status: NetworkStatus): SyncStatus {
-  const { isOnline, hasPendingWrites, isFromCache } = status;
-
-  if (!isOnline) {
-    return hasPendingWrites ? "offline-pending" : "offline";
-  }
-
-  if (hasPendingWrites) {
-    return "syncing";
-  }
-
-  if (isFromCache) {
-    return "cached";
-  }
-
-  return "online";
+  return { isOnline };
 }

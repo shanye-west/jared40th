@@ -28,7 +28,7 @@ import {
 } from "../components/match";
 import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
-import { useNetworkStatus, getSyncStatus } from "../hooks/useNetworkStatus";
+import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
 import { Modal, ModalActions } from "../components/Modal";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
@@ -58,21 +58,14 @@ export default function Match() {
   const { matchId } = useParams();
   const { canEditMatch, player } = useAuth();
   
-  // Use custom hook for all data fetching (now includes sync status)
+  // Use custom hook for all data fetching
   const { 
     match, round, course, tournament, players, matchFacts, 
-    loading, error, 
-    hasPendingWrites: matchHasPendingWrites, 
-    isFromCache 
+    loading, error,
   } = useMatchData(matchId);
   
-  // Network status for offline awareness
-  const networkStatus = useNetworkStatus();
-  const syncStatus = getSyncStatus({
-    ...networkStatus,
-    hasPendingWrites: matchHasPendingWrites || networkStatus.hasPendingWrites,
-    isFromCache,
-  });
+  // Simple online/offline tracking
+  const { isOnline } = useNetworkStatus();
   
   // Track horizontal scroll position for scroll indicator
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -714,8 +707,8 @@ export default function Match() {
           />
         )}
 
-        {/* Connection status banner - shows when offline or syncing */}
-        <ConnectionBanner syncStatus={syncStatus} />
+        {/* Connection status banner - shows when offline */}
+        <ConnectionBanner isOnline={isOnline} />
 
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
         
@@ -725,8 +718,7 @@ export default function Match() {
             <div className="absolute top-2 right-2 z-20">
               <SaveStatusIndicator 
                 status={saveStatus} 
-                isOnline={networkStatus.isOnline}
-                hasPendingWrites={matchHasPendingWrites}
+                isOnline={isOnline}
               />
             </div>
           )}
