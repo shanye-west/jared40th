@@ -14,7 +14,6 @@ import { getPlayerName as getPlayerNameFromLookup, getPlayerShortName as getPlay
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
-import { ConnectionBanner } from "../components/ConnectionBanner";
 import { MatchPageSkeleton } from "../components/Skeleton";
 import { useAuth } from "../contexts/AuthContext";
 import { 
@@ -28,7 +27,6 @@ import {
 } from "../components/match";
 import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
-import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
 import { Modal, ModalActions } from "../components/Modal";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
@@ -63,9 +61,6 @@ export default function Match() {
     match, round, course, tournament, players, matchFacts, 
     loading, error,
   } = useMatchData(matchId);
-  
-  // Simple online/offline tracking
-  const { isOnline } = useNetworkStatus();
   
   // Track horizontal scroll position for scroll indicator
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -707,19 +702,13 @@ export default function Match() {
           />
         )}
 
-        {/* Connection status banner - shows when offline */}
-        <ConnectionBanner isOnline={isOnline} />
-
         {/* SCORECARD TABLE - Horizontally Scrollable (all 18 holes) */}
         
         <div className="card p-0 overflow-hidden relative">
           {/* Save status indicator - top right corner */}
           {canEdit && !isMatchClosed && (
             <div className="absolute top-2 right-2 z-20">
-              <SaveStatusIndicator 
-                status={saveStatus} 
-                isOnline={isOnline}
-              />
+              <SaveStatusIndicator status={saveStatus} />
             </div>
           )}
           
