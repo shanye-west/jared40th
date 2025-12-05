@@ -98,6 +98,7 @@ export const ScoreInputCell = memo(function ScoreInputCell({
               ? `${lowScoreBg} border-slate-200 hover:border-slate-300 active:bg-slate-100` 
               : "bg-white border-slate-200 hover:border-slate-300 active:bg-slate-100"
           }
+          ${showPicker ? 'ring-2 ring-blue-400 shadow-lg z-30 scale-[1.02]' : ''}
         `}
         disabled={locked}
         onClick={handleCellClick}
