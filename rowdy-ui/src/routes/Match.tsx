@@ -7,6 +7,7 @@ import {
   SCORECARD_CELL_WIDTH, 
   SCORECARD_LABEL_WIDTH, 
   SCORECARD_TOTAL_COL_WIDTH,
+  SCORECARD_DIVIDER_WIDTH,
   MIN_DRIVES_PER_ROUND,
 } from "../constants";
 import { formatRoundType } from "../utils";
@@ -52,6 +53,20 @@ function wouldCloseMatch(
   const pendingHoleNum = holes.find(h => h.k === pendingHoleKey)?.num ?? 0;
   
   return predictClose(holeData, pendingHoleNum, pendingInput, format, teamAPlayers, teamBPlayers);
+}
+
+/**
+ * Formats the final match result for display (e.g., "3&2", "1UP", "AS")
+ */
+function formatFinalResult(margin: number, thru: number): string {
+  if (margin === 0) return "AS";
+  const holesRemaining = 18 - thru;
+  if (holesRemaining === 0) {
+    // Match went to 18 - show margin UP
+    return `${margin}UP`;
+  }
+  // Match ended early - show "margin & remaining" format
+  return `${margin}&${holesRemaining}`;
 }
 
 export default function Match() {
@@ -113,6 +128,25 @@ export default function Match() {
   const roundLocked = !!round?.locked;
   const isMatchClosed = !!match?.status?.closed;
   const matchThru = match?.status?.thru ?? 0;
+  
+  // closingHole is the 0-indexed hole where the match closed (only set if match is closed before 18)
+  // If match went to 18, closingHole is null (no divider needed)
+  const closingHole = useMemo(() => {
+    if (!isMatchClosed) return null;
+    // Match closed early if thru < 18 and there's a winner (not AS)
+    const winner = match?.result?.winner;
+    if (matchThru < 18 && winner && winner !== "AS") {
+      return matchThru - 1; // Convert to 0-indexed
+    }
+    return null; // Match went to 18 or ended AS
+  }, [isMatchClosed, matchThru, match?.result?.winner]);
+  
+  // Format the final result text for the divider column
+  const finalResultText = useMemo(() => {
+    if (!isMatchClosed || closingHole === null) return null;
+    const margin = match?.status?.margin ?? 0;
+    return formatFinalResult(margin, matchThru);
+  }, [isMatchClosed, closingHole, match?.status?.margin, matchThru]);
   
   // --- AUTH / PERMISSIONS ---
   // Get player IDs from match rosters
@@ -445,10 +479,11 @@ export default function Match() {
   const getLowScoreStatusB1 = useMemo(() => createGetLowScoreStatus("B", 1), [createGetLowScoreStatus]);
 
   // Check if hole is locked (includes auth check)
-  const isHoleLocked = useCallback((holeNum: number) => {
-    // Can't edit if: round locked, match closed past this hole, OR user can't edit
-    return roundLocked || (isMatchClosed && holeNum > matchThru) || !canEdit;
-  }, [roundLocked, isMatchClosed, matchThru, canEdit]);
+  // Note: Post-match holes are NOT locked - players can continue scoring after match closes
+  const isHoleLocked = useCallback((_holeNum: number) => {
+    // Can't edit if: round locked OR user can't edit
+    return roundLocked || !canEdit;
+  }, [roundLocked, canEdit]);
 
   // Helper to build new input object based on format
   const buildNewInput = useCallback((hole: typeof holes[0], team: "A" | "B", pIdx: number, value: number | null) => {
@@ -621,6 +656,12 @@ export default function Match() {
   const cellWidth = SCORECARD_CELL_WIDTH;
   const labelWidth = SCORECARD_LABEL_WIDTH;
   const totalColWidth = SCORECARD_TOTAL_COL_WIDTH;
+  const dividerWidth = SCORECARD_DIVIDER_WIDTH;
+  
+  // Winner color for divider column
+  const winnerColor = match?.result?.winner === "teamA" ? teamAColor : 
+                      match?.result?.winner === "teamB" ? teamBColor : 
+                      "#94a3b8"; // Gray for AS
 
   return (
     <Layout title={tName} series={tSeries} showBack tournamentLogo={tournament?.tournamentLogo}>
@@ -775,20 +816,37 @@ export default function Match() {
                       borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
                     }}
                   >OUT</th>
-                  {/* Back 9 */}
-                  {holes.slice(9, 18).map(h => (
-                    <th 
-                      key={h.k} 
-                      className="font-bold py-2 border-l-2"
-                      style={{ 
-                        width: cellWidth, 
-                        minWidth: cellWidth,
-                        borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
-                      }}
-                    >
-                      {h.num}
-                    </th>
-                  ))}
+                  {/* Back 9 - with divider column after closing hole */}
+                  {holes.slice(9, 18).map((h, i) => {
+                    const holeIdx = 9 + i;
+                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    return (
+                      <>
+                        <th 
+                          key={h.k} 
+                          className="font-bold py-2 border-l-2"
+                          style={{ 
+                            width: cellWidth, 
+                            minWidth: cellWidth,
+                            borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569"
+                          }}
+                        >
+                          {h.num}
+                        </th>
+                        {isClosingHole && (
+                          <th 
+                            key="match-divider-header"
+                            className="py-2"
+                            style={{ 
+                              width: dividerWidth, 
+                              minWidth: dividerWidth,
+                              backgroundColor: winnerColor,
+                            }}
+                          />
+                        )}
+                      </>
+                    );
+                  })}
                   <th 
                     className="font-bold py-2 border-l-2" 
                     style={{ 
@@ -816,9 +874,16 @@ export default function Match() {
                     <td key={h.k} className="py-1">{h.hcpIndex || ""}</td>
                   ))}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
-                  {holes.slice(9, 18).map((h, i) => (
-                    <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.hcpIndex || ""}</td>
-                  ))}
+                  {holes.slice(9, 18).map((h, i) => {
+                    const holeIdx = 9 + i;
+                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    return (
+                      <>
+                        <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.hcpIndex || ""}</td>
+                        {isClosingHole && <td key="match-divider-hcp" style={{ backgroundColor: winnerColor }} />}
+                      </>
+                    );
+                  })}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
                   <td className="py-1 bg-slate-200"></td>
                 </tr>
@@ -832,9 +897,16 @@ export default function Match() {
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
                     {holes.slice(0, 9).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
                   </td>
-                  {holes.slice(9, 18).map((h, i) => (
-                    <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.yards || ""}</td>
-                  ))}
+                  {holes.slice(9, 18).map((h, i) => {
+                    const holeIdx = 9 + i;
+                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    return (
+                      <>
+                        <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.yards || ""}</td>
+                        {isClosingHole && <td key="match-divider-yards" style={{ backgroundColor: winnerColor }} />}
+                      </>
+                    );
+                  })}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
                     {holes.slice(9, 18).reduce((sum, h) => sum + (h.yards || 0), 0) || ""}
                   </td>
@@ -850,9 +922,16 @@ export default function Match() {
                     <td key={h.k} className="py-1.5">{h.par}</td>
                   ))}
                   <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parOut}</td>
-                  {holes.slice(9, 18).map((h, i) => (
-                    <td key={h.k} className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>{h.par}</td>
-                  ))}
+                  {holes.slice(9, 18).map((h, i) => {
+                    const holeIdx = 9 + i;
+                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    return (
+                      <>
+                        <td key={h.k} className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>{h.par}</td>
+                        {isClosingHole && <td key="match-divider-par" style={{ backgroundColor: winnerColor }} />}
+                      </>
+                    );
+                  })}
                   <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parIn}</td>
                   <td className="py-1.5 bg-slate-300 font-bold">{totals.parTotal}</td>
                 </tr>
@@ -877,6 +956,8 @@ export default function Match() {
                     outTotal={totals.getOut(pr.team, pr.pIdx)}
                     inTotal={totals.getIn(pr.team, pr.pIdx)}
                     totalScore={totals.getTotal(pr.team, pr.pIdx)}
+                    closingHole={closingHole}
+                    dividerColor={winnerColor}
                   />
                 ))}
 
@@ -891,6 +972,8 @@ export default function Match() {
                     outTotal={teamLowScoreTotals?.getOut("A") ?? null}
                     inTotal={teamLowScoreTotals?.getIn("A") ?? null}
                     totalScore={teamLowScoreTotals?.getTotal("A") ?? null}
+                    closingHole={closingHole}
+                    dividerColor={winnerColor}
                   />
                 )}
 
@@ -917,20 +1000,47 @@ export default function Match() {
                   })}
                   {/* OUT status - always blank */}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-300"></td>
-                  {/* Back 9 match status */}
+                  {/* Back 9 match status - with divider column after closing hole */}
                   {holes.slice(9, 18).map((h, i) => {
-                    const { status, leader } = runningMatchStatus[9 + i];
+                    const holeIdx = 9 + i; // 0-indexed hole position
+                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
+                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    
+                    // For post-match holes, show empty status
+                    const { status, leader } = isPostMatch 
+                      ? { status: "", leader: null as "A" | "B" | null }
+                      : runningMatchStatus[holeIdx];
                     const bgColor = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "transparent";
                     const textColor = leader ? "#fff" : "#94a3b8";
+                    
                     return (
-                      <td key={`status-${h.k}`} className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>
-                        <div 
-                          className="text-xs font-bold rounded px-1 py-0.5 text-center"
-                          style={{ color: textColor, backgroundColor: bgColor }}
-                        >
-                          {status}
-                        </div>
-                      </td>
+                      <>
+                        <td key={`status-${h.k}`} className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>
+                          <div 
+                            className="text-xs font-bold rounded px-1 py-0.5 text-center"
+                            style={{ color: textColor, backgroundColor: bgColor }}
+                          >
+                            {status}
+                          </div>
+                        </td>
+                        {/* Divider column after closing hole - shows final result */}
+                        {isClosingHole && (
+                          <td 
+                            key="match-divider-status"
+                            className="py-1 px-0.5 border-l-2 border-r-2"
+                            style={{ 
+                              width: dividerWidth, 
+                              minWidth: dividerWidth,
+                              borderColor: winnerColor,
+                              backgroundColor: winnerColor,
+                            }}
+                          >
+                            <div className="text-xs font-bold text-white text-center whitespace-nowrap">
+                              {finalResultText}
+                            </div>
+                          </td>
+                        )}
+                      </>
                     );
                   })}
                   {/* IN status - always blank */}
@@ -950,6 +1060,8 @@ export default function Match() {
                     outTotal={teamLowScoreTotals?.getOut("B") ?? null}
                     inTotal={teamLowScoreTotals?.getIn("B") ?? null}
                     totalScore={teamLowScoreTotals?.getTotal("B") ?? null}
+                    closingHole={closingHole}
+                    dividerColor={winnerColor}
                   />
                 )}
 
@@ -974,6 +1086,8 @@ export default function Match() {
                     outTotal={totals.getOut(pr.team, pr.pIdx)}
                     inTotal={totals.getIn(pr.team, pr.pIdx)}
                     totalScore={totals.getTotal(pr.team, pr.pIdx)}
+                    closingHole={closingHole}
+                    dividerColor={winnerColor}
                   />
                 ))}
 
@@ -994,6 +1108,8 @@ export default function Match() {
                     getDriveValue={getDriveValue}
                     getPlayerInitials={getPlayerInitials}
                     onDriveClick={handleDriveClick}
+                    closingHole={closingHole}
+                    dividerColor={winnerColor}
                   />
                 )}
               </tbody>

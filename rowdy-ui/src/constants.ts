@@ -15,6 +15,9 @@ export const SCORECARD_LABEL_WIDTH = 120;
 /** Width of OUT/IN/TOT summary columns in pixels */
 export const SCORECARD_TOTAL_COL_WIDTH = 48;
 
+/** Width of match-end divider column in pixels */
+export const SCORECARD_DIVIDER_WIDTH = 28;
+
 // =============================================================================
 // GOLF SCORING
 // =============================================================================

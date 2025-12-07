@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { Fragment, memo } from "react";
 import type { HoleData } from "./PlayerScoreRow";
 
 /** Props for TeamScoreRow */
@@ -11,6 +11,10 @@ export interface TeamScoreRowProps {
   outTotal: number | null;
   inTotal: number | null;
   totalScore: number | null;
+  /** 0-indexed hole where match closed (null if went to 18) */
+  closingHole?: number | null;
+  /** Color for the divider column */
+  dividerColor?: string;
 }
 
 /**
@@ -26,6 +30,8 @@ export const TeamScoreRow = memo(function TeamScoreRow({
   outTotal,
   inTotal,
   totalScore,
+  closingHole,
+  dividerColor,
 }: TeamScoreRowProps) {
   return (
     <tr style={{ backgroundColor: teamColor }}>
@@ -51,16 +57,22 @@ export const TeamScoreRow = memo(function TeamScoreRow({
       >
         {outTotal ?? "–"}
       </td>
-      {/* Back 9 low score */}
+      {/* Back 9 low score - with divider after closing hole */}
       {holes.slice(9, 18).map((h, i) => {
+        const holeIdx = 9 + i;
+        const isClosingHole = closingHole != null && holeIdx === closingHole;
         const lowScore = getTeamLowScore(h, team);
         return (
-          <td 
-            key={`team${team}-${h.k}`} 
-            className={`py-1 text-center text-white font-bold text-sm ${i === 0 ? "border-l-2 border-white/30" : ""}`}
-          >
-            {lowScore ?? ""}
-          </td>
+          <Fragment key={`team${team}-${h.k}`}>
+            <td 
+              className={`py-1 text-center text-white font-bold text-sm ${i === 0 ? "border-l-2 border-white/30" : ""}`}
+            >
+              {lowScore ?? ""}
+            </td>
+            {isClosingHole && (
+              <td style={{ backgroundColor: dividerColor }} />
+            )}
+          </Fragment>
         );
       })}
       {/* IN total */}

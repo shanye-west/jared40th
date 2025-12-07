@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { Fragment, memo } from "react";
 import type { HoleData } from "./PlayerScoreRow";
 
 /** Props for DriveSelectorsSection */
@@ -17,6 +17,10 @@ export interface DriveSelectorsSectionProps {
   getDriveValue: (hole: HoleData, team: "A" | "B") => 0 | 1 | null;
   getPlayerInitials: (playerId?: string) => string;
   onDriveClick: (hole: HoleData, team: "A" | "B") => void;
+  /** 0-indexed hole where match closed (null if went to 18) */
+  closingHole?: number | null;
+  /** Color for the divider column */
+  dividerColor?: string;
 }
 
 /** Props for a single drive row */
@@ -33,6 +37,8 @@ interface DriveRowProps {
   getDriveValue: (hole: HoleData, team: "A" | "B") => 0 | 1 | null;
   getPlayerInitials: (playerId?: string) => string;
   onDriveClick: (hole: HoleData, team: "A" | "B") => void;
+  closingHole?: number | null;
+  dividerColor?: string;
 }
 
 /** Single drive row for a team */
@@ -49,6 +55,8 @@ const DriveRow = memo(function DriveRow({
   getDriveValue,
   getPlayerInitials,
   onDriveClick,
+  closingHole,
+  dividerColor,
 }: DriveRowProps) {
   const renderDriveButton = (hole: HoleData, isFirstBack9?: boolean) => {
     const locked = isHoleLocked(hole.num);
@@ -98,8 +106,19 @@ const DriveRow = memo(function DriveRow({
       {holes.slice(0, 9).map(h => renderDriveButton(h))}
       {/* OUT spacer */}
       <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
-      {/* Back 9 */}
-      {holes.slice(9, 18).map((h, i) => renderDriveButton(h, i === 0))}
+      {/* Back 9 - with divider after closing hole */}
+      {holes.slice(9, 18).map((h, i) => {
+        const holeIdx = 9 + i;
+        const isClosingHole = closingHole != null && holeIdx === closingHole;
+        return (
+          <Fragment key={`drive${team}-back-${h.k}`}>
+            {renderDriveButton(h, i === 0)}
+            {isClosingHole && (
+              <td style={{ backgroundColor: dividerColor }} />
+            )}
+          </Fragment>
+        );
+      })}
       {/* IN spacer */}
       <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
       {/* TOT spacer */}
@@ -127,6 +146,8 @@ export const DriveSelectorsSection = memo(function DriveSelectorsSection({
   getDriveValue,
   getPlayerInitials,
   onDriveClick,
+  closingHole,
+  dividerColor,
 }: DriveSelectorsSectionProps) {
   return (
     <>
@@ -143,6 +164,8 @@ export const DriveSelectorsSection = memo(function DriveSelectorsSection({
         getDriveValue={getDriveValue}
         getPlayerInitials={getPlayerInitials}
         onDriveClick={onDriveClick}
+        closingHole={closingHole}
+        dividerColor={dividerColor}
       />
       <DriveRow
         team="B"
@@ -157,6 +180,8 @@ export const DriveSelectorsSection = memo(function DriveSelectorsSection({
         getDriveValue={getDriveValue}
         getPlayerInitials={getPlayerInitials}
         onDriveClick={onDriveClick}
+        closingHole={closingHole}
+        dividerColor={dividerColor}
       />
     </>
   );
