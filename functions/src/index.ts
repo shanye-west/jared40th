@@ -813,13 +813,12 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     const playerCourseHandicap = matchCourseHandicaps[courseHcpIndex] ?? 0;
     
     if (format === "twoManBestBall" || format === "singles") {
-      const playerGrossArr = team === "teamA" ? teamAPlayerGross : teamBPlayerGross;
-      totalGross = playerGrossArr[pIdx];
-      // totalNet = totalGross - playerCourseHandicap (course handicap, not match strokes)
-      totalNet = totalGross - playerCourseHandicap;
-      strokesVsParGross = totalGross - coursePar;
-      // strokesVsParNet uses course handicap from match document (integer)
-      strokesVsParNet = totalGross - playerCourseHandicap - coursePar;
+      // totalGross/totalNet will be computed from holePerformance below
+      // (ensures post-match holes are included regardless of when match closed)
+      totalGross = null;
+      totalNet = null;
+      strokesVsParGross = null;
+      strokesVsParNet = null;
     } else if (format === "twoManScramble" || format === "twoManShamble") {
       teamTotalGross = team === "teamA" ? teamATotalGross : teamBTotalGross;
       teamStrokesVsParGross = teamTotalGross - coursePar;
@@ -956,6 +955,17 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       }
       
       holePerformance.push(holeData);
+    }
+
+    // After building holePerformance (which includes post-match holes), compute per-player totals
+    if (format === "twoManBestBall" || format === "singles") {
+      const grossSum = holePerformance.reduce((s, hh) => s + (typeof hh.gross === "number" ? hh.gross : 0), 0);
+      const netSum = holePerformance.reduce((s, hh) => s + (typeof hh.net === "number" ? hh.net : 0), 0);
+      totalGross = grossSum;
+      // Prefer summed net (per-hole net) when available; fall back to course-handicap subtraction
+      totalNet = netSum || (typeof totalGross === "number" ? totalGross - playerCourseHandicap : null);
+      strokesVsParGross = typeof totalGross === "number" ? (totalGross - coursePar) : null;
+      strokesVsParNet = typeof totalNet === "number" ? (totalNet - coursePar) : null;
     }
 
     // Opponent/Partner arrays
