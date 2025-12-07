@@ -141,6 +141,36 @@ export default function Match() {
     return null; // Match went to 18 or ended AS
   }, [isMatchClosed, matchThru, match?.result?.winner]);
   
+  // Count how many holes have complete scores (for determining when to show post-match stats)
+  const completedHolesCount = useMemo(() => {
+    if (!match?.holes) return 0;
+    let count = 0;
+    for (let i = 1; i <= 18; i++) {
+      const h = match.holes[String(i)]?.input;
+      if (!h) continue;
+      // Check if hole has complete data based on format
+      if (format === "twoManScramble") {
+        if (typeof h.teamAGross === "number" && typeof h.teamBGross === "number") count++;
+      } else if (format === "singles") {
+        if (typeof h.teamAPlayerGross === "number" && typeof h.teamBPlayerGross === "number") count++;
+      } else {
+        // Best Ball & Shamble: need all 4 player scores
+        const aArr = h.teamAPlayersGross;
+        const bArr = h.teamBPlayersGross;
+        if (Array.isArray(aArr) && Array.isArray(bArr) &&
+            typeof aArr[0] === "number" && typeof aArr[1] === "number" &&
+            typeof bArr[0] === "number" && typeof bArr[1] === "number") {
+          count++;
+        }
+      }
+    }
+    return count;
+  }, [match?.holes, format]);
+  
+  // Determine if post-match stats should be shown
+  // Show when: match is closed AND (all 18 holes scored OR round is locked)
+  const showPostMatchStats = isMatchClosed && matchFacts.length > 0 && (completedHolesCount === 18 || roundLocked);
+  
   // Format the final result text for the divider column
   const finalResultText = useMemo(() => {
     if (!isMatchClosed || closingHole === null) return null;
@@ -1129,7 +1159,8 @@ export default function Match() {
         )}
 
         {/* POST-MATCH STATS */}
-        {isMatchClosed && matchFacts.length > 0 && (
+        {/* Show when: match closed AND (all 18 holes scored OR round locked) */}
+        {showPostMatchStats && (
           <PostMatchStats
             matchFacts={matchFacts}
             format={format}
