@@ -1,5 +1,4 @@
 import { Fragment, memo } from "react";
-import { MatchDivider } from "./MatchDivider";
 import { ScoreInputCell } from "./ScoreInputCell";
 import type { HoleInputLoose } from "../../types";
 
@@ -117,9 +116,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
               />
             </td>
             {isClosingHole && (
-              <td key={`match-divider-player-${h.k}`} className="p-0">
-                <MatchDivider color={dividerColor ?? undefined} />
-              </td>
+              <td style={{ backgroundColor: dividerColor }} />
             )}
           </Fragment>
         );

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, Fragment } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -27,7 +27,6 @@ import {
   DrivesTrackerBanner,
   type HoleData,
 } from "../components/match";
-import { MatchDivider } from "../components/match/MatchDivider";
 import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
@@ -852,7 +851,7 @@ export default function Match() {
                     const holeIdx = 9 + i;
                     const isClosingHole = closingHole !== null && holeIdx === closingHole;
                     return (
-                      <Fragment key={`header-frag-${h.k}`}>
+                      <>
                         <th 
                           key={h.k} 
                           className="font-bold py-2 border-l-2"
@@ -865,11 +864,17 @@ export default function Match() {
                           {h.num}
                         </th>
                         {isClosingHole && (
-                          <th key={`match-divider-header-${h.k}`} className="p-0">
-                            <MatchDivider color={winnerColor} />
-                          </th>
+                          <th 
+                            key="match-divider-header"
+                            className="py-2"
+                            style={{ 
+                              width: dividerWidth, 
+                              minWidth: dividerWidth,
+                              backgroundColor: winnerColor,
+                            }}
+                          />
                         )}
-                      </Fragment>
+                      </>
                     );
                   })}
                   <th 
@@ -903,14 +908,10 @@ export default function Match() {
                     const holeIdx = 9 + i;
                     const isClosingHole = closingHole !== null && holeIdx === closingHole;
                     return (
-                      <Fragment key={`hcp-frag-${h.k}`}>
+                      <>
                         <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.hcpIndex || ""}</td>
-                        {isClosingHole && (
-                          <td key={`match-divider-hcp-${h.k}`} className="p-0">
-                            <MatchDivider color={winnerColor} />
-                          </td>
-                        )}
-                      </Fragment>
+                        {isClosingHole && <td key="match-divider-hcp" style={{ backgroundColor: winnerColor }} />}
+                      </>
                     );
                   })}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200"></td>
@@ -930,14 +931,10 @@ export default function Match() {
                     const holeIdx = 9 + i;
                     const isClosingHole = closingHole !== null && holeIdx === closingHole;
                     return (
-                      <Fragment key={`yards-frag-${h.k}`}>
+                      <>
                         <td key={h.k} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>{h.yards || ""}</td>
-                        {isClosingHole && (
-                          <td key={`match-divider-yards-${h.k}`} className="p-0">
-                            <MatchDivider color={winnerColor} />
-                          </td>
-                        )}
-                      </Fragment>
+                        {isClosingHole && <td key="match-divider-yards" style={{ backgroundColor: winnerColor }} />}
+                      </>
                     );
                   })}
                   <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
@@ -959,14 +956,10 @@ export default function Match() {
                     const holeIdx = 9 + i;
                     const isClosingHole = closingHole !== null && holeIdx === closingHole;
                     return (
-                      <Fragment key={`par-frag-${h.k}`}>
+                      <>
                         <td key={h.k} className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>{h.par}</td>
-                        {isClosingHole && (
-                          <td key={`match-divider-par-${h.k}`} className="p-0">
-                            <MatchDivider color={winnerColor} />
-                          </td>
-                        )}
-                      </Fragment>
+                        {isClosingHole && <td key="match-divider-par" style={{ backgroundColor: winnerColor }} />}
+                      </>
                     );
                   })}
                   <td className="py-1.5 bg-slate-200 font-bold border-l-2 border-slate-300">{totals.parIn}</td>
@@ -1051,7 +1044,7 @@ export default function Match() {
                     const textColor = leader ? "#fff" : "#94a3b8";
                     
                     return (
-                      <Fragment key={`status-frag-${h.k}`}>
+                      <>
                         <td key={`status-${h.k}`} className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-300" : ""}`}>
                           <div 
                             className="text-xs font-bold rounded px-1 py-0.5 text-center"
@@ -1062,18 +1055,22 @@ export default function Match() {
                         </td>
                         {/* Divider column after closing hole - shows final result */}
                         {isClosingHole && (
-                          <td key={`match-divider-status-${h.k}`} className="p-0">
-                            <div style={{ position: "relative" }}>
-                              <MatchDivider color={winnerColor} width={dividerWidth} />
-                              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <div className="text-xs font-bold text-white text-center whitespace-nowrap">
-                                  {finalResultText}
-                                </div>
-                              </div>
+                          <td 
+                            key="match-divider-status"
+                            className="py-1 px-0.5 border-l-2 border-r-2"
+                            style={{ 
+                              width: dividerWidth, 
+                              minWidth: dividerWidth,
+                              borderColor: winnerColor,
+                              backgroundColor: winnerColor,
+                            }}
+                          >
+                            <div className="text-xs font-bold text-white text-center whitespace-nowrap">
+                              {finalResultText}
                             </div>
                           </td>
                         )}
-                      </Fragment>
+                      </>
                     );
                   })}
                   {/* IN status - always blank */}

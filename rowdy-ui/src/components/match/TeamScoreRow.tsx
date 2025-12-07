@@ -1,5 +1,4 @@
 import { Fragment, memo } from "react";
-import { MatchDivider } from "./MatchDivider";
 import type { HoleData } from "./PlayerScoreRow";
 
 /** Props for TeamScoreRow */
@@ -71,9 +70,7 @@ export const TeamScoreRow = memo(function TeamScoreRow({
               {lowScore ?? ""}
             </td>
             {isClosingHole && (
-              <td key={`match-divider-team-${h.k}`} className="p-0">
-                <MatchDivider color={dividerColor ?? undefined} />
-              </td>
+              <td style={{ backgroundColor: dividerColor }} />
             )}
           </Fragment>
         );
