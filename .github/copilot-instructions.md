@@ -46,16 +46,18 @@ Generated when a match closes (`status.closed = true`):
 - `format` - Match format
 - `outcome` - "win" | "loss" | "halve"
 - `pointsEarned` - Points from this match
-- `holesWon`, `holesLost`, `holesHalved` - Hole-by-hole results (halved = finalThru - won - lost)
+- `holesWon`, `holesLost`, `holesHalved` - Hole-by-hole results up to winningHole
 - `finalMargin`, `finalThru` - Match result details
-- `drivesUsed` - Count of drives used (shamble/scramble only)
-- `ballsUsed` - Count of times player's ball was used (compares gross scores)
-- `totalGross`, `totalNet` - 18-hole totals (individual formats only)
-- `strokesVsParGross`, `strokesVsParNet` - Strokes relative to par (individual formats)
-- `teamTotalGross`, `teamStrokesVsParGross` - Team totals (team formats only)
+- `winningHole` - 1-indexed hole where match was decided (null if AS or went to 18)
+- `hasPostMatchData` - True if scores exist beyond winningHole
+- `drivesUsed` - Count of drives used up to winningHole (shamble/scramble only)
+- `ballsUsed` - Count of times player's ball was used up to winningHole
+- `totalGross`, `totalNet` - Full 18-hole totals (individual formats only)
+- `strokesVsParGross`, `strokesVsParNet` - Strokes relative to par for all holes played
+- `teamTotalGross`, `teamStrokesVsParGross` - Team totals for all holes (team formats only)
 - `coursePar` - Par for the course played
 - `comebackWin`, `blownLead` - Momentum stats (was down/up 3+ on back 9)
-- `leadChanges`, `wasNeverBehind`, `winningHole`, `strokesGiven` - Additional match stats
+- `leadChanges`, `wasNeverBehind`, `strokesGiven` - Additional match stats (frozen at winningHole)
 - `playerTier`, `playerHandicap`, `partnerIds`, `partnerTiers`, `partnerHandicaps` - Player context
 - `opponentIds`, `opponentTiers`, `opponentHandicaps` - Opponent context
 - `courseId`, `day`, `tournamentYear`, `tournamentName`, `tournamentSeries` - Round/tournament context

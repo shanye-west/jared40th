@@ -348,12 +348,41 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     courseHoles = Array.from({ length: 18 }, (_, idx) => ({ number: idx + 1, par: 4 }));
   }
 
-  // Calculate match-wide stats by iterating through holes
+  // Pre-calculate winningHole before main loop
+  // This is the hole where the match was decided (margin > holes remaining)
   const holesData = after.holes || {};
+  let winningHole: number | null = null;
+  {
+    let tempMargin = 0;
+    for (const i of holesRange(holesData)) {
+      const holeResult = decideHole(format, i, after);
+      if (holeResult === "teamA") tempMargin++;
+      else if (holeResult === "teamB") tempMargin--;
+      
+      const margin = Math.abs(tempMargin);
+      const holesLeft = 18 - i;
+      if (margin > holesLeft && winningHole === null) {
+        winningHole = i;
+        break;
+      }
+    }
+  }
+  
+  // Check if there's post-match data (scores entered after match closed)
+  let hasPostMatchData = false;
+  if (winningHole !== null) {
+    for (const i of holesRange(holesData)) {
+      if (i > winningHole) {
+        hasPostMatchData = true;
+        break;
+      }
+    }
+  }
+
+  // Calculate match-wide stats by iterating through holes
   let leadChanges = 0;
   let wasTeamANeverBehind = true;
   let wasTeamBNeverBehind = true;
-  let winningHole: number | null = null;
   let prevLeader: "teamA" | "teamB" | null = null;
   let runningMargin = 0;
   
@@ -403,6 +432,10 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   for (const i of holesRange(holesData)) {
     const h = holesData[String(i)]?.input ?? {};
     
+    // Determine if this hole is part of the match (before or at winningHole)
+    // Match stats only accumulate for match holes; scoring stats accumulate for all holes
+    const isMatchHole = winningHole === null || i <= winningHole;
+    
     if (i === 18) {
       marginGoingInto18 = runningMargin;
     }
@@ -413,34 +446,29 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       hole18Result = holeResult;
     }
     
-    if (holeResult === "teamA") {
-      runningMargin++;
-    } else if (holeResult === "teamB") {
-      runningMargin--;
-    }
-    
-    const currentLeader = runningMargin > 0 ? "teamA" : runningMargin < 0 ? "teamB" : null;
-    
-    if (currentLeader !== null && prevLeader !== null && currentLeader !== prevLeader) {
-      leadChanges++;
-    }
-    if (currentLeader !== null) {
-      prevLeader = currentLeader;
-    }
-    
-    if (runningMargin < 0) wasTeamANeverBehind = false;
-    if (runningMargin > 0) wasTeamBNeverBehind = false;
-    
-    if (status.closed && winningHole === null) {
-      const margin = Math.abs(runningMargin);
-      const holesLeft = 18 - i;
-      if (margin > holesLeft) {
-        winningHole = i;
+    // Match status tracking - only for match holes
+    if (isMatchHole) {
+      if (holeResult === "teamA") {
+        runningMargin++;
+      } else if (holeResult === "teamB") {
+        runningMargin--;
       }
+      
+      const currentLeader = runningMargin > 0 ? "teamA" : runningMargin < 0 ? "teamB" : null;
+      
+      if (currentLeader !== null && prevLeader !== null && currentLeader !== prevLeader) {
+        leadChanges++;
+      }
+      if (currentLeader !== null) {
+        prevLeader = currentLeader;
+      }
+      
+      if (runningMargin < 0) wasTeamANeverBehind = false;
+      if (runningMargin > 0) wasTeamBNeverBehind = false;
     }
     
-    // Best Ball ball usage tracking
-    if (format === "twoManBestBall") {
+    // Best Ball ball usage tracking - only for match holes
+    if (format === "twoManBestBall" && isMatchHole) {
       const aArr = h.teamAPlayersGross;
       const bArr = h.teamBPlayersGross;
       
@@ -526,8 +554,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       }
     }
     
-    // Shamble ball usage tracking (GROSS scores)
-    if (format === "twoManShamble") {
+    // Shamble ball usage tracking (GROSS scores) - only for match holes
+    if (format === "twoManShamble" && isMatchHole) {
       const aArr = h.teamAPlayersGross;
       const bArr = h.teamBPlayersGross;
       
@@ -597,8 +625,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       }
     }
     
-    // Drive tracking
-    if (format === "twoManScramble" || format === "twoManShamble") {
+    // Drive tracking - only for match holes
+    if ((format === "twoManScramble" || format === "twoManShamble") && isMatchHole) {
       const aDrive = h.teamADrive;
       const bDrive = h.teamBDrive;
       if (aDrive === 0) teamADrivesUsed[0]++;
@@ -607,7 +635,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       else if (bDrive === 1) teamBDrivesUsed[1]++;
     }
     
-    // Scoring stats by format
+    // Scoring stats by format - tracks ALL holes (including post-match)
     if (format === "twoManScramble") {
       const aGross = h.teamAGross;
       const bGross = h.teamBGross;
@@ -982,6 +1010,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       leadChanges,
       wasNeverBehind,
       winningHole,
+      hasPostMatchData,
       decidedOn18,
       won18thHole,
       courseId,
