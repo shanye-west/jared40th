@@ -42,10 +42,20 @@ export const TeamScoreRow = memo(function TeamScoreRow({
         {teamName}
       </td>
       {/* Front 9 low score */}
-      {holes.slice(0, 9).map(h => {
+      {holes.slice(0, 9).map((h, i) => {
+        const holeIdx = i;
+        const isPostMatch = closingHole != null && holeIdx > closingHole;
+        const isFirstPostMatch = closingHole != null && holeIdx === closingHole + 1;
         const lowScore = getTeamLowScore(h, team);
         return (
-          <td key={`team${team}-${h.k}`} className="py-1 text-center text-white font-bold text-sm">
+          <td 
+            key={`team${team}-${h.k}`}
+            className={`py-1 text-center font-bold text-sm ${isPostMatch ? 'text-white/50' : 'text-white'}`}
+            style={{
+              ...(isPostMatch ? { backgroundColor: "rgba(0,0,0,0.1)" } : {}),
+              ...(isFirstPostMatch ? { borderLeft: `3px solid ${dividerColor}` } : {}),
+            }}
+          >
             {lowScore ?? ""}
           </td>
         );
@@ -64,8 +74,8 @@ export const TeamScoreRow = memo(function TeamScoreRow({
         const isFirstPostMatch = closingHole != null && holeIdx === closingHole + 1;
         const lowScore = getTeamLowScore(h, team);
         
-        // Build class: first hole gets border, post-match gets slight darkening
-        let cellClass = "py-1 text-center text-white font-bold text-sm";
+        // Build class: first hole gets border, post-match gets muted text
+        let cellClass = `py-1 text-center font-bold text-sm ${isPostMatch ? 'text-white/50' : 'text-white'}`;
         if (i === 0) cellClass += " border-l-2 border-white/30";
         
         return (

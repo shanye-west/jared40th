@@ -14,6 +14,8 @@ export interface ScoreInputCellProps {
   lowScoreStatus: 'solo' | 'tied' | null;
   teamColor: 'A' | 'B';
   onChange: (holeKey: string, value: number | null) => void;
+  /** When true, cell is for a post-match hole (after match was decided) - uses muted styling */
+  isPostMatch?: boolean;
 }
 
 /** Memoized score input cell - prevents re-render unless props change */
@@ -28,6 +30,7 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   lowScoreStatus,
   teamColor,
   onChange,
+  isPostMatch = false,
 }: ScoreInputCellProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [pickerPos, setPickerPos] = useState<{left: number; top: number} | null>(null);
@@ -92,11 +95,13 @@ export const ScoreInputCell = memo(function ScoreInputCell({
         className={`
           w-11 h-11 text-center text-base font-semibold rounded-md border
           transition-colors duration-100 select-none
-          ${locked 
-            ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
-            : lowScoreBg 
-              ? `${lowScoreBg} border-slate-200 hover:border-slate-300 active:bg-slate-100` 
-              : "bg-white border-slate-200 hover:border-slate-300 active:bg-slate-100"
+          ${isPostMatch
+            ? "bg-slate-50 text-slate-400 border-slate-200"
+            : locked 
+              ? "bg-slate-50 text-slate-600 border-slate-200 cursor-default" 
+              : lowScoreBg 
+                ? `${lowScoreBg} border-slate-200 hover:border-slate-300 active:bg-slate-100` 
+                : "bg-white border-slate-200 hover:border-slate-300 active:bg-slate-100"
           }
           ${showPicker ? 'ring-2 ring-blue-400 shadow-lg z-30 scale-[1.02]' : ''}
         `}
@@ -124,25 +129,25 @@ export const ScoreInputCell = memo(function ScoreInputCell({
           {/* Outer circles for eagle+ (2+ under par) */}
           {circleCount >= 2 && (
             <div 
-              className="absolute rounded-full border border-black/70"
+              className={`absolute rounded-full border ${isPostMatch ? 'border-slate-300' : 'border-black/70'}`}
               style={{ width: '38px', height: '38px' }}
             />
           )}
           {circleCount >= 3 && (
             <div 
-              className="absolute rounded-full border border-black/70"
+              className={`absolute rounded-full border ${isPostMatch ? 'border-slate-300' : 'border-black/70'}`}
               style={{ width: '42px', height: '42px' }}
             />
           )}
           {circleCount >= 4 && (
             <div 
-              className="absolute rounded-full border border-black/70"
+              className={`absolute rounded-full border ${isPostMatch ? 'border-slate-300' : 'border-black/70'}`}
               style={{ width: '46px', height: '46px' }}
             />
           )}
           {/* Inner circle for birdie (always shown when under par) */}
           <div 
-            className="absolute rounded-full border border-black/70"
+            className={`absolute rounded-full border ${isPostMatch ? 'border-slate-300' : 'border-black/70'}`}
             style={{ width: '34px', height: '34px' }}
           />
         </div>

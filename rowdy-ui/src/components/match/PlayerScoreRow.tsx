@@ -75,22 +75,36 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
         {label}
       </td>
       {/* Front 9 holes */}
-      {holes.slice(0, 9).map(h => (
-        <td key={h.k} className="p-0.5">
-          <ScoreInputCell
-            holeKey={h.k}
-            holeNum={h.num}
-            value={getCellValue(h.k)}
-            par={h.par}
-            locked={isHoleLocked(h.num)}
-            hasStroke={hasStroke(h.num - 1)}
-            hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
-            lowScoreStatus={getLowScoreStatus(h.k)}
-            teamColor={team}
-            onChange={onCellChange}
-          />
-        </td>
-      ))}
+      {holes.slice(0, 9).map((h, i) => {
+        const holeIdx = i;
+        const isPostMatch = closingHole != null && holeIdx > closingHole;
+        const isFirstPostMatch = closingHole != null && holeIdx === closingHole + 1;
+        
+        let cellClass = "p-0.5";
+        if (isPostMatch) cellClass += " bg-slate-50/60";
+        
+        return (
+          <td 
+            key={h.k} 
+            className={cellClass}
+            style={isFirstPostMatch ? { borderLeft: `3px solid ${dividerColor}` } : undefined}
+          >
+            <ScoreInputCell
+              holeKey={h.k}
+              holeNum={h.num}
+              value={getCellValue(h.k)}
+              par={h.par}
+              locked={isHoleLocked(h.num)}
+              hasStroke={hasStroke(h.num - 1)}
+              hasDrive={trackDrives && getDriveValue(h.k) === pIdx}
+              lowScoreStatus={getLowScoreStatus(h.k)}
+              teamColor={team}
+              onChange={onCellChange}
+              isPostMatch={isPostMatch}
+            />
+          </td>
+        );
+      })}
       {/* OUT total */}
       <td className="py-1 bg-slate-50 font-bold text-slate-700 border-l-2 border-slate-200">
         {outTotal ?? "–"}
@@ -123,6 +137,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
               lowScoreStatus={getLowScoreStatus(h.k)}
               teamColor={team}
               onChange={onCellChange}
+              isPostMatch={isPostMatch}
             />
           </td>
         );
