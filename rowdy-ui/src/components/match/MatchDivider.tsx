@@ -27,7 +27,9 @@ export const MatchDivider: React.FC<MatchDividerProps> = ({ color = "#fff", widt
       >
         <polygon
           points={`0,0 ${svgWidth},15 0,30 ${svgWidth},45 0,60 ${svgWidth},75 0,90 ${svgWidth},100`}
-          fill="#fff"
+          fill="rgba(255,255,255,0.92)"
+          stroke="rgba(0,0,0,0.06)"
+          strokeWidth={0.5}
         />
       </svg>
 
@@ -39,7 +41,9 @@ export const MatchDivider: React.FC<MatchDividerProps> = ({ color = "#fff", widt
       >
         <polygon
           points={`${svgWidth},0 0,15 ${svgWidth},30 0,45 ${svgWidth},60 0,75 ${svgWidth},90 0,100`}
-          fill="#fff"
+          fill="rgba(255,255,255,0.92)"
+          stroke="rgba(0,0,0,0.06)"
+          strokeWidth={0.5}
         />
       </svg>
     </div>
