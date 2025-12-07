@@ -17,6 +17,10 @@ export interface DriveSelectorsSectionProps {
   getDriveValue: (hole: HoleData, team: "A" | "B") => 0 | 1 | null;
   getPlayerInitials: (playerId?: string) => string;
   onDriveClick: (hole: HoleData, team: "A" | "B") => void;
+  /** 0-indexed hole where match closed (null if went to 18) */
+  closingHole?: number | null;
+  /** Color for the divider column */
+  dividerColor?: string;
 }
 
 /** Props for a single drive row */
@@ -33,6 +37,8 @@ interface DriveRowProps {
   getDriveValue: (hole: HoleData, team: "A" | "B") => 0 | 1 | null;
   getPlayerInitials: (playerId?: string) => string;
   onDriveClick: (hole: HoleData, team: "A" | "B") => void;
+  closingHole?: number | null;
+  dividerColor?: string;
 }
 
 /** Single drive row for a team */
@@ -49,8 +55,11 @@ const DriveRow = memo(function DriveRow({
   getDriveValue,
   getPlayerInitials,
   onDriveClick,
+  closingHole,
+  dividerColor,
 }: DriveRowProps) {
-  const renderDriveButton = (hole: HoleData, isFirstBack9?: boolean) => {
+  const renderDriveButton = (hole: HoleData, options?: { isFirstBack9?: boolean; isPostMatch?: boolean; isFirstPostMatch?: boolean }) => {
+    const { isFirstBack9, isPostMatch, isFirstPostMatch } = options || {};
     const locked = isHoleLocked(hole.num);
     const currentDrive = getDriveValue(hole, team);
     const initials = currentDrive === 0 
@@ -59,11 +68,20 @@ const DriveRow = memo(function DriveRow({
         ? getPlayerInitials(teamPlayers[1]?.playerId)
         : null;
     
+    // Build class and style
+    let cellClass = "p-0.5";
+    if (isFirstBack9) cellClass += " border-l-2 border-slate-200";
+    if (isPostMatch) cellClass += " bg-slate-100/50";
+    
     return (
       <td 
         key={`drive${team}-${hole.k}`} 
-        className={`p-0.5 ${isFirstBack9 ? "border-l-2 border-slate-200" : ""}`} 
-        style={{ width: cellWidth, minWidth: cellWidth }}
+        className={cellClass}
+        style={{ 
+          width: cellWidth, 
+          minWidth: cellWidth,
+          ...(isFirstPostMatch ? { borderLeft: `3px solid ${dividerColor}` } : {}),
+        }}
       >
         <button
           type="button"
@@ -98,8 +116,17 @@ const DriveRow = memo(function DriveRow({
       {holes.slice(0, 9).map(h => renderDriveButton(h))}
       {/* OUT spacer */}
       <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
-      {/* Back 9 */}
-      {holes.slice(9, 18).map((h, i) => renderDriveButton(h, i === 0))}
+      {/* Back 9 - post-match cells have border and tint */}
+      {holes.slice(9, 18).map((h, i) => {
+        const holeIdx = 9 + i;
+        const isPostMatch = closingHole != null && holeIdx > closingHole;
+        const isFirstPostMatch = closingHole != null && holeIdx === closingHole + 1;
+        return renderDriveButton(h, { 
+          isFirstBack9: i === 0, 
+          isPostMatch, 
+          isFirstPostMatch 
+        });
+      })}
       {/* IN spacer */}
       <td className="bg-slate-100 border-l-2 border-slate-200" style={{ width: totalColWidth, minWidth: totalColWidth }}></td>
       {/* TOT spacer */}
@@ -127,6 +154,8 @@ export const DriveSelectorsSection = memo(function DriveSelectorsSection({
   getDriveValue,
   getPlayerInitials,
   onDriveClick,
+  closingHole,
+  dividerColor,
 }: DriveSelectorsSectionProps) {
   return (
     <>
@@ -143,6 +172,8 @@ export const DriveSelectorsSection = memo(function DriveSelectorsSection({
         getDriveValue={getDriveValue}
         getPlayerInitials={getPlayerInitials}
         onDriveClick={onDriveClick}
+        closingHole={closingHole}
+        dividerColor={dividerColor}
       />
       <DriveRow
         team="B"
@@ -157,6 +188,8 @@ export const DriveSelectorsSection = memo(function DriveSelectorsSection({
         getDriveValue={getDriveValue}
         getPlayerInitials={getPlayerInitials}
         onDriveClick={onDriveClick}
+        closingHole={closingHole}
+        dividerColor={dividerColor}
       />
     </>
   );

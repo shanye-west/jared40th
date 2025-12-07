@@ -84,6 +84,9 @@ export interface MatchSummary {
 
 /**
  * Summarizes the current match state by iterating through all holes
+ * Note: Once a match is mathematically decided (margin > holes remaining),
+ * we stop processing additional holes for match status purposes.
+ * This allows post-match scoring without affecting the final result.
  */
 export function summarize(format: RoundFormat, match: MatchData): MatchSummary {
   let a = 0, b = 0, thru = 0;
@@ -91,8 +94,12 @@ export function summarize(format: RoundFormat, match: MatchData): MatchSummary {
   let wasTeamADown3PlusBack9 = false;
   let wasTeamAUp3PlusBack9 = false;
   const marginHistory: number[] = []; // Track margin after each completed hole
+  let matchDecided = false; // Track when match is mathematically over
 
   for (const i of holesRange(match.holes ?? {})) {
+    // If match is already decided, don't process further holes for match status
+    if (matchDecided) break;
+    
     const res = decideHole(format, i, match);
     if (res === null) continue;
     thru = Math.max(thru, i);
@@ -106,6 +113,13 @@ export function summarize(format: RoundFormat, match: MatchData): MatchSummary {
     if (i >= 9) {
       if (runningMargin <= -3) wasTeamADown3PlusBack9 = true;
       if (runningMargin >= 3) wasTeamAUp3PlusBack9 = true;
+    }
+    
+    // Check if match is now mathematically decided
+    const margin = Math.abs(runningMargin);
+    const holesLeft = 18 - i;
+    if (margin > holesLeft) {
+      matchDecided = true;
     }
   }
   
