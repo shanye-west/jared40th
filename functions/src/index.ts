@@ -232,8 +232,59 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const matchId = event.params.matchId;
   const after = event.data?.after?.data();
   
-  if (!after || !after.status?.closed) {
-    // Clean up facts if match re-opened or deleted
+  const tId = after?.tournamentId || "";
+  const rId = after?.roundId || "";
+  
+  // Fetch round to check if locked and to get other context
+  let roundLocked = false;
+  let format: RoundFormat = "twoManBestBall";
+  let points = 1;
+  let courseId = "";
+  let day = 0;
+  
+  if (rId) {
+    const rSnap = await db.collection("rounds").doc(rId).get();
+    if (rSnap.exists) {
+      const rData = rSnap.data();
+      roundLocked = rData?.locked === true;
+      format = (rData?.format as RoundFormat) || "twoManBestBall";
+      points = rData?.pointsValue ?? 1;
+      courseId = rData?.courseId || "";
+      day = rData?.day ?? 0;
+    }
+  }
+  
+  // Count how many holes have input (any score entered)
+  const holesData = after?.holes || {};
+  let completedHolesCount = 0;
+  for (const key of Object.keys(holesData)) {
+    const holeNum = parseInt(key, 10);
+    if (holeNum >= 1 && holeNum <= 18) {
+      const input = holesData[key]?.input;
+      // Check if any score is entered for this hole based on format
+      let hasScore = false;
+      if (format === "singles") {
+        hasScore = input?.teamAPlayerGross != null || input?.teamBPlayerGross != null;
+      } else if (format === "twoManScramble") {
+        hasScore = input?.teamAGross != null || input?.teamBGross != null;
+      } else if (format === "twoManBestBall" || format === "twoManShamble") {
+        const aArr = input?.teamAPlayersGross;
+        const bArr = input?.teamBPlayersGross;
+        hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
+                   (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
+      }
+      if (hasScore) completedHolesCount++;
+    }
+  }
+  
+  const allHolesCompleted = completedHolesCount === 18;
+  const matchClosed = after?.status?.closed === true;
+  
+  // Only write facts if: (match closed AND all 18 holes scored) OR round is locked
+  const shouldWriteFacts = (matchClosed && allHolesCompleted) || roundLocked;
+  
+  if (!after || !shouldWriteFacts) {
+    // Clean up facts if match re-opened, not ready, or deleted
     const snap = await db.collection("playerMatchFacts").where("matchId", "==", matchId).get();
     if (snap.empty) return;
     const b = db.batch();
@@ -241,9 +292,6 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     await b.commit();
     return;
   }
-
-  const tId = after.tournamentId || "";
-  const rId = after.roundId || "";
   
   // Extract course handicaps from match document
   // Array order: [teamA[0], teamA[1], teamB[0], teamB[1]]
@@ -251,11 +299,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     ? after.courseHandicaps 
     : [0, 0, 0, 0];
   
-  let format: RoundFormat = "twoManBestBall";
-  let points = 1;
-  let courseId = "";
   let coursePar = DEFAULT_COURSE_PAR;
-  let day = 0;
   let playerTierLookup: Record<string, string> = {};
   let playerHandicapLookup: Record<string, number> = {};
   let teamAId = "teamA";
@@ -268,15 +312,11 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   let teamBCaptainId: string | null = null;
   let teamBCoCaptainId: string | null = null;
 
-  // Fetch Context (Round & Tournament)
+  // Re-fetch Round context for remaining fields (we already have format, points, courseId, day)
   if (rId) {
     const rSnap = await db.collection("rounds").doc(rId).get();
     if (rSnap.exists) {
       const rData = rSnap.data();
-      format = (rData?.format as RoundFormat) || "twoManBestBall";
-      points = rData?.pointsValue ?? 1;
-      courseId = rData?.courseId || "";
-      day = rData?.day ?? 0;
       
       if (rData?.course?.holes && Array.isArray(rData.course.holes)) {
         coursePar = rData.course.holes.reduce((sum: number, h: any) => sum + (h?.par || 4), 0);
@@ -350,7 +390,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
   // Pre-calculate winningHole before main loop
   // This is the hole where the match was decided (margin > holes remaining)
-  const holesData = after.holes || {};
+  // Note: holesData already declared earlier in function for completedHolesCount check
   let winningHole: number | null = null;
   {
     let tempMargin = 0;
