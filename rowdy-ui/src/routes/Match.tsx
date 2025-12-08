@@ -848,7 +848,7 @@ export default function Match() {
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i;
                     const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
+                    
                     return (
                       <th 
                         key={h.k} 
@@ -858,7 +858,6 @@ export default function Match() {
                           minWidth: cellWidth,
                           borderColor: tSeries === "christmasClassic" ? "#8b6914" : "#475569",
                           ...(isPostMatch ? { opacity: 0.7 } : {}),
-                          ...(isFirstPostMatch ? { borderLeftWidth: 3, borderLeftColor: winnerColor } : {}),
                         }}
                       >
                         {h.num}
@@ -895,12 +894,11 @@ export default function Match() {
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i;
                     const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
+                    
                     return (
                       <td 
                         key={h.k} 
                         className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""} ${isPostMatch ? "bg-slate-100/60" : ""}`}
-                        style={isFirstPostMatch ? { borderLeft: `3px solid ${winnerColor}` } : undefined}
                       >
                         {h.hcpIndex || ""}
                       </td>
@@ -922,12 +920,12 @@ export default function Match() {
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i;
                     const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
+                    
                     return (
                       <td 
                         key={h.k} 
                         className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""} ${isPostMatch ? "bg-slate-100/60" : ""}`}
-                        style={isFirstPostMatch ? { borderLeft: `3px solid ${winnerColor}` } : undefined}
+                        
                       >
                         {h.yards || ""}
                       </td>
@@ -951,12 +949,12 @@ export default function Match() {
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i;
                     const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
+                    
                     return (
                       <td 
                         key={h.k} 
                         className={`py-1.5 ${i === 0 ? "border-l-2 border-slate-300" : ""} ${isPostMatch ? "bg-slate-200/60" : ""}`}
-                        style={isFirstPostMatch ? { borderLeft: `3px solid ${winnerColor}` } : undefined}
+                        
                       >
                         {h.par}
                       </td>
@@ -987,7 +985,6 @@ export default function Match() {
                     inTotal={totals.getIn(pr.team, pr.pIdx)}
                     totalScore={totals.getTotal(pr.team, pr.pIdx)}
                     closingHole={closingHole}
-                    dividerColor={winnerColor}
                   />
                 ))}
 
@@ -1003,7 +1000,6 @@ export default function Match() {
                     inTotal={teamLowScoreTotals?.getIn("A") ?? null}
                     totalScore={teamLowScoreTotals?.getTotal("A") ?? null}
                     closingHole={closingHole}
-                    dividerColor={winnerColor}
                   />
                 )}
 
@@ -1046,7 +1042,7 @@ export default function Match() {
                   {holes.slice(9, 18).map((h, i) => {
                     const holeIdx = 9 + i; // 0-indexed hole position
                     const isPostMatch = closingHole !== null && holeIdx > closingHole;
-                    const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
+                    
                     const isClosingHole = closingHole !== null && holeIdx === closingHole;
                     
                     // For post-match holes, blank out status
@@ -1065,7 +1061,6 @@ export default function Match() {
                       <td 
                         key={`status-${h.k}`} 
                         className={`py-1 px-0.5 ${i === 0 ? "border-l-2 border-slate-300" : ""} ${isPostMatch ? "bg-slate-50/60" : ""}`}
-                        style={isFirstPostMatch ? { borderLeft: `3px solid ${winnerColor}` } : undefined}
                       >
                         <div 
                           className="text-xs font-bold rounded px-1 py-0.5 text-center whitespace-nowrap"
@@ -1094,7 +1089,6 @@ export default function Match() {
                     inTotal={teamLowScoreTotals?.getIn("B") ?? null}
                     totalScore={teamLowScoreTotals?.getTotal("B") ?? null}
                     closingHole={closingHole}
-                    dividerColor={winnerColor}
                   />
                 )}
 
@@ -1120,7 +1114,6 @@ export default function Match() {
                     inTotal={totals.getIn(pr.team, pr.pIdx)}
                     totalScore={totals.getTotal(pr.team, pr.pIdx)}
                     closingHole={closingHole}
-                    dividerColor={winnerColor}
                   />
                 ))}
 
@@ -1142,7 +1135,6 @@ export default function Match() {
                     getPlayerInitials={getPlayerInitials}
                     onDriveClick={handleDriveClick}
                     closingHole={closingHole}
-                    dividerColor={winnerColor}
                   />
                 )}
               </tbody>

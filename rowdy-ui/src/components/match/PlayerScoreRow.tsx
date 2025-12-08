@@ -14,7 +14,8 @@ export interface HoleData {
 
 /** Props for PlayerScoreRow */
 export interface PlayerScoreRowProps {
-  team: "A" | "B";
+  /** Team key, kept for compatibility with callers */
+  team?: "A" | "B";
   pIdx: number;
   label: string;
   color: string;
@@ -33,8 +34,6 @@ export interface PlayerScoreRowProps {
   totalScore: number | null;
   /** 0-indexed hole where match closed (null if match ongoing or went to 18) */
   closingHole?: number | null;
-  /** Color for the divider column */
-  dividerColor?: string;
 }
 
 /** Memoized player score row - renders 18 ScoreInputCells + totals */
@@ -56,7 +55,6 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
   inTotal,
   totalScore,
   closingHole,
-  dividerColor,
 }: PlayerScoreRowProps) {
   // Team B last row has thicker border
   const rowClassName = isTeamB && isLastOfTeam 
@@ -77,7 +75,6 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
       {holes.slice(0, 9).map((h, i) => {
         const holeIdx = i;
         const isPostMatch = closingHole != null && holeIdx > closingHole;
-        const isFirstPostMatch = closingHole != null && holeIdx === closingHole + 1;
         
         let cellClass = "p-0.5";
         if (isPostMatch) cellClass += " bg-slate-50/60";
@@ -86,7 +83,6 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
           <td 
             key={h.k} 
             className={cellClass}
-            style={isFirstPostMatch ? { borderLeft: `3px solid ${dividerColor}` } : undefined}
           >
             <ScoreInputCell
               holeKey={h.k}
@@ -112,7 +108,6 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
       {holes.slice(9, 18).map((h, i) => {
         const holeIdx = 9 + i;
         const isPostMatch = closingHole != null && holeIdx > closingHole;
-        const isFirstPostMatch = closingHole != null && holeIdx === closingHole + 1;
         
         // Build class: first hole of back 9 gets border, first post-match gets thick colored border
         let cellClass = "p-0.5";
@@ -123,7 +118,6 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
           <td 
             key={h.k} 
             className={cellClass}
-            style={isFirstPostMatch ? { borderLeft: `3px solid ${dividerColor}` } : undefined}
           >
             <ScoreInputCell
               holeKey={h.k}
