@@ -1014,16 +1014,28 @@ export default function Match() {
                   </td>
                   {/* Front 9 match status */}
                   {holes.slice(0, 9).map((h, i) => {
-                    const { status, leader } = runningMatchStatus[i];
+                    const holeIdx = i; // 0-indexed hole position
+                    const isPostMatch = closingHole !== null && holeIdx > closingHole;
+                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
+                    
+                    const { status, leader } = isPostMatch 
+                      ? { status: "", leader: null as "A" | "B" | null }
+                      : runningMatchStatus[i];
                     const bgColor = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "transparent";
                     const textColor = leader ? "#fff" : "#94a3b8";
+                    
+                    // Closing hole shows final result; post-match holes are blank
+                    const displayText = isClosingHole ? finalResultText : status;
+                    const displayBgColor = isClosingHole ? winnerColor : bgColor;
+                    const displayTextColor = isClosingHole ? "#fff" : textColor;
+                    
                     return (
-                      <td key={`status-${h.k}`} className="py-1 px-0.5">
+                      <td key={`status-${h.k}`} className={`py-1 px-0.5 ${isPostMatch ? "bg-slate-50/60" : ""}`}>
                         <div 
                           className="text-xs font-bold rounded px-1 py-0.5 text-center"
-                          style={{ color: textColor, backgroundColor: bgColor }}
+                          style={{ color: displayTextColor, backgroundColor: displayBgColor }}
                         >
-                          {status}
+                          {displayText}
                         </div>
                       </td>
                     );
@@ -1035,18 +1047,19 @@ export default function Match() {
                     const holeIdx = 9 + i; // 0-indexed hole position
                     const isPostMatch = closingHole !== null && holeIdx > closingHole;
                     const isFirstPostMatch = closingHole !== null && holeIdx === closingHole + 1;
+                    const isClosingHole = closingHole !== null && holeIdx === closingHole;
                     
-                    // For post-match holes, show the final result in first cell, empty in rest
+                    // For post-match holes, blank out status
                     const { status, leader } = isPostMatch 
                       ? { status: "", leader: null as "A" | "B" | null }
                       : runningMatchStatus[holeIdx];
                     const bgColor = leader === "A" ? teamAColor : leader === "B" ? teamBColor : "transparent";
                     const textColor = leader ? "#fff" : "#94a3b8";
                     
-                    // First post-match cell shows the final result
-                    const displayText = isFirstPostMatch ? finalResultText : status;
-                    const displayBgColor = isFirstPostMatch ? winnerColor : bgColor;
-                    const displayTextColor = isFirstPostMatch ? "#fff" : textColor;
+                    // Closing hole (last match hole) shows the final result; post-match holes are blank
+                    const displayText = isClosingHole ? finalResultText : status;
+                    const displayBgColor = isClosingHole ? winnerColor : bgColor;
+                    const displayTextColor = isClosingHole ? "#fff" : textColor;
                     
                     return (
                       <td 
