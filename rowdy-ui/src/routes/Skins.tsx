@@ -313,13 +313,31 @@ function SkinsComponent() {
                       <div style={{ display: "grid", gap: 6 }}>
                         {(() => {
                           const sorted = [...hole.allScores].sort((a, b) => {
-                            const aVal = selectedTab === "gross" ? a.gross : a.net;
-                            const bVal = selectedTab === "gross" ? b.gross : b.net;
-                            // Nulls (not yet played) go to the bottom
-                            if (aVal === null && bVal === null) return a.playerName.localeCompare(b.playerName);
-                            if (aVal === null) return 1;
-                            if (bVal === null) return -1;
-                            return aVal - bVal;
+                            const aStarted = a.playerThru > 0 || (selectedTab === "gross" ? a.gross !== null : a.net !== null);
+                            const bStarted = b.playerThru > 0 || (selectedTab === "gross" ? b.gross !== null : b.net !== null);
+
+                            // If one started and the other not, the started player comes first
+                            if (aStarted && !bStarted) return -1;
+                            if (!aStarted && bStarted) return 1;
+
+                            // Both started: sort by score (lowest first)
+                            if (aStarted && bStarted) {
+                              const aVal = selectedTab === "gross" ? a.gross ?? Number.POSITIVE_INFINITY : a.net ?? Number.POSITIVE_INFINITY;
+                              const bVal = selectedTab === "gross" ? b.gross ?? Number.POSITIVE_INFINITY : b.net ?? Number.POSITIVE_INFINITY;
+                              if (aVal !== bVal) return aVal - bVal;
+                              return a.playerName.localeCompare(b.playerName);
+                            }
+
+                            // Both not started: sort by tee time (earliest first)
+                            const aT = a.playerTeeTime ? (a.playerTeeTime.toDate ? a.playerTeeTime.toDate().getTime() : new Date(a.playerTeeTime).getTime()) : null;
+                            const bT = b.playerTeeTime ? (b.playerTeeTime.toDate ? b.playerTeeTime.toDate().getTime() : new Date(b.playerTeeTime).getTime()) : null;
+
+                            if (aT !== null && bT !== null) return aT - bT;
+                            if (aT !== null && bT === null) return -1;
+                            if (aT === null && bT !== null) return 1;
+
+                            // Fallback to name
+                            return a.playerName.localeCompare(b.playerName);
                           });
 
                           return sorted.map(score => {
