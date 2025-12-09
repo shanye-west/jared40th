@@ -3,6 +3,7 @@
   "roundId": "2025-rowdycup-day1",
   "tournamentId": "2025-rowdycup",
   "matchNumber": 1,
+  "teeTime": { "_seconds": 1733666400, "_nanoseconds": 0 },
   "courseHandicaps": [0, 0, 0, 0],
   "teamAPlayers": [
     {

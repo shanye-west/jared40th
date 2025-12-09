@@ -193,6 +193,8 @@ function RoundComponent() {
                     teamBColor={teamBColor}
                     teamAName={tournament?.teamA?.name}
                     teamBName={tournament?.teamB?.name}
+                    matchNumber={m.matchNumber}
+                    teeTime={m.teeTime}
                   />
 
                   {/* Right: Team B Players */}

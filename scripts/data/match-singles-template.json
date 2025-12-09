@@ -3,6 +3,7 @@
   "roundId": "2025ChristmasClassic-R02",
   "tournamentId": "2025ChristmasClassic",
   "matchNumber": 1,
+  "teeTime": { "_seconds": 1733666400, "_nanoseconds": 0 },
   "courseHandicaps": [0, 0],
   "teamAPlayers": [
     {

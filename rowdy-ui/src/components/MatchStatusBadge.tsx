@@ -22,6 +22,10 @@ export interface MatchStatusBadgeProps {
   teamBName?: string;
   /** Size variant */
   variant?: "default" | "compact";
+  /** Match number for display on unstarted matches */
+  matchNumber?: number;
+  /** Tee time (Firestore Timestamp) for display on unstarted matches */
+  teeTime?: any;
 }
 
 /**
@@ -29,7 +33,7 @@ export interface MatchStatusBadgeProps {
  * Used on Round page match cards and Match page header.
  * 
  * States handled:
- * - Not started: "Not Started" in grey
+ * - Not started: "Match X" with tee time (e.g., "9:10am")
  * - In progress (all square): "ALL SQUARE" with "THRU X"
  * - In progress (leader): Team name, "X UP", "THRU Y"
  * - Completed (halved): "TIED" with "FINAL"
@@ -43,6 +47,8 @@ export function MatchStatusBadge({
   teamAName = "Team A",
   teamBName = "Team B",
   variant = "default",
+  matchNumber,
+  teeTime,
 }: MatchStatusBadgeProps) {
   const isClosed = status?.closed === true;
   const thru = status?.thru ?? 0;
@@ -150,18 +156,43 @@ export function MatchStatusBadge({
   }
 
   // Not started
+  // Format tee time if available
+  let teeTimeStr = "";
+  if (teeTime) {
+    const date = teeTime.toDate ? teeTime.toDate() : new Date(teeTime);
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? "pm" : "am";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+    teeTimeStr = `${hours}:${minutesStr}${ampm}`;
+  }
+
   return (
     <div style={containerStyle}>
-      <div
-        style={{
-          whiteSpace: "nowrap",
-          fontSize: "0.75rem",
-          fontWeight: 600,
-          color: "#94a3b8",
-        }}
-      >
-        Not Started
-      </div>
+      {matchNumber && (
+        <div style={{ ...mainTextStyle, color: "#64748b" }}>
+          Match {matchNumber}
+        </div>
+      )}
+      {teeTimeStr && (
+        <div style={{ ...labelStyle, color: "#94a3b8" }}>
+          {teeTimeStr}
+        </div>
+      )}
+      {!matchNumber && !teeTimeStr && (
+        <div
+          style={{
+            whiteSpace: "nowrap",
+            fontSize: "0.75rem",
+            fontWeight: 600,
+            color: "#94a3b8",
+          }}
+        >
+          Not Started
+        </div>
+      )}
     </div>
   );
 }

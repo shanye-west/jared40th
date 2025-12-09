@@ -47,6 +47,14 @@ npx ts-node seed-match.ts --input data/match-twoManShamble.json
 npx ts-node seed-match.ts --input data/match-twoManScramble.json
 ```
 
+**Tee Time Field**: Matches can include an optional `teeTime` field (Firestore Timestamp) that displays on the Round page for matches that haven't started. Example format in JSON:
+```json
+{
+  "teeTime": { "_seconds": 1733666400, "_nanoseconds": 0 }
+}
+```
+This will display as "Match X" with the formatted time (e.g., "9:10am") on the Round page match card.
+
 ### Seed Handicaps
 Update tournament player handicaps from a JSON file. Accepts either an object map (`{ "playerId": handicap }`),
 an array (`[{ "playerId": "p1", "handicap": 12.3 }, ...]`), or a JSON that includes `tournamentId` and
