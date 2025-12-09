@@ -33,6 +33,7 @@ function TournamentComponent() {
         <div className="spinner-lg"></div>
       </div>
     );
+  }
 
   if (!tournament) {
     return (
@@ -45,8 +46,9 @@ function TournamentComponent() {
       </Layout>
     );
   }
-                  <TeamName name={tournament.teamB?.name || "Team B"} variant="inline" style={{ color: tournament.teamB?.color || "var(--team-b-default)", fontSize: '1.1rem', marginBottom: 4 }} />
-  const tLogo = tournament.tournamentLogo;
+  const tName = tournament?.name || "Tournament";
+  const tSeries = tournament?.series;
+  const tLogo = tournament?.tournamentLogo;
   const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
 
@@ -99,7 +101,7 @@ function TournamentComponent() {
                 fontSize: "1.1rem", 
                 marginBottom: 4 
               }}>
-                {tournament.teamA?.name || "Team A"}
+                <TeamName name={tournament.teamA?.name || "Team A"} variant="inline" style={{ color: tournament.teamA?.color || "var(--team-a-default)", fontSize: '1.1rem', marginBottom: 4 }} />
               </div>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
                 <span style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}>{stats.teamAConfirmed}</span>
@@ -123,7 +125,7 @@ function TournamentComponent() {
                 fontSize: "1.1rem", 
                 marginBottom: 4 
               }}>
-                {tournament.teamB?.name || "Team B"}
+                <TeamName name={tournament.teamB?.name || "Team B"} variant="inline" style={{ color: tournament.teamB?.color || "var(--team-b-default)", fontSize: '1.1rem', marginBottom: 4 }} />
               </div>
               <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1 }}>
                 <span style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}>{stats.teamBConfirmed}</span>
