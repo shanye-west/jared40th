@@ -11,6 +11,7 @@ export interface PlayerHoleScore {
   gross: number | null;
   net: number | null;
   hasStroke: boolean;
+  playerThru: number; // Number of holes completed by this player
 }
 
 export interface HoleSkinData {
@@ -23,6 +24,7 @@ export interface HoleSkinData {
   grossTiedCount: number; // 0 if winner, >1 if tied
   netTiedCount: number;
   allScores: PlayerHoleScore[]; // All player scores for this hole, sorted low→high
+  allPlayersCompleted: boolean; // True if all players have completed this hole
 }
 
 export interface PlayerSkinsTotal {
@@ -179,12 +181,14 @@ export function useSkinsData(roundId: string | undefined) {
             const gross = input.teamAPlayerGross ?? null;
             const hasStroke = (teamAPlayer.strokesReceived?.[holeNum - 1] ?? 0) > 0;
             const net = gross !== null ? gross - (hasStroke ? 1 : 0) : null;
+            const playerThru = match.status?.thru ?? 0;
             allScores.push({
               playerId: teamAPlayer.playerId,
               playerName: players[teamAPlayer.playerId]?.displayName || teamAPlayer.playerId,
               gross,
               net,
               hasStroke,
+              playerThru,
             });
           }
 
@@ -192,12 +196,14 @@ export function useSkinsData(roundId: string | undefined) {
             const gross = input.teamBPlayerGross ?? null;
             const hasStroke = (teamBPlayer.strokesReceived?.[holeNum - 1] ?? 0) > 0;
             const net = gross !== null ? gross - (hasStroke ? 1 : 0) : null;
+            const playerThru = match.status?.thru ?? 0;
             allScores.push({
               playerId: teamBPlayer.playerId,
               playerName: players[teamBPlayer.playerId]?.displayName || teamBPlayer.playerId,
               gross,
               net,
               hasStroke,
+              playerThru,
             });
           }
         } else if (format === "twoManBestBall") {
@@ -211,6 +217,7 @@ export function useSkinsData(roundId: string | undefined) {
               const gross = grossArray?.[idx] ?? null;
               const hasStroke = (player.strokesReceived?.[holeNum - 1] ?? 0) > 0;
               const net = gross !== null ? gross - (hasStroke ? 1 : 0) : null;
+              const playerThru = match.status?.thru ?? 0;
               
               allScores.push({
                 playerId: player.playerId,
@@ -218,6 +225,7 @@ export function useSkinsData(roundId: string | undefined) {
                 gross,
                 net,
                 hasStroke,
+                playerThru,
               });
             });
           });
@@ -245,6 +253,9 @@ export function useSkinsData(roundId: string | undefined) {
         return a.gross - b.gross;
       });
 
+      // Check if all players have completed this hole
+      const allPlayersCompleted = allScores.every(s => s.gross !== null);
+
       holes.push({
         holeNumber: holeNum,
         par,
@@ -255,6 +266,7 @@ export function useSkinsData(roundId: string | undefined) {
         grossTiedCount,
         netTiedCount,
         allScores,
+        allPlayersCompleted,
       });
     }
 

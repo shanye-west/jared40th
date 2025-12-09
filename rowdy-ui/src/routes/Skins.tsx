@@ -165,16 +165,16 @@ function SkinsComponent() {
                       gap: 12,
                       alignItems: "center",
                       padding: "12px 16px",
-                      backgroundColor: idx === 0 ? "#fef3c7" : "#f8fafc",
+                      backgroundColor: "#f8fafc",
                       borderRadius: 8,
-                      border: idx === 0 ? "2px solid #fbbf24" : "1px solid #e2e8f0",
+                      border: "1px solid #e2e8f0",
                     }}
                   >
                     {/* Rank */}
                     <div style={{ 
                       fontSize: "1.2rem", 
                       fontWeight: 800, 
-                      color: idx === 0 ? "#b45309" : "#64748b",
+                      color: "#64748b",
                       minWidth: 32,
                       textAlign: "center"
                     }}>
@@ -227,7 +227,7 @@ function SkinsComponent() {
                 }
               }
 
-              const hasWinner = winner !== null;
+              const allPlayersCompleted = hole.allPlayersCompleted;
 
               return (
                 <div
@@ -236,7 +236,7 @@ function SkinsComponent() {
                     border: "1px solid #e2e8f0",
                     borderRadius: 8,
                     overflow: "hidden",
-                    backgroundColor: hasWinner ? "#f0fdf4" : "#ffffff",
+                    backgroundColor: allPlayersCompleted ? "#f0fdf4" : "#ffffff",
                   }}
                 >
                   {/* Hole Header (clickable) */}
@@ -249,7 +249,7 @@ function SkinsComponent() {
                       gap: 12,
                       alignItems: "center",
                       padding: "12px 16px",
-                      backgroundColor: hasWinner ? "#dcfce7" : "#f8fafc",
+                      backgroundColor: allPlayersCompleted ? "#dcfce7" : "#f8fafc",
                       border: "none",
                       cursor: "pointer",
                       textAlign: "left",
@@ -275,7 +275,7 @@ function SkinsComponent() {
                       <div style={{ 
                         fontSize: "0.9rem", 
                         fontWeight: 700, 
-                        color: hasWinner ? "#16a34a" : "#64748b"
+                        color: allPlayersCompleted ? "#16a34a" : "#64748b"
                       }}>
                         {lowScore}
                       </div>
@@ -333,7 +333,7 @@ function SkinsComponent() {
                                   fontWeight: 600,
                                   color: displayScore === null ? "#cbd5e1" : "#1e293b"
                                 }}>
-                                  {displayScore ?? "—"}
+                                  {displayScore !== null ? displayScore : `Thru ${score.playerThru}`}
                                 </div>
                               </div>
                             );
