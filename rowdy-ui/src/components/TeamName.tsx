@@ -1,11 +1,15 @@
 import React, { useRef, useLayoutEffect, useEffect } from "react";
 
+export type TeamNameVariant = "tile" | "inline";
+
 export interface TeamNameProps {
   name: string;
   className?: string;
   title?: string;
   minFontPx?: number;
   maxFontPx?: number;
+  variant?: TeamNameVariant;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -14,13 +18,15 @@ export interface TeamNameProps {
  * - Watches container size changes via ResizeObserver.
  * - Keeps the name on a single line (no truncation).
  */
-export default function TeamName({
+const TeamName: React.FC<TeamNameProps> = ({
   name,
   className = "",
   title,
   minFontPx = 12,
   maxFontPx = 22,
-}: TeamNameProps) {
+  variant = "inline",
+  style,
+}: TeamNameProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLSpanElement | null>(null);
 
@@ -77,19 +83,19 @@ export default function TeamName({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const isTile = variant === "tile";
+
+  const containerStyle: React.CSSProperties = isTile
+    ? { display: "flex", alignItems: "center", justifyContent: "center", padding: "0.25rem 0.5rem", boxSizing: "border-box" }
+    : { display: "inline-block", padding: 0, boxSizing: "border-box" };
+
   return (
-    <div
-      ref={containerRef}
-      className={className}
-      title={title ?? name}
-      style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0.25rem 0.5rem", boxSizing: "border-box" }}
-    >
-      <span
-        ref={textRef}
-        style={{ whiteSpace: "nowrap", lineHeight: 1, fontWeight: 600, display: "inline-block" }}
-      >
+    <div ref={containerRef} className={className} title={title ?? name} style={{ ...containerStyle, ...(style || {}) }}>
+      <span ref={textRef} style={{ whiteSpace: "nowrap", lineHeight: 1, fontWeight: 600, display: "inline-block" }}>
         {name}
       </span>
     </div>
   );
-}
+};
+
+export default TeamName;
