@@ -201,7 +201,7 @@ function TeamsComponent() {
                               letterSpacing: '0.05em',
                               padding: '1px 5px',
                               borderRadius: 4,
-                              background: `color-mix(in srgb, ${teamColor} 15%, white)`,
+                              background: `color-mix(in srgb, ${teamColor} 86%, white)`,
                               marginLeft: 6,
                             }}
                           >
@@ -269,7 +269,7 @@ function TeamsComponent() {
               border: "none",
               cursor: "pointer",
               background: selectedTeam === "A" 
-                ? `color-mix(in srgb, ${teamAColor} 15%, white)` 
+                ? `color-mix(in srgb, ${teamAColor} 86%, white)` 
                 : "white",
               borderBottom: selectedTeam === "A" ? `3px solid ${teamAColor}` : "3px solid transparent",
               transition: "all 0.2s ease",
@@ -305,7 +305,7 @@ function TeamsComponent() {
               borderLeft: "1px solid var(--divider)",
               cursor: "pointer",
               background: selectedTeam === "B" 
-                ? `color-mix(in srgb, ${teamBColor} 15%, white)` 
+                ? `color-mix(in srgb, ${teamBColor} 86%, white)` 
                 : "white",
               borderBottom: selectedTeam === "B" ? `3px solid ${teamBColor}` : "3px solid transparent",
               transition: "all 0.2s ease",

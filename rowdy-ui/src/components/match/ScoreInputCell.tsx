@@ -37,14 +37,16 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   const [pickerPos, setPickerPos] = useState<{left: number; top: number} | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   
-  // Create a subtle tint using the passed teamColor. Use a darker tint for solo and lighter for tied.
-  const tintPercent = lowScoreStatus === 'solo' ? '15%' : lowScoreStatus === 'tied' ? '5%' : null;
-  const lowScoreStyle: CSSProperties | undefined = tintPercent && teamColor
+  // Create a stronger tint so team colors remain visually distinct from greys.
+  // Use mostly the team color so dark blues don't desaturate to grey.
+  const teamTint = lowScoreStatus === 'solo' ? '86%' : lowScoreStatus === 'tied' ? '92%' : null;
+  const lowScoreStyle: CSSProperties | undefined = teamTint && teamColor
     ? (() => {
-        const tint = `color-mix(in srgb, ${teamColor} ${tintPercent}, white)`;
+        const tint = `color-mix(in srgb, ${teamColor} ${teamTint}, white)`;
         return {
           background: tint,
-          borderColor: tint,
+          // Use the exact team color for the border for maximum contrast
+          borderColor: teamColor,
         } as CSSProperties;
       })()
     : undefined;
