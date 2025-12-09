@@ -4,6 +4,7 @@ import { useRoundData } from "../hooks/useRoundData";
 import { formatRoundType } from "../utils";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
 import Layout from "../components/Layout";
+import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import OfflineImage from "../components/OfflineImage";
 import { MatchStatusBadge, getMatchCardStyles } from "../components/MatchStatusBadge";
@@ -116,9 +117,7 @@ function RoundComponent() {
                   fallbackIcon="🔵"
                   style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
                 />
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamA?.color || "var(--team-a-default)", marginBottom: 2 }}>
-                  {tournament?.teamA?.name}
-                </div>
+                <TeamName name={tournament?.teamA?.name || "Team A"} variant="inline" style={{ color: tournament?.teamA?.color || "var(--team-a-default)", marginBottom: 2, fontSize: '0.85rem' }} />
                 <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
                   <span style={{ color: tournament?.teamA?.color || "var(--team-a-default)" }}>{stats.fA}</span>
                   {stats.pA > 0 && (
@@ -150,9 +149,7 @@ function RoundComponent() {
                   fallbackIcon="🔴"
                   style={{ width: 40, height: 40, objectFit: "contain", marginBottom: 6 }}
                 />
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: tournament?.teamB?.color || "var(--team-b-default)", marginBottom: 2 }}>
-                  {tournament?.teamB?.name}
-                </div>
+                <TeamName name={tournament?.teamB?.name || "Team B"} variant="inline" style={{ color: tournament?.teamB?.color || "var(--team-b-default)", marginBottom: 2, fontSize: '0.85rem' }} />
                 <div style={{ fontSize: "1.8rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
                   {stats.pB > 0 && (
                     <span

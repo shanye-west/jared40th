@@ -2,6 +2,7 @@ import { memo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTournamentData } from "../hooks/useTournamentData";
 import Layout from "../components/Layout";
+import TeamName from "../components/TeamName";
 import LastUpdated from "../components/LastUpdated";
 import ScoreBlock from "../components/ScoreBlock";
 import ScoreTrackerBar from "../components/ScoreTrackerBar";
@@ -32,7 +33,6 @@ function TournamentComponent() {
         <div className="spinner-lg"></div>
       </div>
     );
-  }
 
   if (!tournament) {
     return (
@@ -45,9 +45,7 @@ function TournamentComponent() {
       </Layout>
     );
   }
-
-  const tName = tournament.name || "Tournament";
-  const tSeries = tournament.series;
+                  <TeamName name={tournament.teamB?.name || "Team B"} variant="inline" style={{ color: tournament.teamB?.color || "var(--team-b-default)", fontSize: '1.1rem', marginBottom: 4 }} />
   const tLogo = tournament.tournamentLogo;
   const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
