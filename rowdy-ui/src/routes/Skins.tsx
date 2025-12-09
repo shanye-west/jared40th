@@ -241,7 +241,9 @@ function SkinsComponent() {
                 }
               }
 
+              // Emphasize only on the collapsed hole header when there is a single outright winner
               const allPlayersCompleted = hole.allPlayersCompleted;
+              const isHoleWinner = !!winner && lowScore !== null;
 
               return (
                 <div
@@ -280,7 +282,7 @@ function SkinsComponent() {
                     </div>
 
                     {/* Winner */}
-                    <div style={{ fontSize: "0.85rem", color: "#1e293b" }}>
+                    <div style={isHoleWinner ? { fontSize: "0.95rem", fontWeight: 800, color: "#1e293b" } : { fontSize: "0.85rem", color: "#1e293b" }}>
                       {winnerText}
                     </div>
 
@@ -334,28 +336,18 @@ function SkinsComponent() {
                                   backgroundColor: isWinner ? "#dcfce7" : "#f8fafc",
                                   borderRadius: 4,
                                   border: isWinner ? "1px solid #86efac" : "1px solid #e2e8f0",
-                                  minHeight: 40,
-                                  alignItems: "center",
                                 }}
                               >
-                                <div style={{
-                                  fontSize: isWinner ? "0.95rem" : "0.85rem",
-                                  fontWeight: isWinner ? 800 : 400,
-                                  color: "#1e293b",
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis"
-                                }}>
+                                <div style={{ fontSize: "0.85rem", color: "#1e293b" }}>
                                   {score.playerName}
                                   {selectedTab === "net" && score.hasStroke && (
-                                    <span style={{ marginLeft: 6, fontSize: "0.7rem", color: "#3b82f6" }}>●</span>
+                                    <span style={{ marginLeft: 4, fontSize: "0.7rem", color: "#3b82f6" }}>●</span>
                                   )}
                                 </div>
                                 <div style={{ 
                                   fontSize: "0.85rem", 
                                   fontWeight: 600,
-                                  color: displayScore === null ? "#cbd5e1" : "#1e293b",
-                                  whiteSpace: "nowrap"
+                                  color: displayScore === null ? "#cbd5e1" : "#1e293b"
                                 }}>
                                   {displayScore !== null ? displayScore : `Thru ${score.playerThru}`}
                                 </div>
