@@ -39,7 +39,7 @@ if (fs.existsSync(serviceAccountPath)) {
 
 const db = admin.firestore();
 
-const VALID_FORMATS = ["twoManBestBall", "twoManShamble", "twoManScramble", "singles", null];
+const VALID_FORMATS = ["twoManBestBall", "twoManShamble", "twoManScramble", "fourManScramble", "singles", null];
 
 async function seedRound(inputFile: string, force: boolean) {
   const inputPath = path.resolve(inputFile);
