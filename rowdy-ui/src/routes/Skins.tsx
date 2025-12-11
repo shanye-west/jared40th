@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useSkinsData } from "../hooks/useSkinsData";
 import type { SkinType } from "../hooks/useSkinsData";
@@ -69,6 +69,16 @@ function SkinsComponent() {
 
   const hasGross = (round.skinsGrossPot ?? 0) > 0;
   const hasNet = (round.skinsNetPot ?? 0) > 0;
+
+  // If only net skins are configured, default to the net tab.
+  useEffect(() => {
+    if (!round) return;
+    if (hasNet && !hasGross) {
+      setSelectedTab("net");
+    } else if (hasGross && !hasNet) {
+      setSelectedTab("gross");
+    }
+  }, [round, hasGross, hasNet]);
 
   // Filter player totals by selected tab
   const leaderboard = playerTotals
