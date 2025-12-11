@@ -18,6 +18,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 // Import shared modules
 import type { RoundFormat } from "./types.js";
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
+import { ensureTournamentTeamColors } from "./utils/teamColors.js";
 import { 
   playersPerSide, 
   ensureSideSize, 
@@ -344,7 +345,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   if (tId) {
     const tSnap = await db.collection("tournaments").doc(tId).get();
     if (tSnap.exists) {
-      const d = tSnap.data()!;
+      const dRaw = tSnap.data()!;
+      const d = ensureTournamentTeamColors(dRaw as any) as any;
       teamAId = d.teamA?.id || "teamA";
       teamBId = d.teamB?.id || "teamB";
       tournamentYear = d.year || 0;
