@@ -21,6 +21,23 @@ function SkinsComponent() {
   const [selectedTab, setSelectedTab] = useState<SkinType>("gross");
   const [expandedHole, setExpandedHole] = useState<number | null>(null);
 
+  const tName = tournament?.name || "Skins Game";
+  const tSeries = tournament?.series;
+  const tLogo = tournament?.tournamentLogo;
+
+  const hasGross = (round?.skinsGrossPot ?? 0) > 0;
+  const hasNet = (round?.skinsNetPot ?? 0) > 0;
+
+  // If only net or only gross skins are configured, default to that tab.
+  useEffect(() => {
+    if (!round) return;
+    if (hasNet && !hasGross) {
+      setSelectedTab("net");
+    } else if (hasGross && !hasNet) {
+      setSelectedTab("gross");
+    }
+  }, [round, hasGross, hasNet]);
+
   if (loading) {
     return (
       <Layout title="Loading..." showBack>
@@ -62,23 +79,6 @@ function SkinsComponent() {
       </Layout>
     );
   }
-
-  const tName = tournament?.name || "Skins Game";
-  const tSeries = tournament?.series;
-  const tLogo = tournament?.tournamentLogo;
-
-  const hasGross = (round.skinsGrossPot ?? 0) > 0;
-  const hasNet = (round.skinsNetPot ?? 0) > 0;
-
-  // If only net skins are configured, default to the net tab.
-  useEffect(() => {
-    if (!round) return;
-    if (hasNet && !hasGross) {
-      setSelectedTab("net");
-    } else if (hasGross && !hasNet) {
-      setSelectedTab("gross");
-    }
-  }, [round, hasGross, hasNet]);
 
   // Filter player totals by selected tab
   const leaderboard = playerTotals
