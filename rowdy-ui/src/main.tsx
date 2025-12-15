@@ -17,6 +17,7 @@ const History = lazy(() => import("./routes/History"));
 const Tournament = lazy(() => import("./routes/Tournament"));
 const Admin = lazy(() => import("./routes/Admin"));
 const AddMatch = lazy(() => import("./routes/AddMatch"));
+const EditMatch = lazy(() => import("./routes/EditMatch"));
 
 // Loading fallback for lazy-loaded routes
 const RouteLoader = () => (
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
   { path: "/login", element: <Suspense fallback={<RouteLoader />}><Login /></Suspense>, errorElement: <ErrorBoundary /> },
   { path: "/admin", element: <Suspense fallback={<RouteLoader />}><Admin /></Suspense>, errorElement: <ErrorBoundary /> },
   { path: "/admin/match", element: <Suspense fallback={<RouteLoader />}><AddMatch /></Suspense>, errorElement: <ErrorBoundary /> },
+  { path: "/admin/match/edit", element: <Suspense fallback={<RouteLoader />}><EditMatch /></Suspense>, errorElement: <ErrorBoundary /> },
   // Catch-all 404 route
   { path: "*", element: <NotFound /> },
 ]);

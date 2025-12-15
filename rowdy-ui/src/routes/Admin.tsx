@@ -43,6 +43,20 @@ export default function Admin() {
               </div>
             </Link>
 
+            {/* Edit Match */}
+            <Link 
+              to="/admin/match/edit" 
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-lg">Edit Match</div>
+                  <div className="text-sm text-gray-600">Modify existing match details and players</div>
+                </div>
+                <div className="text-2xl">→</div>
+              </div>
+            </Link>
+
             {/* Future: Add Tournament */}
             <div 
               className="block p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-50 cursor-not-allowed"

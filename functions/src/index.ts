@@ -1479,3 +1479,134 @@ export const seedMatch = onCall(async (request) => {
 
   return { success: true, matchId: id };
 });
+
+/**
+ * Admin-only function to edit an existing match.
+ * 
+ * Data payload:
+ * - matchId: string - Match document ID
+ * - tournamentId: string
+ * - roundId: string
+ * - teeTime?: string (ISO datetime format)
+ * - teamAPlayers: Array<{ playerId: string, courseHandicap: number }>
+ * - teamBPlayers: Array<{ playerId: string, courseHandicap: number }>
+ */
+export const editMatch = onCall(async (request) => {
+  // Auth check
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Must be logged in");
+  }
+
+  // Verify admin status
+  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
+  if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
+    throw new HttpsError("permission-denied", "Admin access required");
+  }
+
+  // Extract data
+  const { matchId, tournamentId, roundId, teeTime, teamAPlayers, teamBPlayers } = request.data;
+
+  // Validate required fields
+  if (!matchId || !tournamentId || !roundId || !teamAPlayers || !teamBPlayers) {
+    throw new HttpsError("invalid-argument", "Missing required fields");
+  }
+
+  if (!Array.isArray(teamAPlayers) || !Array.isArray(teamBPlayers)) {
+    throw new HttpsError("invalid-argument", "teamAPlayers and teamBPlayers must be arrays");
+  }
+
+  // Check if match exists
+  const matchDoc = await db.collection("matches").doc(matchId).get();
+  if (!matchDoc.exists) {
+    throw new HttpsError("not-found", "Match not found");
+  }
+
+  // Fetch round to get courseId
+  const roundDoc = await db.collection("rounds").doc(roundId).get();
+  if (!roundDoc.exists) {
+    throw new HttpsError("not-found", "Round not found");
+  }
+
+  const round = roundDoc.data()!;
+  const courseId = round.courseId;
+  if (!courseId) {
+    throw new HttpsError("failed-precondition", "Round does not have a courseId");
+  }
+
+  // Fetch course to get hole data
+  const courseDoc = await db.collection("courses").doc(courseId).get();
+  if (!courseDoc.exists) {
+    throw new HttpsError("not-found", "Course not found");
+  }
+
+  const course = courseDoc.data()!;
+  const courseHoles = course.holes || [];
+  if (courseHoles.length !== 18) {
+    throw new HttpsError("failed-precondition", "Course must have 18 holes");
+  }
+
+  // Calculate strokesReceived for each player
+  // First, "spin down" from the lowest handicap
+  const allHandicaps = [
+    ...teamAPlayers.map((p: any) => p.courseHandicap),
+    ...teamBPlayers.map((p: any) => p.courseHandicap),
+  ];
+  const lowestHandicap = Math.min(...allHandicaps);
+
+  // Build player arrays with strokes
+  const teamAPlayersWithStrokes = teamAPlayers.map((p: any) => {
+    const adjustedHandicap = p.courseHandicap - lowestHandicap;
+    return {
+      playerId: p.playerId,
+      strokesReceived: calculateStrokesReceived(adjustedHandicap, courseHoles),
+    };
+  });
+
+  const teamBPlayersWithStrokes = teamBPlayers.map((p: any) => {
+    const adjustedHandicap = p.courseHandicap - lowestHandicap;
+    return {
+      playerId: p.playerId,
+      strokesReceived: calculateStrokesReceived(adjustedHandicap, courseHoles),
+    };
+  });
+
+  // Store raw course handicaps for reference
+  const courseHandicaps = [
+    ...teamAPlayers.map((p: any) => p.courseHandicap),
+    ...teamBPlayers.map((p: any) => p.courseHandicap),
+  ];
+
+  // Parse teeTime if provided
+  let teeTimeTimestamp: Timestamp | null = null;
+  if (teeTime) {
+    // Handle ISO string format from datetime-local input
+    if (typeof teeTime === 'string') {
+      const date = new Date(teeTime);
+      teeTimeTimestamp = Timestamp.fromDate(date);
+    } else if (typeof teeTime === 'object' && '_seconds' in teeTime) {
+      teeTimeTimestamp = Timestamp.fromMillis(teeTime._seconds * 1000 + (teeTime._nanoseconds || 0) / 1000000);
+    } else if (teeTime instanceof Timestamp) {
+      teeTimeTimestamp = teeTime;
+    }
+  }
+
+  // Update match document
+  const updates: any = {
+    tournamentId,
+    roundId,
+    teamAPlayers: teamAPlayersWithStrokes,
+    teamBPlayers: teamBPlayersWithStrokes,
+    courseHandicaps,
+  };
+
+  // Only update teeTime if provided
+  if (teeTimeTimestamp) {
+    updates.teeTime = teeTimeTimestamp;
+  }
+
+  // Write to Firestore
+  await db.collection("matches").doc(matchId).update(updates);
+
+  return { success: true, matchId };
+});
