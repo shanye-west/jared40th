@@ -242,7 +242,7 @@ export default function AddMatch() {
                 type="text"
                 value={matchId}
                 onChange={(e) => setMatchId(e.target.value)}
-                placeholder="e.g., rowdyCup2025-R01-M01"
+                placeholder="e.g., rowdyCup2025-R01M01-twoManBestBall"
                 className="w-full p-3 border border-gray-300 rounded-lg"
                 required
               />
