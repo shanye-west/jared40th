@@ -16,21 +16,7 @@ export default function AddMatch() {
   const { player } = useAuth();
   const navigate = useNavigate();
 
-  // Access control
-  if (!player?.isAdmin) {
-    return (
-      <Layout title="Add Match" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <div className="empty-state-text">Access Denied</div>
-          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
-    );
-  }
-
-  // State
+  // State - must declare all hooks before any conditional returns
   const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
   const [rounds, setRounds] = useState<RoundDoc[]>([]);
   const [players, setPlayers] = useState<PlayerDoc[]>([]);
@@ -166,6 +152,20 @@ export default function AddMatch() {
       setSubmitting(false);
     }
   };
+
+  // Access control - check after all hooks are declared
+  if (!player?.isAdmin) {
+    return (
+      <Layout title="Add Match" showBack>
+        <div className="empty-state">
+          <div className="empty-state-icon">🔒</div>
+          <div className="empty-state-text">Access Denied</div>
+          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        </div>
+      </Layout>
+    );
+  }
 
   if (loading) {
     return (
