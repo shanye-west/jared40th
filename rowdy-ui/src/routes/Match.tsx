@@ -775,7 +775,7 @@ export default function Match() {
               aria-label="Open strokes info"
               className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center px-2 py-1 rounded"
             >
-              <span className="text-sm text-slate-700">Strokes Info</span>
+              <span className="text-sm text-slate-700">Strokes</span>
               <span className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem] relative -top-1" aria-hidden="true">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
