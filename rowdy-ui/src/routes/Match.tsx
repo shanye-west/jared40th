@@ -769,13 +769,20 @@ export default function Match() {
         <div className="space-y-3">
           {/* Top row: centered format pill with auth status on the right */}
           <div className="relative">
-            {/* Strokes Info button - positioned to the left */}
+            {/* Strokes Info label with tappable superscript icon (entire area is clickable) */}
             <button
               onClick={() => setStrokesInfoModal(true)}
-              className="absolute left-0 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded"
-              style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}
+              aria-label="Open strokes info"
+              className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center px-2 py-1 rounded"
             >
-              Strokes Info
+              <span className="text-sm text-slate-700">Strokes Info</span>
+              <span className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem] relative -top-1" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <circle cx="12" cy="16" r="1" />
+                </svg>
+              </span>
             </button>
             
             <div className="flex justify-center">
