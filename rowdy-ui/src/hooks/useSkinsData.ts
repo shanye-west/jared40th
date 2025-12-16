@@ -181,8 +181,10 @@ export function useSkinsData(roundId: string | undefined) {
 
           if (teamAPlayer) {
             const gross = input.teamAPlayerGross ?? null;
-            const hasStroke = (teamAPlayer.strokesReceived?.[holeNum - 1] ?? 0) > 0;
-            const net = gross !== null ? gross - (hasStroke ? 1 : 0) : null;
+            const strokesReceived = teamAPlayer.strokesReceived?.[holeNum - 1] ?? 0;
+            const handicapPercent = round?.skinsHandicapPercent ?? 100;
+            const strokeValue = strokesReceived * (handicapPercent / 100);
+            const net = gross !== null ? gross - strokeValue : null;
             const playerThru = match.status?.thru ?? 0;
             allScores.push({
               playerId: teamAPlayer.playerId,
@@ -197,8 +199,10 @@ export function useSkinsData(roundId: string | undefined) {
 
           if (teamBPlayer) {
             const gross = input.teamBPlayerGross ?? null;
-            const hasStroke = (teamBPlayer.strokesReceived?.[holeNum - 1] ?? 0) > 0;
-            const net = gross !== null ? gross - (hasStroke ? 1 : 0) : null;
+            const strokesReceived = teamBPlayer.strokesReceived?.[holeNum - 1] ?? 0;
+            const handicapPercent = round?.skinsHandicapPercent ?? 100;
+            const strokeValue = strokesReceived * (handicapPercent / 100);
+            const net = gross !== null ? gross - strokeValue : null;
             const playerThru = match.status?.thru ?? 0;
             allScores.push({
               playerId: teamBPlayer.playerId,
@@ -219,8 +223,10 @@ export function useSkinsData(roundId: string | undefined) {
                 : (team === match.teamAPlayers ? input.teamAPlayersGross : input.teamBPlayersGross);
               
               const gross = grossArray?.[idx] ?? null;
-              const hasStroke = (player.strokesReceived?.[holeNum - 1] ?? 0) > 0;
-              const net = gross !== null ? gross - (hasStroke ? 1 : 0) : null;
+              const strokesReceived = player.strokesReceived?.[holeNum - 1] ?? 0;
+              const handicapPercent = round?.skinsHandicapPercent ?? 100;
+              const strokeValue = strokesReceived * (handicapPercent / 100);
+              const net = gross !== null ? gross - strokeValue : null;
               const playerThru = match.status?.thru ?? 0;
               
               allScores.push({

@@ -168,6 +168,7 @@ export type RoundDoc = {
   // SKINS: Optional skins game pots (only for singles/bestBall formats)
   skinsGrossPot?: number; // Total $ for gross skins; if > 0, gross skins active
   skinsNetPot?: number;   // Total $ for net skins; if > 0, net skins active
+  skinsHandicapPercent?: number; // Percentage of course handicap to use for net skins (default: 100)
   
   // DRIVE_TRACKING: Feature toggle for scramble/shamble drive tracking
   trackDrives?: boolean;
