@@ -1,10 +1,39 @@
 import { useState, useEffect, useMemo } from "react";
 import { collection, query, where, onSnapshot, doc } from "firebase/firestore";
 import { db } from "../firebase";
-import type { RoundDoc, MatchDoc, CourseDoc, PlayerDoc, TournamentDoc } from "../types";
+import type { RoundDoc, MatchDoc, CourseDoc, PlayerDoc, TournamentDoc, HoleInfo } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
 
 export type SkinType = "gross" | "net";
+
+/**
+ * Calculate which holes receive strokes for skins based on course handicap and percentage.
+ * Returns an 18-element array of 0 or 1.
+ * @param courseHandicap - Player's course handicap (e.g., 8)
+ * @param handicapPercent - Percentage of handicap to apply (e.g., 50 for 50%)
+ * @param courseHoles - Array of hole info with hcpIndex for difficulty
+ */
+function calculateSkinsStrokes(
+  courseHandicap: number,
+  handicapPercent: number,
+  courseHoles: HoleInfo[]
+): number[] {
+  // Calculate how many holes should receive strokes (round up for odd numbers)
+  const numStrokesHoles = Math.ceil(courseHandicap * (handicapPercent / 100));
+  
+  // Sort holes by difficulty (lowest hcpIndex = hardest)
+  const sortedHoles = [...courseHoles]
+    .sort((a, b) => a.hcpIndex - b.hcpIndex)
+    .slice(0, numStrokesHoles);
+  
+  // Create 18-element array with strokes on the appropriate holes
+  const strokes = new Array(18).fill(0);
+  sortedHoles.forEach(hole => {
+    strokes[hole.number - 1] = 1;
+  });
+  
+  return strokes;
+}
 
 export interface PlayerHoleScore {
   playerId: string;
@@ -181,10 +210,14 @@ export function useSkinsData(roundId: string | undefined) {
 
           if (teamAPlayer) {
             const gross = input.teamAPlayerGross ?? null;
-            const strokesReceived = teamAPlayer.strokesReceived?.[holeNum - 1] ?? 0;
             const handicapPercent = round?.skinsHandicapPercent ?? 100;
-            const strokeValue = strokesReceived * (handicapPercent / 100);
-            const net = gross !== null ? gross - strokeValue : null;
+            
+            // Calculate skins-specific strokes (reduced number of holes, not stroke value)
+            const courseHandicap = match.courseHandicaps?.[0] ?? 0;
+            const skinsStrokes = calculateSkinsStrokes(courseHandicap, handicapPercent, course.holes);
+            const strokesReceived = skinsStrokes[holeNum - 1];
+            
+            const net = gross !== null ? gross - strokesReceived : null;
             const playerThru = match.status?.thru ?? 0;
             allScores.push({
               playerId: teamAPlayer.playerId,
@@ -192,17 +225,21 @@ export function useSkinsData(roundId: string | undefined) {
               gross,
               net,
               hasStroke: strokesReceived > 0,
-                playerThru,
-                playerTeeTime: match.teeTime ?? null,
+              playerThru,
+              playerTeeTime: match.teeTime ?? null,
             });
           }
 
           if (teamBPlayer) {
             const gross = input.teamBPlayerGross ?? null;
-            const strokesReceived = teamBPlayer.strokesReceived?.[holeNum - 1] ?? 0;
             const handicapPercent = round?.skinsHandicapPercent ?? 100;
-            const strokeValue = strokesReceived * (handicapPercent / 100);
-            const net = gross !== null ? gross - strokeValue : null;
+            
+            // Calculate skins-specific strokes (reduced number of holes, not stroke value)
+            const courseHandicap = match.courseHandicaps?.[1] ?? 0;
+            const skinsStrokes = calculateSkinsStrokes(courseHandicap, handicapPercent, course.holes);
+            const strokesReceived = skinsStrokes[holeNum - 1];
+            
+            const net = gross !== null ? gross - strokesReceived : null;
             const playerThru = match.status?.thru ?? 0;
             allScores.push({
               playerId: teamBPlayer.playerId,
@@ -210,23 +247,29 @@ export function useSkinsData(roundId: string | undefined) {
               gross,
               net,
               hasStroke: strokesReceived > 0,
-                playerThru,
-                playerTeeTime: match.teeTime ?? null,
+              playerThru,
+              playerTeeTime: match.teeTime ?? null,
             });
           }
         } else if (format === "twoManBestBall") {
           // Best Ball: two players per team
-          [match.teamAPlayers, match.teamBPlayers].forEach(team => {
-            team?.forEach((player, idx) => {
-              const grossArray = idx === 0 
-                ? (team === match.teamAPlayers ? input.teamAPlayersGross : input.teamBPlayersGross)
-                : (team === match.teamAPlayers ? input.teamAPlayersGross : input.teamBPlayersGross);
+          const handicapPercent = round?.skinsHandicapPercent ?? 100;
+          
+          [match.teamAPlayers, match.teamBPlayers].forEach((team, teamIdx) => {
+            team?.forEach((player, playerIdx) => {
+              const grossArray = team === match.teamAPlayers 
+                ? input.teamAPlayersGross 
+                : input.teamBPlayersGross;
               
-              const gross = grossArray?.[idx] ?? null;
-              const strokesReceived = player.strokesReceived?.[holeNum - 1] ?? 0;
-              const handicapPercent = round?.skinsHandicapPercent ?? 100;
-              const strokeValue = strokesReceived * (handicapPercent / 100);
-              const net = gross !== null ? gross - strokeValue : null;
+              const gross = grossArray?.[playerIdx] ?? null;
+              
+              // Calculate skins-specific strokes (reduced number of holes, not stroke value)
+              const courseHandicapIndex = teamIdx * 2 + playerIdx;
+              const courseHandicap = match.courseHandicaps?.[courseHandicapIndex] ?? 0;
+              const skinsStrokes = calculateSkinsStrokes(courseHandicap, handicapPercent, course.holes);
+              const strokesReceived = skinsStrokes[holeNum - 1];
+              
+              const net = gross !== null ? gross - strokesReceived : null;
               const playerThru = match.status?.thru ?? 0;
               
               allScores.push({
