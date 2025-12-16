@@ -28,6 +28,7 @@ export default function AddMatch() {
   const [tournamentId, setTournamentId] = useState("");
   const [roundId, setRoundId] = useState("");
   const [matchId, setMatchId] = useState("");
+  const [teeTime, setTeeTime] = useState("");
   const [teamAPlayers, setTeamAPlayers] = useState<PlayerInput[]>([{ playerId: "" }]);
   const [teamBPlayers, setTeamBPlayers] = useState<PlayerInput[]>([{ playerId: "" }]);
 
@@ -121,13 +122,16 @@ export default function AddMatch() {
 
       // Call Cloud Function
       const seedMatchFn = httpsCallable(functions, "seedMatch");
-      const result = await seedMatchFn({
+      const payload: any = {
         id: matchId,
         tournamentId,
         roundId,
         teamAPlayers: validTeamA,
         teamBPlayers: validTeamB,
-      });
+      };
+      if (teeTime) payload.teeTime = teeTime;
+
+      const result = await seedMatchFn(payload);
 
       console.log("Match created:", result.data);
       setSuccess(true);
@@ -238,9 +242,21 @@ export default function AddMatch() {
                 required
               />
               <div className="text-xs text-gray-500 mt-1">
-                Tee time can be set later in Firestore
+                  Tee time can be set now or later. If provided, uses local timezone.
               </div>
             </div>
+              {/* Tee time input */}
+              <div>
+                <label className="block text-sm font-semibold mb-2">Tee Time</label>
+                <input
+                  type="datetime-local"
+                  value={teeTime}
+                  onChange={(e) => setTeeTime(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  placeholder="Optional"
+                />
+                <div className="text-xs text-gray-500 mt-1">Optional — stored as a timestamp</div>
+              </div>
           </div>
 
           {/* Team A Players */}

@@ -1495,17 +1495,33 @@ export const seedMatch = onCall(async (request) => {
   // teeTime is optional - can be set later in Firestore
   let teeTimeTimestamp: Timestamp | null = null;
   if (teeTime) {
-    if (typeof teeTime === 'object' && '_seconds' in teeTime) {
+    if (typeof teeTime === 'string') {
+      const date = new Date(teeTime);
+      if (!isNaN(date.getTime())) teeTimeTimestamp = Timestamp.fromDate(date);
+    } else if (typeof teeTime === 'object' && '_seconds' in teeTime) {
       teeTimeTimestamp = Timestamp.fromMillis(teeTime._seconds * 1000 + (teeTime._nanoseconds || 0) / 1000000);
     } else if (teeTime instanceof Timestamp) {
       teeTimeTimestamp = teeTime;
     }
+  }
+  // Determine matchNumber: if caller provided `matchNumber` use it, otherwise
+  // compute the lowest available positive integer for this round.
+  let matchNumberToUse: number = request.data?.matchNumber ?? 0;
+  if (!matchNumberToUse || typeof matchNumberToUse !== 'number' || matchNumberToUse <= 0) {
+    const existingSnaps = await db.collection('matches').where('roundId', '==', roundId).get();
+    const nums = existingSnaps.docs.map(d => Number(d.data()?.matchNumber) || 0).filter(n => n > 0);
+    // find smallest missing positive integer starting at 1
+    let candidate = 1;
+    const numSet = new Set(nums);
+    while (numSet.has(candidate)) candidate++;
+    matchNumberToUse = candidate;
   }
 
   const matchDoc = {
     id,
     tournamentId,
     roundId,
+    matchNumber: matchNumberToUse,
     teeTime: teeTimeTimestamp,
     teamAPlayers: teamAPlayersWithStrokes,
     teamBPlayers: teamBPlayersWithStrokes,
