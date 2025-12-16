@@ -198,6 +198,7 @@ export type MatchDoc = {
   tournamentId?: string;
   matchNumber?: number; // For ordering matches on Round page (like day for rounds)
   teeTime?: any; // Firestore Timestamp - tee time for the match
+  teeTimeLocalIso?: string; // Original local ISO string from datetime-local input (YYYY-MM-DDTHH:mm)
   holes?: Record<string, HoleData>;
   result?: { 
     winner?: "teamA" | "teamB" | "AS";
