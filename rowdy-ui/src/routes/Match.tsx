@@ -839,7 +839,7 @@ export default function Match() {
                   teamBColor={tournament?.teamB?.color || "var(--team-b-default)"}
                   teamAName={tournament?.teamA?.name}
                   teamBName={tournament?.teamB?.name}
-                  teeTime={match?.teeTime}
+                  teeTime={match?.teeTimeLocalIso ?? match?.teeTime}
                 />
               </div>
             );
@@ -1290,7 +1290,7 @@ export default function Match() {
                   teamBColor={teamBColor}
                   teamAName={tournament?.teamA?.name}
                   teamBName={tournament?.teamB?.name}
-                  teeTime={match?.teeTime}
+                  teeTime={match?.teeTimeLocalIso ?? match?.teeTime}
                 />
               </div>
 

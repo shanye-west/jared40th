@@ -1517,12 +1517,13 @@ export const seedMatch = onCall(async (request) => {
     matchNumberToUse = candidate;
   }
 
-  const matchDoc = {
+  const matchDoc: any = {
     id,
     tournamentId,
     roundId,
     matchNumber: matchNumberToUse,
     teeTime: teeTimeTimestamp,
+    teeTimeLocalIso: typeof teeTime === 'string' ? teeTime : null,
     teamAPlayers: teamAPlayersWithStrokes,
     teamBPlayers: teamBPlayersWithStrokes,
     courseHandicaps,
@@ -1688,6 +1689,7 @@ export const editMatch = onCall(async (request) => {
   // Only update teeTime if provided
   if (teeTimeTimestamp) {
     updates.teeTime = teeTimeTimestamp;
+    if (typeof teeTime === 'string') updates.teeTimeLocalIso = teeTime;
   }
 
   // Write to Firestore

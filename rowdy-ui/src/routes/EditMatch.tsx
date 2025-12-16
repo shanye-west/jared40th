@@ -134,8 +134,10 @@ export default function EditMatch() {
         // Set form fields
         setMatchId(selectedMatchId);
         
-        // Convert teeTime if it exists
-        if (matchData.teeTime) {
+        // Convert teeTime if it exists. Prefer the original local ISO if present.
+        if (matchData.teeTimeLocalIso) {
+          setTeeTime(matchData.teeTimeLocalIso);
+        } else if (matchData.teeTime) {
           const timestamp = matchData.teeTime.toDate();
           const isoString = timestamp.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
           setTeeTime(isoString);

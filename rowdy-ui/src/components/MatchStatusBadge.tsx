@@ -162,14 +162,38 @@ export function MatchStatusBadge({
   // Format tee time if available
   let teeTimeStr = "";
   if (teeTime) {
-    const date = teeTime.toDate ? teeTime.toDate() : new Date(teeTime);
-    let hours = date.getHours();
-    const minutes = date.getMinutes();
-    const ampm = hours >= 12 ? "pm" : "am";
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
-    teeTimeStr = `${hours}:${minutesStr}${ampm}`;
+    if (typeof teeTime === "string") {
+      // Expecting datetime-local format: YYYY-MM-DDTHH:mm
+      const m = teeTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      if (m) {
+        let hours = parseInt(m[4], 10);
+        const minutes = parseInt(m[5], 10);
+        const ampm = hours >= 12 ? "pm" : "am";
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+        teeTimeStr = `${hours}:${minutesStr}${ampm}`;
+      } else {
+        // Fallback to Date parsing if unexpected string
+        const date = new Date(teeTime);
+        let hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? "pm" : "am";
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+        teeTimeStr = `${hours}:${minutesStr}${ampm}`;
+      }
+    } else {
+      const date = teeTime.toDate ? teeTime.toDate() : new Date(teeTime);
+      let hours = date.getHours();
+      const minutes = date.getMinutes();
+      const ampm = hours >= 12 ? "pm" : "am";
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+      teeTimeStr = `${hours}:${minutesStr}${ampm}`;
+    }
   }
 
   // If tee time available, render it (with optional label)
