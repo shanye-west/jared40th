@@ -119,6 +119,8 @@ export default function Match() {
   
   // STROKES INFO: Modal state for showing handicap info
   const [strokesInfoModal, setStrokesInfoModal] = useState(false);
+  // Definition modal for abbreviation explanations ("HI" | "CH" | "SO" | "SH")
+  const [defModal, setDefModal] = useState<string | null>(null);
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
   
@@ -1288,6 +1290,33 @@ export default function Match() {
           )}
         </Modal>
 
+        {/* ABBREVIATION DEFINITION MODAL */}
+        <Modal
+          isOpen={!!defModal}
+          onClose={() => setDefModal(null)}
+          title={defModal ? defModal : "Definition"}
+          ariaLabel="Abbreviation definition"
+        >
+          {(() => {
+            if (!defModal) return null;
+            const defs: Record<string, string> = {
+              HI: "Handicap Index",
+              CH: "Course Handicap",
+              SO: "Matchplay Strokes",
+              SH: "Skins Strokes",
+            };
+            return (
+              <div className="py-2 text-sm text-slate-700">
+                <div className="font-semibold mb-2">{defModal}</div>
+                <div>{defs[defModal] ?? ""}</div>
+                <div className="mt-4">
+                  <button onClick={() => setDefModal(null)} className="py-2 px-3 bg-slate-100 rounded text-slate-700">Close</button>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
+
         {/* DRIVE SELECTOR MODAL */}
         <Modal
           isOpen={!!driveModal}
@@ -1423,10 +1452,70 @@ export default function Match() {
                   <thead>
                     <tr className="border-b border-slate-200">
                       <th className="text-left py-2 px-2 font-semibold text-slate-700">Player</th>
-                      <th className="text-center py-2 px-2 font-semibold text-slate-700">H.I.</th>
-                      <th className="text-center py-2 px-2 font-semibold text-slate-700">C.H.</th>
-                      <th className="text-center py-2 px-2 font-semibold text-slate-700">S.O.</th>
-                      <th className="text-center py-2 px-2 font-semibold text-slate-700">S.H.</th>
+                      <th className="text-center py-2 px-2 font-semibold text-slate-700">
+                        <div className="flex items-center justify-center">
+                          <span>H.I.</span>
+                          <button
+                            onClick={() => setDefModal("HI")}
+                            aria-label="Define H.I."
+                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <circle cx="12" cy="12" r="10" />
+                              <line x1="12" y1="8" x2="12" y2="12" />
+                              <circle cx="12" cy="16" r="1" />
+                            </svg>
+                          </button>
+                        </div>
+                      </th>
+                      <th className="text-center py-2 px-2 font-semibold text-slate-700">
+                        <div className="flex items-center justify-center">
+                          <span>C.H.</span>
+                          <button
+                            onClick={() => setDefModal("CH")}
+                            aria-label="Define C.H."
+                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <circle cx="12" cy="12" r="10" />
+                              <line x1="12" y1="8" x2="12" y2="12" />
+                              <circle cx="12" cy="16" r="1" />
+                            </svg>
+                          </button>
+                        </div>
+                      </th>
+                      <th className="text-center py-2 px-2 font-semibold text-slate-700">
+                        <div className="flex items-center justify-center">
+                          <span>S.O.</span>
+                          <button
+                            onClick={() => setDefModal("SO")}
+                            aria-label="Define S.O."
+                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <circle cx="12" cy="12" r="10" />
+                              <line x1="12" y1="8" x2="12" y2="12" />
+                              <circle cx="12" cy="16" r="1" />
+                            </svg>
+                          </button>
+                        </div>
+                      </th>
+                      <th className="text-center py-2 px-2 font-semibold text-slate-700">
+                        <div className="flex items-center justify-center">
+                          <span>S.H.</span>
+                          <button
+                            onClick={() => setDefModal("SH")}
+                            aria-label="Define S.H."
+                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <circle cx="12" cy="12" r="10" />
+                              <line x1="12" y1="8" x2="12" y2="12" />
+                              <circle cx="12" cy="16" r="1" />
+                            </svg>
+                          </button>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
