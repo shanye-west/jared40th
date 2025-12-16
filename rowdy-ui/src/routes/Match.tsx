@@ -130,7 +130,10 @@ export default function Match() {
     e.stopPropagation();
     const el = e.currentTarget as HTMLElement;
     const rect = el.getBoundingClientRect();
-    setDefTooltip({ key, x: rect.right, y: rect.top });
+    // store center x so tooltip can be centered above the element
+    // Position tooltip so its right edge sits slightly left of the icon
+    const offset = 6; // pixels to nudge left of the icon
+    setDefTooltip({ key, x: rect.left - offset, y: rect.top });
   };
 
   const format: RoundFormat = (round?.format as RoundFormat) || "twoManBestBall";
@@ -1524,11 +1527,11 @@ export default function Match() {
                     SH: "Skins Strokes",
                   };
                   const text = defs[defTooltip.key] ?? "";
-                  const left = defTooltip.x + 8;
-                  const top = Math.max(8, defTooltip.y - 28);
+                  const left = defTooltip.x;
+                  const top = Math.max(8, defTooltip.y - 6);
                   return (
-                    <div style={{ position: 'fixed', left, top, zIndex: 1200 }}>
-                      <div className="bg-slate-800 text-white text-xs px-2 py-1 rounded shadow">
+                    <div style={{ position: 'fixed', left, top, transform: 'translate(-100%, -120%)', zIndex: 1200 }}>
+                      <div className="bg-slate-800 text-white text-xs px-2 py-1 rounded shadow" style={{ whiteSpace: 'nowrap' }}>
                         {text}
                       </div>
                     </div>
