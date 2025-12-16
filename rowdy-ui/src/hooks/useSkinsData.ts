@@ -191,7 +191,7 @@ export function useSkinsData(roundId: string | undefined) {
               playerName: players[teamAPlayer.playerId]?.displayName || teamAPlayer.playerId,
               gross,
               net,
-              hasStroke,
+              hasStroke: strokesReceived > 0,
                 playerThru,
                 playerTeeTime: match.teeTime ?? null,
             });
@@ -209,7 +209,7 @@ export function useSkinsData(roundId: string | undefined) {
               playerName: players[teamBPlayer.playerId]?.displayName || teamBPlayer.playerId,
               gross,
               net,
-              hasStroke,
+              hasStroke: strokesReceived > 0,
                 playerThru,
                 playerTeeTime: match.teeTime ?? null,
             });
@@ -234,7 +234,7 @@ export function useSkinsData(roundId: string | undefined) {
                 playerName: players[player.playerId]?.displayName || player.playerId,
                 gross,
                 net,
-                hasStroke,
+                hasStroke: strokesReceived > 0,
                 playerThru,
                 playerTeeTime: match.teeTime ?? null,
               });
