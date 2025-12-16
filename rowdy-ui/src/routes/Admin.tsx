@@ -57,6 +57,20 @@ export default function Admin() {
               </div>
             </Link>
 
+            {/* Recalculate Match Strokes */}
+            <Link 
+              to="/admin/match/recalculate" 
+              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-lg">Recalculate Match Strokes</div>
+                  <div className="text-sm text-gray-600">Recalculate strokesReceived using current tournament handicap indexes</div>
+                </div>
+                <div className="text-2xl">→</div>
+              </div>
+            </Link>
+
             {/* Future: Add Tournament */}
             <div 
               className="block p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-50 cursor-not-allowed"

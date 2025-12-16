@@ -7,24 +7,58 @@ import { ensureTournamentTeamColors } from "../utils/teamColors";
 export type SkinType = "gross" | "net";
 
 /**
- * Calculate which holes receive strokes for skins based on course handicap and percentage.
+ * Calculate GHIN course handicap from handicap index.
+ * Formula: (Handicap Index × (Slope Rating ÷ 113)) + (Course Rating − Par)
+ * @param handicapIndex - Player's handicap index (e.g., 7.4)
+ * @param slopeRating - Course slope rating (e.g., 121)
+ * @param courseRating - Course rating (e.g., 70.5)
+ * @param par - Course par (e.g., 72)
+ * @returns Unrounded course handicap
+ */
+function calculateCourseHandicap(
+  handicapIndex: number,
+  slopeRating: number,
+  courseRating: number,
+  par: number
+): number {
+  return (handicapIndex * (slopeRating / 113)) + (courseRating - par);
+}
+
+/**
+ * Calculate which holes receive strokes for skins based on handicap index and percentage.
+ * Uses GHIN formula: unrounded courseHandicap × percentage, THEN round.
  * Returns an 18-element array of 0 or 1.
- * @param courseHandicap - Player's course handicap (e.g., 8)
+ * @param handicapIndex - Player's handicap index (e.g., 7.4)
  * @param handicapPercent - Percentage of handicap to apply (e.g., 50 for 50%)
+ * @param slopeRating - Course slope rating
+ * @param courseRating - Course rating
+ * @param par - Course par
  * @param courseHoles - Array of hole info with hcpIndex for difficulty
  */
 function calculateSkinsStrokes(
-  courseHandicap: number,
+  handicapIndex: number,
   handicapPercent: number,
+  slopeRating: number,
+  courseRating: number,
+  par: number,
   courseHoles: HoleInfo[]
 ): number[] {
-  // Calculate how many holes should receive strokes (round up for odd numbers)
-  const numStrokesHoles = Math.ceil(courseHandicap * (handicapPercent / 100));
+  // Calculate unrounded course handicap using GHIN formula
+  const courseHandicap = calculateCourseHandicap(
+    handicapIndex,
+    slopeRating,
+    courseRating,
+    par
+  );
+  
+  // Multiply by percentage THEN round (per GHIN method)
+  const adjustedHandicap = courseHandicap * (handicapPercent / 100);
+  const numStrokesHoles = Math.round(adjustedHandicap);
   
   // Sort holes by difficulty (lowest hcpIndex = hardest)
   const sortedHoles = [...courseHoles]
     .sort((a, b) => a.hcpIndex - b.hcpIndex)
-    .slice(0, numStrokesHoles);
+    .slice(0, Math.max(0, numStrokesHoles));
   
   // Create 18-element array with strokes on the appropriate holes
   const strokes = new Array(18).fill(0);
@@ -212,9 +246,16 @@ export function useSkinsData(roundId: string | undefined) {
             const gross = input.teamAPlayerGross ?? null;
             const handicapPercent = round?.skinsHandicapPercent ?? 100;
             
-            // Calculate skins-specific strokes (reduced number of holes, not stroke value)
-            const courseHandicap = match.courseHandicaps?.[0] ?? 0;
-            const skinsStrokes = calculateSkinsStrokes(courseHandicap, handicapPercent, course.holes);
+            // Get handicap index from tournament and calculate skins strokes using GHIN formula
+            const handicapIndex = tournament?.teamA?.handicapByPlayer?.[teamAPlayer.playerId] ?? 0;
+            const skinsStrokes = calculateSkinsStrokes(
+              handicapIndex,
+              handicapPercent,
+              course.slope ?? 113,
+              course.rating ?? (course.par ?? 72),
+              course.par ?? 72,
+              course.holes
+            );
             const strokesReceived = skinsStrokes[holeNum - 1];
             
             const net = gross !== null ? gross - strokesReceived : null;
@@ -234,9 +275,16 @@ export function useSkinsData(roundId: string | undefined) {
             const gross = input.teamBPlayerGross ?? null;
             const handicapPercent = round?.skinsHandicapPercent ?? 100;
             
-            // Calculate skins-specific strokes (reduced number of holes, not stroke value)
-            const courseHandicap = match.courseHandicaps?.[1] ?? 0;
-            const skinsStrokes = calculateSkinsStrokes(courseHandicap, handicapPercent, course.holes);
+            // Get handicap index from tournament and calculate skins strokes using GHIN formula
+            const handicapIndex = tournament?.teamB?.handicapByPlayer?.[teamBPlayer.playerId] ?? 0;
+            const skinsStrokes = calculateSkinsStrokes(
+              handicapIndex,
+              handicapPercent,
+              course.slope ?? 113,
+              course.rating ?? (course.par ?? 72),
+              course.par ?? 72,
+              course.holes
+            );
             const strokesReceived = skinsStrokes[holeNum - 1];
             
             const net = gross !== null ? gross - strokesReceived : null;
@@ -255,18 +303,27 @@ export function useSkinsData(roundId: string | undefined) {
           // Best Ball: two players per team
           const handicapPercent = round?.skinsHandicapPercent ?? 100;
           
-          [match.teamAPlayers, match.teamBPlayers].forEach((team, teamIdx) => {
+          [match.teamAPlayers, match.teamBPlayers].forEach((team) => {
+            const isTeamA = team === match.teamAPlayers;
+            const teamData = isTeamA ? tournament?.teamA : tournament?.teamB;
+            
             team?.forEach((player, playerIdx) => {
-              const grossArray = team === match.teamAPlayers 
+              const grossArray = isTeamA 
                 ? input.teamAPlayersGross 
                 : input.teamBPlayersGross;
               
               const gross = grossArray?.[playerIdx] ?? null;
               
-              // Calculate skins-specific strokes (reduced number of holes, not stroke value)
-              const courseHandicapIndex = teamIdx * 2 + playerIdx;
-              const courseHandicap = match.courseHandicaps?.[courseHandicapIndex] ?? 0;
-              const skinsStrokes = calculateSkinsStrokes(courseHandicap, handicapPercent, course.holes);
+              // Get handicap index from tournament and calculate skins strokes using GHIN formula
+              const handicapIndex = teamData?.handicapByPlayer?.[player.playerId] ?? 0;
+              const skinsStrokes = calculateSkinsStrokes(
+                handicapIndex,
+                handicapPercent,
+                course.slope ?? 113,
+                course.rating ?? (course.par ?? 72),
+                course.par ?? 72,
+                course.holes
+              );
               const strokesReceived = skinsStrokes[holeNum - 1];
               
               const net = gross !== null ? gross - strokesReceived : null;

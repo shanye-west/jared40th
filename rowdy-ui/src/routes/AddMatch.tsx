@@ -9,7 +9,7 @@ import type { TournamentDoc, RoundDoc, PlayerDoc } from "../types";
 
 type PlayerInput = {
   playerId: string;
-  courseHandicap: number;
+  handicapIndex: number;
 };
 
 export default function AddMatch() {
@@ -29,8 +29,8 @@ export default function AddMatch() {
   const [tournamentId, setTournamentId] = useState("");
   const [roundId, setRoundId] = useState("");
   const [matchId, setMatchId] = useState("");
-  const [teamAPlayers, setTeamAPlayers] = useState<PlayerInput[]>([{ playerId: "", courseHandicap: 0 }]);
-  const [teamBPlayers, setTeamBPlayers] = useState<PlayerInput[]>([{ playerId: "", courseHandicap: 0 }]);
+  const [teamAPlayers, setTeamAPlayers] = useState<PlayerInput[]>([{ playerId: "", handicapIndex: 0 }]);
+  const [teamBPlayers, setTeamBPlayers] = useState<PlayerInput[]>([{ playerId: "", handicapIndex: 0 }]);
 
   // Fetch tournaments and players on mount
   useEffect(() => {
@@ -275,13 +275,14 @@ export default function AddMatch() {
                   </div>
 
                   <div className="w-32">
-                    <label className="block text-sm font-semibold mb-2">Course Hdcp</label>
+                    <label className="block text-sm font-semibold mb-2">Handicap Index</label>
                     <input
                       type="number"
-                      value={playerInput.courseHandicap}
+                      step="0.1"
+                      value={playerInput.handicapIndex}
                       onChange={(e) => {
                         const updated = [...teamAPlayers];
-                        updated[idx].courseHandicap = parseInt(e.target.value) || 0;
+                        updated[idx].handicapIndex = parseFloat(e.target.value) || 0;
                         setTeamAPlayers(updated);
                       }}
                       className="w-full p-3 border border-gray-300 rounded-lg"
@@ -303,7 +304,7 @@ export default function AddMatch() {
 
               <button
                 type="button"
-                onClick={() => setTeamAPlayers([...teamAPlayers, { playerId: "", courseHandicap: 0 }])}
+                onClick={() => setTeamAPlayers([...teamAPlayers, { playerId: "", handicapIndex: 0 }])}
                 className="text-sm text-blue-600 hover:underline"
               >
                 + Add another {selectedTournament.teamA?.name || "Team A"} player
@@ -342,13 +343,14 @@ export default function AddMatch() {
                   </div>
 
                   <div className="w-32">
-                    <label className="block text-sm font-semibold mb-2">Course Hdcp</label>
+                    <label className="block text-sm font-semibold mb-2">Handicap Index</label>
                     <input
                       type="number"
-                      value={playerInput.courseHandicap}
+                      step="0.1"
+                      value={playerInput.handicapIndex}
                       onChange={(e) => {
                         const updated = [...teamBPlayers];
-                        updated[idx].courseHandicap = parseInt(e.target.value) || 0;
+                        updated[idx].handicapIndex = parseFloat(e.target.value) || 0;
                         setTeamBPlayers(updated);
                       }}
                       className="w-full p-3 border border-gray-300 rounded-lg"
@@ -370,7 +372,7 @@ export default function AddMatch() {
 
               <button
                 type="button"
-                onClick={() => setTeamBPlayers([...teamBPlayers, { playerId: "", courseHandicap: 0 }])}
+                onClick={() => setTeamBPlayers([...teamBPlayers, { playerId: "", handicapIndex: 0 }])}
                 className="text-sm text-blue-600 hover:underline"
               >
                 + Add another {selectedTournament.teamB?.name || "Team B"} player

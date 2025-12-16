@@ -1334,6 +1334,28 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
 // ============================================================================
 
 /**
+ * Calculate GHIN course handicap from handicap index.
+ * Formula: courseHandicap = (handicapIndex × (slopeRating ÷ 113)) + (courseRating − par)
+ * @param handicapIndex - Player's handicap index (e.g., 7.4)
+ * @param slopeRating - Course slope rating (default 113)
+ * @param courseRating - Course rating (defaults to par if not provided)
+ * @param par - Course par (default 72)
+ * @returns Rounded course handicap
+ */
+function calculateCourseHandicap(
+  handicapIndex: number,
+  slopeRating: number = 113,
+  courseRating?: number,
+  par: number = DEFAULT_COURSE_PAR
+): number {
+  const slope = slopeRating || 113;
+  const rating = courseRating ?? par;
+  
+  const unrounded = (handicapIndex * (slope / 113)) + (rating - par);
+  return Math.round(unrounded);
+}
+
+/**
  * Calculate strokesReceived array for a player based on course handicap.
  * Strokes are assigned to holes by difficulty (hcpIndex), with 1 stroke max per hole.
  */
@@ -1361,8 +1383,8 @@ function calculateStrokesReceived(courseHandicap: number, courseHoles: any[]): n
  * - tournamentId: string
  * - roundId: string
  * - teeTime: Timestamp
- * - teamAPlayers: Array<{ playerId: string, courseHandicap: number }>
- * - teamBPlayers: Array<{ playerId: string, courseHandicap: number }>
+ * - teamAPlayers: Array<{ playerId: string, handicapIndex: number }>
+ * - teamBPlayers: Array<{ playerId: string, handicapIndex: number }>
  */
 export const seedMatch = onCall(async (request) => {
   // Auth check
@@ -1413,36 +1435,41 @@ export const seedMatch = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "Course must have 18 holes");
   }
 
-  // Calculate strokesReceived for each player
-  // First, "spin down" from the lowest handicap
-  const allHandicaps = [
-    ...teamAPlayers.map((p: any) => p.courseHandicap),
-    ...teamBPlayers.map((p: any) => p.courseHandicap),
+  // Get course parameters for GHIN calculation
+  const slopeRating = course.slope ?? 113;
+  const courseRating = course.rating;
+  const coursePar = course.par ?? DEFAULT_COURSE_PAR;
+
+  // Calculate course handicap for each player using GHIN formula
+  const allCourseHandicaps = [
+    ...teamAPlayers.map((p: any) => calculateCourseHandicap(p.handicapIndex, slopeRating, courseRating, coursePar)),
+    ...teamBPlayers.map((p: any) => calculateCourseHandicap(p.handicapIndex, slopeRating, courseRating, coursePar)),
   ];
-  const lowestHandicap = Math.min(...allHandicaps);
+
+  // "Spin down" from the lowest course handicap
+  const lowestHandicap = Math.min(...allCourseHandicaps);
 
   // Build player arrays with strokes
-  const teamAPlayersWithStrokes = teamAPlayers.map((p: any) => {
-    const adjustedHandicap = p.courseHandicap - lowestHandicap;
+  const teamAPlayersWithStrokes = teamAPlayers.map((p: any, idx: number) => {
+    const courseHandicap = allCourseHandicaps[idx];
+    const adjustedHandicap = courseHandicap - lowestHandicap;
     return {
       playerId: p.playerId,
       strokesReceived: calculateStrokesReceived(adjustedHandicap, courseHoles),
     };
   });
 
-  const teamBPlayersWithStrokes = teamBPlayers.map((p: any) => {
-    const adjustedHandicap = p.courseHandicap - lowestHandicap;
+  const teamBPlayersWithStrokes = teamBPlayers.map((p: any, idx: number) => {
+    const courseHandicap = allCourseHandicaps[teamAPlayers.length + idx];
+    const adjustedHandicap = courseHandicap - lowestHandicap;
     return {
       playerId: p.playerId,
       strokesReceived: calculateStrokesReceived(adjustedHandicap, courseHoles),
     };
   });
 
-  // Store raw course handicaps for reference
-  const courseHandicaps = [
-    ...teamAPlayers.map((p: any) => p.courseHandicap),
-    ...teamBPlayers.map((p: any) => p.courseHandicap),
-  ];
+  // Store calculated course handicaps for reference
+  const courseHandicaps = allCourseHandicaps;
 
   // Create match document
   // teeTime is optional - can be set later in Firestore
@@ -1488,8 +1515,8 @@ export const seedMatch = onCall(async (request) => {
  * - tournamentId: string
  * - roundId: string
  * - teeTime?: string (ISO datetime format)
- * - teamAPlayers: Array<{ playerId: string, courseHandicap: number }>
- * - teamBPlayers: Array<{ playerId: string, courseHandicap: number }>
+ * - teamAPlayers: Array<{ playerId: string, handicapIndex: number }>
+ * - teamBPlayers: Array<{ playerId: string, handicapIndex: number }>
  */
 export const editMatch = onCall(async (request) => {
   // Auth check
@@ -1546,36 +1573,41 @@ export const editMatch = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "Course must have 18 holes");
   }
 
-  // Calculate strokesReceived for each player
-  // First, "spin down" from the lowest handicap
-  const allHandicaps = [
-    ...teamAPlayers.map((p: any) => p.courseHandicap),
-    ...teamBPlayers.map((p: any) => p.courseHandicap),
+  // Get course parameters for GHIN calculation
+  const slopeRating = course.slope ?? 113;
+  const courseRating = course.rating;
+  const coursePar = course.par ?? DEFAULT_COURSE_PAR;
+
+  // Calculate course handicap for each player using GHIN formula
+  const allCourseHandicaps = [
+    ...teamAPlayers.map((p: any) => calculateCourseHandicap(p.handicapIndex, slopeRating, courseRating, coursePar)),
+    ...teamBPlayers.map((p: any) => calculateCourseHandicap(p.handicapIndex, slopeRating, courseRating, coursePar)),
   ];
-  const lowestHandicap = Math.min(...allHandicaps);
+
+  // "Spin down" from the lowest course handicap
+  const lowestHandicap = Math.min(...allCourseHandicaps);
 
   // Build player arrays with strokes
-  const teamAPlayersWithStrokes = teamAPlayers.map((p: any) => {
-    const adjustedHandicap = p.courseHandicap - lowestHandicap;
+  const teamAPlayersWithStrokes = teamAPlayers.map((p: any, idx: number) => {
+    const courseHandicap = allCourseHandicaps[idx];
+    const adjustedHandicap = courseHandicap - lowestHandicap;
     return {
       playerId: p.playerId,
       strokesReceived: calculateStrokesReceived(adjustedHandicap, courseHoles),
     };
   });
 
-  const teamBPlayersWithStrokes = teamBPlayers.map((p: any) => {
-    const adjustedHandicap = p.courseHandicap - lowestHandicap;
+  const teamBPlayersWithStrokes = teamBPlayers.map((p: any, idx: number) => {
+    const courseHandicap = allCourseHandicaps[teamAPlayers.length + idx];
+    const adjustedHandicap = courseHandicap - lowestHandicap;
     return {
       playerId: p.playerId,
       strokesReceived: calculateStrokesReceived(adjustedHandicap, courseHoles),
     };
   });
 
-  // Store raw course handicaps for reference
-  const courseHandicaps = [
-    ...teamAPlayers.map((p: any) => p.courseHandicap),
-    ...teamBPlayers.map((p: any) => p.courseHandicap),
-  ];
+  // Store calculated course handicaps for reference
+  const courseHandicaps = allCourseHandicaps;
 
   // Parse teeTime if provided
   let teeTimeTimestamp: Timestamp | null = null;
@@ -1609,4 +1641,133 @@ export const editMatch = onCall(async (request) => {
   await db.collection("matches").doc(matchId).update(updates);
 
   return { success: true, matchId };
+});
+
+/**
+ * Admin-only function to recalculate strokesReceived for an existing match.
+ * Uses current tournament handicap indexes and course data.
+ * 
+ * Data payload:
+ * - matchId: string - Match document ID
+ */
+export const recalculateMatchStrokes = onCall(async (request) => {
+  // Auth check
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Must be logged in");
+  }
+
+  // Verify admin status
+  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
+  if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
+    throw new HttpsError("permission-denied", "Admin access required");
+  }
+
+  // Extract data
+  const { matchId } = request.data;
+
+  // Validate required fields
+  if (!matchId) {
+    throw new HttpsError("invalid-argument", "Missing matchId");
+  }
+
+  // Fetch match
+  const matchDoc = await db.collection("matches").doc(matchId).get();
+  if (!matchDoc.exists) {
+    throw new HttpsError("not-found", "Match not found");
+  }
+
+  const match = matchDoc.data()!;
+  const tournamentId = match.tournamentId;
+  const roundId = match.roundId;
+
+  if (!tournamentId || !roundId) {
+    throw new HttpsError("failed-precondition", "Match missing tournamentId or roundId");
+  }
+
+  // Fetch tournament to get handicap indexes
+  const tournamentDoc = await db.collection("tournaments").doc(tournamentId).get();
+  if (!tournamentDoc.exists) {
+    throw new HttpsError("not-found", "Tournament not found");
+  }
+
+  const tournament = tournamentDoc.data()!;
+  const teamAHandicaps = tournament.teamA?.handicapByPlayer || {};
+  const teamBHandicaps = tournament.teamB?.handicapByPlayer || {};
+
+  // Fetch round to get courseId
+  const roundDoc = await db.collection("rounds").doc(roundId).get();
+  if (!roundDoc.exists) {
+    throw new HttpsError("not-found", "Round not found");
+  }
+
+  const round = roundDoc.data()!;
+  const courseId = round.courseId;
+  if (!courseId) {
+    throw new HttpsError("failed-precondition", "Round does not have a courseId");
+  }
+
+  // Fetch course to get hole data
+  const courseDoc = await db.collection("courses").doc(courseId).get();
+  if (!courseDoc.exists) {
+    throw new HttpsError("not-found", "Course not found");
+  }
+
+  const course = courseDoc.data()!;
+  const courseHoles = course.holes || [];
+  if (courseHoles.length !== 18) {
+    throw new HttpsError("failed-precondition", "Course must have 18 holes");
+  }
+
+  // Get course parameters for GHIN calculation
+  const slopeRating = course.slope ?? 113;
+  const courseRating = course.rating;
+  const coursePar = course.par ?? DEFAULT_COURSE_PAR;
+
+  // Get player IDs from match
+  const teamAPlayers = match.teamAPlayers || [];
+  const teamBPlayers = match.teamBPlayers || [];
+
+  // Calculate course handicaps using GHIN formula
+  const allCourseHandicaps = [
+    ...teamAPlayers.map((p: any) => {
+      const handicapIndex = teamAHandicaps[p.playerId] ?? 0;
+      return calculateCourseHandicap(handicapIndex, slopeRating, courseRating, coursePar);
+    }),
+    ...teamBPlayers.map((p: any) => {
+      const handicapIndex = teamBHandicaps[p.playerId] ?? 0;
+      return calculateCourseHandicap(handicapIndex, slopeRating, courseRating, coursePar);
+    }),
+  ];
+
+  // "Spin down" from the lowest course handicap
+  const lowestHandicap = Math.min(...allCourseHandicaps);
+
+  // Build updated player arrays with strokes
+  const teamAPlayersWithStrokes = teamAPlayers.map((p: any, idx: number) => {
+    const courseHandicap = allCourseHandicaps[idx];
+    const adjustedHandicap = courseHandicap - lowestHandicap;
+    return {
+      playerId: p.playerId,
+      strokesReceived: calculateStrokesReceived(adjustedHandicap, courseHoles),
+    };
+  });
+
+  const teamBPlayersWithStrokes = teamBPlayers.map((p: any, idx: number) => {
+    const courseHandicap = allCourseHandicaps[teamAPlayers.length + idx];
+    const adjustedHandicap = courseHandicap - lowestHandicap;
+    return {
+      playerId: p.playerId,
+      strokesReceived: calculateStrokesReceived(adjustedHandicap, courseHoles),
+    };
+  });
+
+  // Update match document
+  await db.collection("matches").doc(matchId).update({
+    teamAPlayers: teamAPlayersWithStrokes,
+    teamBPlayers: teamBPlayersWithStrokes,
+    courseHandicaps: allCourseHandicaps,
+  });
+
+  return { success: true, matchId, courseHandicaps: allCourseHandicaps };
 });
