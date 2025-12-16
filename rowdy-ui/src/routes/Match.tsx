@@ -1436,7 +1436,7 @@ export default function Match() {
             });
 
             return (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" onClick={() => setDefTooltip(null)}>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200">
