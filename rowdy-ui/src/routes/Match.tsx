@@ -1441,13 +1441,13 @@ export default function Match() {
                   <thead>
                     <tr className="border-b border-slate-200">
                       <th className="text-left py-2 px-2 font-semibold text-slate-700">Player</th>
-                      <th className="text-center py-2 px-2 font-semibold text-slate-700">
-                        <div className="flex items-center justify-center">
+                      <th className="text-left py-2 px-2 font-semibold text-slate-700">
+                        <div className="flex items-start justify-start">
                           <span>H.I.</span>
                           <button
                             onClick={(e) => openDefTooltip(e, "HI")}
                             aria-label="Define H.I."
-                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
+                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
                           >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                               <circle cx="12" cy="12" r="10" />
@@ -1457,13 +1457,13 @@ export default function Match() {
                           </button>
                         </div>
                       </th>
-                      <th className="text-center py-2 px-2 font-semibold text-slate-700">
-                        <div className="flex items-center justify-center">
+                      <th className="text-left py-2 px-2 font-semibold text-slate-700">
+                        <div className="flex items-start justify-start">
                           <span>C.H.</span>
                           <button
                             onClick={(e) => openDefTooltip(e, "CH")}
                             aria-label="Define C.H."
-                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
+                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
                           >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                               <circle cx="12" cy="12" r="10" />
@@ -1473,13 +1473,13 @@ export default function Match() {
                           </button>
                         </div>
                       </th>
-                      <th className="text-center py-2 px-2 font-semibold text-slate-700">
-                        <div className="flex items-center justify-center">
+                      <th className="text-left py-2 px-2 font-semibold text-slate-700">
+                        <div className="flex items-start justify-start">
                           <span>S.O.</span>
                           <button
                             onClick={(e) => openDefTooltip(e, "SO")}
                             aria-label="Define S.O."
-                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
+                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
                           >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                               <circle cx="12" cy="12" r="10" />
@@ -1489,13 +1489,13 @@ export default function Match() {
                           </button>
                         </div>
                       </th>
-                      <th className="text-center py-2 px-2 font-semibold text-slate-700">
-                        <div className="flex items-center justify-center">
+                      <th className="text-left py-2 px-2 font-semibold text-slate-700">
+                        <div className="flex items-start justify-start">
                           <span>S.H.</span>
                           <button
                             onClick={(e) => openDefTooltip(e, "SH")}
                             aria-label="Define S.H."
-                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.6rem]"
+                            className="ml-1 w-4 h-4 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[0.55rem] relative -top-2"
                           >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                               <circle cx="12" cy="12" r="10" />
@@ -1511,10 +1511,10 @@ export default function Match() {
                     {playerRows.map((row, i) => (
                       <tr key={i} className="border-b border-slate-100">
                         <td className="py-2 px-2 text-slate-800">{row.name}</td>
-                        <td className="py-2 px-2 text-center text-slate-600">{row.hi != null ? row.hi.toFixed(1) : "—"}</td>
-                        <td className="py-2 px-2 text-center text-slate-600">{row.ch != null ? row.ch : "—"}</td>
-                        <td className="py-2 px-2 text-center text-slate-600">{row.so}</td>
-                        <td className="py-2 px-2 text-center text-slate-600">{row.sh}</td>
+                        <td className="py-2 px-2 text-left text-slate-600">{row.hi != null ? row.hi.toFixed(1) : "—"}</td>
+                        <td className="py-2 px-2 text-left text-slate-600">{row.ch != null ? row.ch : "—"}</td>
+                        <td className="py-2 px-2 text-left text-slate-600">{row.so}</td>
+                        <td className="py-2 px-2 text-left text-slate-600">{row.sh}</td>
                       </tr>
                     ))}
                   </tbody>
