@@ -44,33 +44,32 @@ export function HoleByHoleTracker({
     if (!hasScore) return null;
     
     // Determine hole winner (simplified - could import full logic from match scoring)
-    return getHoleWinner(match, format, holeNum);
+    return { holeNum, winner: getHoleWinner(match, format, holeNum) };
   });
 
-  const containerStyle: CSSProperties = {
-    display: "flex",
-    gap: "2px",
-    flexWrap: "nowrap",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: "6px",
-    padding: "2px 0",
-    width: "100%",
-  };
+  
+
+  // Only render holes that have been completed
+  const played = holeResults.filter(Boolean) as { holeNum: number; winner: "teamA" | "teamB" | "AS" | null }[];
+
+  if (played.length === 0) return null;
+
+  // If all 18 holes are shown, size them to fit the container; otherwise use a compact fixed size
+  const showAll = played.length === 18;
+  const totalGap = 17 * 2; // 2px gap
+  const perHoleCalc = `calc((100% - ${totalGap}px) / 18)`;
+  const fixedSize = "22px";
 
   const holeStyle = (result: "teamA" | "teamB" | "AS" | null): CSSProperties => {
-    // Calculate width so 18 holes fit within container: subtract total gap (17 * gap)
-    const totalGap = 17 * 2; // 2px gap
-    const perHoleCalc = `calc((100% - ${totalGap}px) / 18)`;
     const baseStyle: CSSProperties = {
-      width: perHoleCalc,
-      height: perHoleCalc,
+      width: showAll ? perHoleCalc : fixedSize,
+      height: showAll ? perHoleCalc : fixedSize,
       minWidth: "14px",
       minHeight: "14px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: "0.6rem",
+      fontSize: showAll ? "0.6rem" : "0.65rem",
       fontWeight: 600,
       borderRadius: "50%",
       transition: "all 0.12s ease",
@@ -99,7 +98,7 @@ export function HoleByHoleTracker({
       };
     }
 
-    // Not yet played
+    // Fallback
     return {
       ...baseStyle,
       backgroundColor: "transparent",
@@ -108,19 +107,27 @@ export function HoleByHoleTracker({
     };
   };
 
+  // Container: left-align items; do not stretch when only a few holes are shown
+  const containerStyle: CSSProperties = {
+    display: "flex",
+    gap: "2px",
+    flexWrap: "nowrap",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    marginTop: "6px",
+    padding: "2px 0",
+    width: "100%",
+  };
+
   return (
     <div style={containerStyle} aria-label="Hole-by-hole results">
-      {holeResults.map((result, idx) => (
+      {played.map((r) => (
         <div
-          key={idx + 1}
-          style={holeStyle(result)}
-          aria-label={
-            result
-              ? `Hole ${idx + 1}: ${result === "AS" ? "Halved" : result === "teamA" ? "Team A" : "Team B"}`
-              : `Hole ${idx + 1}: Not played`
-          }
+          key={r.holeNum}
+          style={holeStyle(r.winner)}
+          aria-label={r.winner ? `Hole ${r.holeNum}: ${r.winner === "AS" ? "Halved" : r.winner === "teamA" ? "Team A" : "Team B"}` : `Hole ${r.holeNum}: Not played`}
         >
-          {idx + 1}
+          {r.holeNum}
         </div>
       ))}
     </div>
