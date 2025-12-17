@@ -49,24 +49,31 @@ export function HoleByHoleTracker({
 
   const containerStyle: CSSProperties = {
     display: "flex",
-    gap: "4px",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    marginTop: "8px",
-    padding: "4px 0",
+    gap: "2px",
+    flexWrap: "nowrap",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: "6px",
+    padding: "2px 0",
+    width: "100%",
   };
 
   const holeStyle = (result: "teamA" | "teamB" | "AS" | null): CSSProperties => {
+    // Calculate width so 18 holes fit within container: subtract total gap (17 * gap)
+    const totalGap = 17 * 2; // 2px gap
+    const perHoleCalc = `calc((100% - ${totalGap}px) / 18)`;
     const baseStyle: CSSProperties = {
-      width: "26px",
-      height: "26px",
+      width: perHoleCalc,
+      height: perHoleCalc,
+      minWidth: "14px",
+      minHeight: "14px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: "0.75rem",
+      fontSize: "0.6rem",
       fontWeight: 600,
       borderRadius: "50%",
-      transition: "all 0.2s ease",
+      transition: "all 0.12s ease",
     };
 
     if (result === "teamA") {
