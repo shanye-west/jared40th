@@ -1035,7 +1035,7 @@ export default function Match() {
           teamAColor={teamAColor}
           teamBColor={teamBColor}
           tournament={tournament}
-          teeTime={match?.teeTimeLocalIso ?? match?.teeTime}
+          teeTime={match?.teeTime}
         />
 
         {/* DRIVE SELECTOR MODAL */}

@@ -223,7 +223,7 @@ function RoundComponent() {
                         teamAName={tournament?.teamA?.name}
                         teamBName={tournament?.teamB?.name}
                         matchNumber={m.matchNumber}
-                        teeTime={m.teeTimeLocalIso ?? m.teeTime}
+                        teeTime={m.teeTime}
                         showTeeLabel={false}
                       />
 

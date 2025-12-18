@@ -101,7 +101,7 @@ export function MatchStatusHeader({
               teamBColor={teamBColor}
               teamAName={tournament?.teamA?.name}
               teamBName={tournament?.teamB?.name}
-              teeTime={match?.teeTimeLocalIso ?? match?.teeTime}
+              teeTime={match?.teeTime}
             />
           </div>
         );

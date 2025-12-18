@@ -134,13 +134,17 @@ export default function EditMatch() {
         // Set form fields
         setMatchId(selectedMatchId);
         
-        // Convert teeTime if it exists. Prefer the original local ISO if present.
-        if (matchData.teeTimeLocalIso) {
-          setTeeTime(matchData.teeTimeLocalIso);
-        } else if (matchData.teeTime) {
+        // Convert teeTime Timestamp to datetime-local format (Pacific Time)
+        if (matchData.teeTime) {
           const timestamp = matchData.teeTime.toDate();
-          const isoString = timestamp.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
-          setTeeTime(isoString);
+          // Format as Pacific Time for datetime-local input
+          const pacificDate = new Date(timestamp.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+          const year = pacificDate.getFullYear();
+          const month = String(pacificDate.getMonth() + 1).padStart(2, '0');
+          const day = String(pacificDate.getDate()).padStart(2, '0');
+          const hours = String(pacificDate.getHours()).padStart(2, '0');
+          const minutes = String(pacificDate.getMinutes()).padStart(2, '0');
+          setTeeTime(`${year}-${month}-${day}T${hours}:${minutes}`);
         } else {
           setTeeTime("");
         }
@@ -238,9 +242,14 @@ export default function EditMatch() {
         teamBPlayers: validTeamB,
       };
 
-      // Include teeTime if provided
+      // Include teeTime if provided - convert datetime-local to Pacific Time (UTC-8)
       if (teeTime) {
-        payload.teeTime = teeTime;
+        const localDate = new Date(teeTime);
+        const pacificOffset = -8 * 60;
+        const browserOffset = localDate.getTimezoneOffset();
+        const offsetDiff = pacificOffset - browserOffset;
+        const pacificDate = new Date(localDate.getTime() + offsetDiff * 60 * 1000);
+        payload.teeTime = pacificDate.toISOString();
       }
 
       const result = await editMatchFn(payload);
