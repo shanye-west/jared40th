@@ -79,7 +79,7 @@ export function HoleByHoleTracker({
         color: "#64748b",
         border: "1px dashed #cbd5e1",
         backgroundImage:
-          "repeating-linear-gradient(135deg, rgba(0,0,0,0.06) 0 6px, transparent 6px 12px)",
+          "linear-gradient(135deg, transparent calc(50% - 1px), rgba(0,0,0,0.18) 50%, transparent calc(50% + 1px))",
       };
     }
 
