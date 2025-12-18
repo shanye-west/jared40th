@@ -1,4 +1,4 @@
-import { DEFAULT_COURSE_PAR } from "./constants";
+import { DEFAULT_COURSE_PAR } from "./constants.js";
 
 /**
  * Calculate GHIN course handicap from handicap index.
