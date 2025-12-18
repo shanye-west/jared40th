@@ -100,6 +100,8 @@ function SkinsComponent() {
   // Helper to convert numeric score to label (Eagle/Birdie/Par/Bogey/etc.)
   const scoreLabel = (score: number | null, parVal: number) => {
     if (score === null) return "";
+    // Hole-in-one should be shown explicitly
+    if (score === 1) return "Hole-in-One";
     const diff = score - parVal;
     if (diff === 0) return "Par";
     if (diff === -1) return "Birdie";
