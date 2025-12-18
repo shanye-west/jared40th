@@ -341,8 +341,10 @@ function SkinsComponent() {
                             const bThru = b.playerThru ?? 0;
                             if (aThru !== bThru) return bThru - aThru; // higher 'thru' first
 
-                            const aT = a.playerTeeTime ? (a.playerTeeTime.toDate ? a.playerTeeTime.toDate().getTime() : new Date(a.playerTeeTime).getTime()) : null;
-                            const bT = b.playerTeeTime ? (b.playerTeeTime.toDate ? b.playerTeeTime.toDate().getTime() : new Date(b.playerTeeTime).getTime()) : null;
+                            const aTval = (a as any).playerTeeTimeLocalIso ?? a.playerTeeTime;
+                            const bTval = (b as any).playerTeeTimeLocalIso ?? b.playerTeeTime;
+                            const aT = aTval ? (aTval.toDate ? aTval.toDate().getTime() : new Date(aTval).getTime()) : null;
+                            const bT = bTval ? (bTval.toDate ? bTval.toDate().getTime() : new Date(bTval).getTime()) : null;
 
                             if (aT !== null && bT !== null) return aT - bT;
                             if (aT !== null && bT === null) return -1;
@@ -383,8 +385,8 @@ function SkinsComponent() {
                                     scoreLabel(displayScore, hole.par)
                                   ) : (
                                     // If player hasn't started (thru === 0), show tee time when available
-                                    score.playerThru === 0 && score.playerTeeTime
-                                      ? formatTeeTime(score.playerTeeTime)
+                                    score.playerThru === 0 && (((score as any).playerTeeTimeLocalIso) ?? score.playerTeeTime)
+                                      ? formatTeeTime(((score as any).playerTeeTimeLocalIso) ?? score.playerTeeTime)
                                       : `Thru ${score.playerThru}`
                                   )}
                                 </div>
