@@ -104,11 +104,11 @@ function SkinsComponent() {
     if (diff === 0) return "Par";
     if (diff === -1) return "Birdie";
     if (diff === -2) return "Eagle";
-    if (diff === -3) return "Albatross";
+    if (diff === -3) return "Double Eagle";
     if (diff === 1) return "Bogey";
     if (diff === 2) return "Double Bogey";
     if (diff === 3) return "Triple Bogey";
-    if (diff === 4) return "Quadruple Bogey";
+    if (diff === 4) return "Quad Bogey";
     if (diff < -3) return `${Math.abs(diff)} under par`;
     if (diff >= 5) return `${diff} over par`;
     return `${diff} over par`;
