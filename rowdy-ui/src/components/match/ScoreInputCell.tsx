@@ -205,7 +205,7 @@ export const ScoreInputCell = memo(function ScoreInputCell({
         <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold text-green-600">D</div>
       )}
       {hasSkinWin && !hasDrive && (
-        <div className="absolute top-1 left-0.5 text-[8px] font-bold text-amber-500">$</div>
+        <div className="absolute top-0.5 left-1 text-[8px] font-bold text-amber-500">$</div>
       )}
     </div>
   );
