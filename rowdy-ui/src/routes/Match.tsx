@@ -32,6 +32,7 @@ import {
   type HoleData,
 } from "../components/match";
 import { useMatchData } from "../hooks/useMatchData";
+import { useSkinsData } from "../hooks/useSkinsData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
@@ -81,6 +82,9 @@ export default function Match() {
     match, round, course, tournament, players, matchFacts, 
     loading, error,
   } = useMatchData(matchId);
+  
+  // Fetch skins data for the round (for $ icon display)
+  const { holeSkinsData } = useSkinsData(round?.id);
   
   // Simple online/offline tracking
   const { isOnline } = useNetworkStatus();
@@ -524,6 +528,42 @@ export default function Match() {
   const getLowScoreStatusB0 = useMemo(() => createGetLowScoreStatus("B", 0), [createGetLowScoreStatus]);
   const getLowScoreStatusB1 = useMemo(() => createGetLowScoreStatus("B", 1), [createGetLowScoreStatus]);
 
+  // Build skins winners lookup from useSkinsData hook
+  // This already calculates winners across ALL matches in the round (not just this match)
+  const skinsWinnersByHole = useMemo(() => {
+    const winners = new Map<string, { grossWinnerId: string | null; netWinnerId: string | null }>();
+    
+    holeSkinsData.forEach(holeData => {
+      const holeKey = String(holeData.holeNumber);
+      winners.set(holeKey, {
+        grossWinnerId: holeData.grossWinner,
+        netWinnerId: holeData.netWinner,
+      });
+    });
+    
+    return winners;
+  }, [holeSkinsData]);
+
+  // Create hasSkinWin getter for each player
+  const createHasSkinWin = useCallback((team: "A" | "B", pIdx: number) => {
+    return (holeKey: string): boolean => {
+      const winner = skinsWinnersByHole.get(holeKey);
+      if (!winner) return false;
+      
+      const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
+      const playerId = roster?.[pIdx]?.playerId;
+      if (!playerId) return false;
+      
+      // Player wins if they win either gross or net
+      return winner.grossWinnerId === playerId || winner.netWinnerId === playerId;
+    };
+  }, [skinsWinnersByHole, match?.teamAPlayers, match?.teamBPlayers]);
+
+  const hasSkinWinA0 = useMemo(() => createHasSkinWin("A", 0), [createHasSkinWin]);
+  const hasSkinWinA1 = useMemo(() => createHasSkinWin("A", 1), [createHasSkinWin]);
+  const hasSkinWinB0 = useMemo(() => createHasSkinWin("B", 0), [createHasSkinWin]);
+  const hasSkinWinB1 = useMemo(() => createHasSkinWin("B", 1), [createHasSkinWin]);
+
   // Check if hole is locked (includes auth check)
   // Note: Post-match holes are NOT locked - players can continue scoring after match closes
   const isHoleLocked = useCallback((_holeNum: number) => {
@@ -679,6 +719,7 @@ export default function Match() {
     hasStroke: (holeIdx: number) => boolean;
     getDriveValue: (holeKey: string) => 0 | 1 | 2 | 3 | null;
     getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
+    hasSkinWin: (holeKey: string) => boolean;
   };
   const playerRows: PlayerRowConfig[] = [];
 
@@ -697,28 +738,28 @@ export default function Match() {
           <>
             <span>{getPlayerName(match.teamAPlayers?.[0]?.playerId)}</span>
           </>
-        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
+        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
       { team: "A", pIdx: 1, label: (
           <>
             <span>{getPlayerName(match.teamAPlayers?.[1]?.playerId)}</span>
           </>
-        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1 },
+        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1, hasSkinWin: hasSkinWinA1 },
       { team: "B", pIdx: 0, label: (
           <>
             <span>{getPlayerName(match.teamBPlayers?.[0]?.playerId)}</span>
           </>
-        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
+        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
       { team: "B", pIdx: 1, label: (
           <>
             <span>{getPlayerName(match.teamBPlayers?.[1]?.playerId)}</span>
           </>
-        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1 },
+        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1, hasSkinWin: hasSkinWinB1 },
     );
   } else if (isTeamFormat) {
     // 2 rows with TEAM NAMES for scramble only
     playerRows.push(
-      { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
-      { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
+      { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
+      { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
     );
   } else {
     // 2 rows: Player A, Player B (singles)
@@ -727,12 +768,12 @@ export default function Match() {
           <>
             <span>{getPlayerName(match.teamAPlayers?.[0]?.playerId)}</span>
           </>
-        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
+        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
       { team: "B", pIdx: 0, label: (
           <>
             <span>{getPlayerName(match.teamBPlayers?.[0]?.playerId)}</span>
           </>
-        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
+        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
     );
   }
 
@@ -832,6 +873,7 @@ export default function Match() {
                     hasStroke={pr.hasStroke}
                     getDriveValue={pr.getDriveValue}
                     getLowScoreStatus={pr.getLowScoreStatus}
+                    hasSkinWin={pr.hasSkinWin}
                     onCellChange={pr.onCellChange}
                     outTotal={totals.getOut(pr.team, pr.pIdx)}
                     inTotal={totals.getIn(pr.team, pr.pIdx)}
@@ -961,6 +1003,7 @@ export default function Match() {
                     hasStroke={pr.hasStroke}
                     getDriveValue={pr.getDriveValue}
                     getLowScoreStatus={pr.getLowScoreStatus}
+                    hasSkinWin={pr.hasSkinWin}
                     onCellChange={pr.onCellChange}
                     outTotal={totals.getOut(pr.team, pr.pIdx)}
                     inTotal={totals.getIn(pr.team, pr.pIdx)}

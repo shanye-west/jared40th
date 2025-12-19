@@ -28,6 +28,7 @@ export interface PlayerScoreRowProps {
   hasStroke: (holeIdx: number) => boolean;
   getDriveValue: (holeKey: string) => 0 | 1 | 2 | 3 | null;
   getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
+  hasSkinWin: (holeKey: string) => boolean;
   onCellChange: (holeKey: string, value: number | null) => void;
   outTotal: number | null;
   inTotal: number | null;
@@ -50,6 +51,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
   hasStroke,
   getDriveValue,
   getLowScoreStatus,
+  hasSkinWin,
   onCellChange,
   outTotal,
   inTotal,
@@ -96,6 +98,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
               teamColor={color}
               onChange={onCellChange}
               isPostMatch={isPostMatch}
+              hasSkinWin={hasSkinWin(h.k)}
             />
           </td>
         );
@@ -131,6 +134,7 @@ export const PlayerScoreRow = memo(function PlayerScoreRow({
               teamColor={color}
               onChange={onCellChange}
               isPostMatch={isPostMatch}
+              hasSkinWin={hasSkinWin(h.k)}
             />
           </td>
         );
