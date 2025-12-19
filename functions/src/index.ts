@@ -17,9 +17,9 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 
 // Import shared modules
-import type { RoundFormat } from "./types.js";
+import type { RoundFormat, PlayerHoleScore, HoleSkinData, PlayerSkinsTotal, SkinsResultDoc } from "./types.js";
 import { DEFAULT_COURSE_PAR, JEKYLL_AND_HYDE_THRESHOLD } from "./constants.js";
-import { calculateCourseHandicap, calculateStrokesReceived } from "./ghin.js";
+import { calculateCourseHandicap, calculateStrokesReceived, calculateSkinsStrokes } from "./ghin.js";
 import { checkRateLimit } from "./rateLimit.js";
 import { ensureTournamentTeamColors } from "./utils/teamColors.js";
 import { 
@@ -1145,6 +1145,322 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   if (Array.isArray(pB)) pB.forEach((p: any, idx: number) => writeFact(p, "teamB", idx, pA, pB));
 
   await batch.commit();
+});
+
+// ============================================================================
+// SKINS COMPUTATION
+// Computes hole-by-hole skins data for the entire round when any match updates
+// Stores pre-computed results in rounds/{roundId}/skinsResults/computed
+// ============================================================================
+
+export const computeRoundSkins = onDocumentWritten("matches/{matchId}", async (event) => {
+  const after = event.data?.after?.data();
+  const before = event.data?.before?.data();
+  
+  // Get round ID from after or before (handle deletion)
+  const roundId = after?.roundId || before?.roundId;
+  if (!roundId) return;
+  
+  // Fetch round to check if skins are enabled
+  const roundSnap = await db.collection("rounds").doc(roundId).get();
+  if (!roundSnap.exists) return;
+  
+  const round = roundSnap.data()!;
+  const format = round.format as RoundFormat;
+  
+  // Only singles and twoManBestBall support skins
+  if (format !== "singles" && format !== "twoManBestBall") return;
+  
+  const skinsGrossPot = round.skinsGrossPot ?? 0;
+  const skinsNetPot = round.skinsNetPot ?? 0;
+  
+  // Skip if no skins configured
+  if (skinsGrossPot <= 0 && skinsNetPot <= 0) return;
+  
+  // Fetch all matches for this round
+  const matchesSnap = await db.collection("matches").where("roundId", "==", roundId).get();
+  const matches = matchesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  if (matches.length === 0) return;
+  
+  // Fetch course data
+  const courseId = round.courseId;
+  if (!courseId) return;
+  
+  const courseSnap = await db.collection("courses").doc(courseId).get();
+  if (!courseSnap.exists) return;
+  
+  const course = courseSnap.data()!;
+  const courseHoles: { number: number; par: number; hcpIndex: number }[] = course.holes || [];
+  
+  if (courseHoles.length === 0) return;
+  
+  // Fetch tournament for handicap data
+  const tournamentId = round.tournamentId;
+  if (!tournamentId) return;
+  
+  const tournamentSnap = await db.collection("tournaments").doc(tournamentId).get();
+  if (!tournamentSnap.exists) return;
+  
+  const tournament = tournamentSnap.data()!;
+  
+  // Fetch player names
+  const playerIds = new Set<string>();
+  matches.forEach((match: any) => {
+    (match.teamAPlayers || []).forEach((p: any) => playerIds.add(p.playerId));
+    (match.teamBPlayers || []).forEach((p: any) => playerIds.add(p.playerId));
+  });
+  
+  const playerNames: Record<string, string> = {};
+  const playerIdArray = Array.from(playerIds);
+  
+  // Batch fetch players (30 at a time due to Firestore limit)
+  for (let i = 0; i < playerIdArray.length; i += 30) {
+    const batch = playerIdArray.slice(i, i + 30);
+    const playersSnap = await db.collection("players").where("__name__", "in", batch).get();
+    playersSnap.docs.forEach(d => {
+      playerNames[d.id] = d.data().displayName || d.id;
+    });
+  }
+  
+  // Skins calculation parameters
+  const handicapPercent = round.skinsHandicapPercent ?? 100;
+  const slopeRating = course.slope ?? 113;
+  const courseRating = course.rating ?? (course.par ?? 72);
+  const coursePar = course.par ?? 72;
+  
+  // Cache skins strokes per player to avoid recomputing
+  const skinsStrokesCache = new Map<string, number[]>();
+  
+  const getSkinsStrokesForPlayer = (playerId: string, teamKey: "teamA" | "teamB"): number[] => {
+    const cacheKey = `${teamKey}:${playerId}`;
+    const existing = skinsStrokesCache.get(cacheKey);
+    if (existing) return existing;
+    
+    const teamData = teamKey === "teamA" ? tournament.teamA : tournament.teamB;
+    const handicapIndex = teamData?.handicapByPlayer?.[playerId] ?? 0;
+    
+    const strokes = calculateSkinsStrokes(
+      handicapIndex,
+      handicapPercent,
+      slopeRating,
+      courseRating,
+      coursePar,
+      courseHoles
+    );
+    
+    skinsStrokesCache.set(cacheKey, strokes);
+    return strokes;
+  };
+  
+  // Build hole-by-hole skins data
+  const holeSkinsData: HoleSkinData[] = [];
+  
+  for (let holeNum = 1; holeNum <= 18; holeNum++) {
+    const holeKey = String(holeNum);
+    const holeInfo = courseHoles.find(h => h.number === holeNum);
+    const par = holeInfo?.par ?? 4;
+    
+    // Collect all player scores for this hole across all matches
+    const allScores: PlayerHoleScore[] = [];
+    
+    matches.forEach((match: any) => {
+      const holeData = match.holes?.[holeKey];
+      if (!holeData) return;
+      
+      const input = holeData.input || {};
+      
+      if (format === "singles") {
+        // Singles: one player per team
+        const teamAPlayer = match.teamAPlayers?.[0];
+        const teamBPlayer = match.teamBPlayers?.[0];
+        
+        if (teamAPlayer) {
+          const gross = input.teamAPlayerGross ?? null;
+          const skinsStrokes = getSkinsStrokesForPlayer(teamAPlayer.playerId, "teamA");
+          const strokesReceived = skinsStrokes[holeNum - 1];
+          
+          const net = gross !== null ? gross - strokesReceived : null;
+          const playerThru = match.status?.thru ?? 0;
+          
+          allScores.push({
+            playerId: teamAPlayer.playerId,
+            playerName: playerNames[teamAPlayer.playerId] || teamAPlayer.playerId,
+            gross,
+            net,
+            hasStroke: strokesReceived > 0,
+            playerThru,
+            playerTeeTime: match.teeTime ?? null,
+          });
+        }
+        
+        if (teamBPlayer) {
+          const gross = input.teamBPlayerGross ?? null;
+          const skinsStrokes = getSkinsStrokesForPlayer(teamBPlayer.playerId, "teamB");
+          const strokesReceived = skinsStrokes[holeNum - 1];
+          
+          const net = gross !== null ? gross - strokesReceived : null;
+          const playerThru = match.status?.thru ?? 0;
+          
+          allScores.push({
+            playerId: teamBPlayer.playerId,
+            playerName: playerNames[teamBPlayer.playerId] || teamBPlayer.playerId,
+            gross,
+            net,
+            hasStroke: strokesReceived > 0,
+            playerThru,
+            playerTeeTime: match.teeTime ?? null,
+          });
+        }
+      } else if (format === "twoManBestBall") {
+        // Best Ball: two players per team
+        [match.teamAPlayers, match.teamBPlayers].forEach((team: any[], teamIdx: number) => {
+          const isTeamA = teamIdx === 0;
+          team?.forEach((player: any, playerIdx: number) => {
+            const grossArray = isTeamA 
+              ? input.teamAPlayersGross 
+              : input.teamBPlayersGross;
+            
+            const gross = grossArray?.[playerIdx] ?? null;
+            const teamKey: "teamA" | "teamB" = isTeamA ? "teamA" : "teamB";
+            const skinsStrokes = getSkinsStrokesForPlayer(player.playerId, teamKey);
+            const strokesReceived = skinsStrokes[holeNum - 1];
+            
+            const net = gross !== null ? gross - strokesReceived : null;
+            const playerThru = match.status?.thru ?? 0;
+            
+            allScores.push({
+              playerId: player.playerId,
+              playerName: playerNames[player.playerId] || player.playerId,
+              gross,
+              net,
+              hasStroke: strokesReceived > 0,
+              playerThru,
+              playerTeeTime: match.teeTime ?? null,
+            });
+          });
+        });
+      }
+    });
+    
+    // Determine gross winner
+    const grossScores = allScores.filter(s => s.gross !== null);
+    const grossLowScore = grossScores.length > 0 ? Math.min(...grossScores.map(s => s.gross!)) : null;
+    const grossWinners = grossScores.filter(s => s.gross === grossLowScore);
+    const grossWinner = grossWinners.length === 1 ? grossWinners[0].playerId : null;
+    const grossTiedCount = grossWinners.length;
+    
+    // Determine net winner
+    const netScores = allScores.filter(s => s.net !== null);
+    const netLowScore = netScores.length > 0 ? Math.min(...netScores.map(s => s.net!)) : null;
+    const netWinners = netScores.filter(s => s.net === netLowScore);
+    const netWinner = netWinners.length === 1 ? netWinners[0].playerId : null;
+    const netTiedCount = netWinners.length;
+    
+    // Sort all scores: lowest first, null scores at end
+    allScores.sort((a, b) => {
+      if (a.gross === null) return 1;
+      if (b.gross === null) return -1;
+      return a.gross - b.gross;
+    });
+    
+    // Check if all players have completed this hole
+    const allPlayersCompleted = allScores.length > 0 && allScores.every(s => s.gross !== null);
+    
+    holeSkinsData.push({
+      holeNumber: holeNum,
+      par,
+      grossWinner,
+      netWinner,
+      grossLowScore,
+      netLowScore,
+      grossTiedCount,
+      netTiedCount,
+      allScores,
+      allPlayersCompleted,
+    });
+  }
+  
+  // Compute player totals (leaderboard)
+  const totalsMap = new Map<string, PlayerSkinsTotal>();
+  
+  // Initialize all players
+  matches.forEach((match: any) => {
+    [...(match.teamAPlayers || []), ...(match.teamBPlayers || [])].forEach((p: any) => {
+      if (!totalsMap.has(p.playerId)) {
+        totalsMap.set(p.playerId, {
+          playerId: p.playerId,
+          playerName: playerNames[p.playerId] || p.playerId,
+          grossSkinsWon: 0,
+          netSkinsWon: 0,
+          grossHoles: [],
+          netHoles: [],
+          grossEarnings: 0,
+          netEarnings: 0,
+          totalEarnings: 0,
+        });
+      }
+    });
+  });
+  
+  // Count skins won per player
+  holeSkinsData.forEach(hole => {
+    if (hole.grossWinner) {
+      const player = totalsMap.get(hole.grossWinner);
+      if (player) {
+        player.grossSkinsWon++;
+        player.grossHoles.push(hole.holeNumber);
+      }
+    }
+    if (hole.netWinner) {
+      const player = totalsMap.get(hole.netWinner);
+      if (player) {
+        player.netSkinsWon++;
+        player.netHoles.push(hole.holeNumber);
+      }
+    }
+  });
+  
+  // Calculate earnings
+  const totalGrossSkins = holeSkinsData.filter(h => h.grossWinner !== null).length;
+  const totalNetSkins = holeSkinsData.filter(h => h.netWinner !== null).length;
+  const grossValuePerSkin = totalGrossSkins > 0 ? skinsGrossPot / totalGrossSkins : 0;
+  const netValuePerSkin = totalNetSkins > 0 ? skinsNetPot / totalNetSkins : 0;
+  
+  totalsMap.forEach(player => {
+    player.grossEarnings = player.grossSkinsWon * grossValuePerSkin;
+    player.netEarnings = player.netSkinsWon * netValuePerSkin;
+    player.totalEarnings = player.grossEarnings + player.netEarnings;
+  });
+  
+  // Build sorted player totals (highest earnings first, filter to only those with skins)
+  const playerTotals = Array.from(totalsMap.values())
+    .filter(p => p.grossSkinsWon > 0 || p.netSkinsWon > 0)
+    .sort((a, b) => b.totalEarnings - a.totalEarnings);
+  
+  // Create computation signature from all match holes data
+  const computeSig = JSON.stringify(matches.map((m: any) => m.holes || {}));
+  
+  // Check if we need to write (avoid redundant writes)
+  const skinsResultRef = db.collection("rounds").doc(roundId).collection("skinsResults").doc("computed");
+  const existingSnap = await skinsResultRef.get();
+  
+  if (existingSnap.exists && existingSnap.data()?._computeSig === computeSig) {
+    // No change, skip write
+    return;
+  }
+  
+  // Write pre-computed skins results
+  const skinsResultDoc: SkinsResultDoc = {
+    holeSkinsData,
+    playerTotals,
+    skinsGrossPot,
+    skinsNetPot,
+    lastUpdated: FieldValue.serverTimestamp(),
+    _computeSig: computeSig,
+  };
+  
+  await skinsResultRef.set(skinsResultDoc);
 });
 
 // ============================================================================

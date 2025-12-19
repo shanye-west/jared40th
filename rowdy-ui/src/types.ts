@@ -399,3 +399,52 @@ export type PlayerStatsBySeries = {
   
   lastUpdated?: any; // Firestore Timestamp
 };
+
+// ============================================================================
+// SKINS TYPES
+// Pre-computed skins results stored in rounds/{roundId}/skinsResults/computed
+// ============================================================================
+
+export interface PlayerHoleScore {
+  playerId: string;
+  playerName: string;
+  gross: number | null;
+  net: number | null;
+  hasStroke: boolean;
+  playerThru: number; // Number of holes completed by this player
+  playerTeeTime?: any; // Firestore Timestamp or serialized timestamp
+}
+
+export interface HoleSkinData {
+  holeNumber: number;
+  par: number;
+  grossWinner: string | null; // playerId or null if tied
+  netWinner: string | null;
+  grossLowScore: number | null;
+  netLowScore: number | null;
+  grossTiedCount: number; // 0 if winner, >1 if tied
+  netTiedCount: number;
+  allScores: PlayerHoleScore[]; // All player scores for this hole
+  allPlayersCompleted: boolean; // True if all players have completed this hole
+}
+
+export interface PlayerSkinsTotal {
+  playerId: string;
+  playerName: string;
+  grossSkinsWon: number;
+  netSkinsWon: number;
+  grossHoles: number[]; // Hole numbers won
+  netHoles: number[];
+  grossEarnings: number;
+  netEarnings: number;
+  totalEarnings: number;
+}
+
+export interface SkinsResultDoc {
+  holeSkinsData: HoleSkinData[];
+  playerTotals: PlayerSkinsTotal[];
+  skinsGrossPot: number;
+  skinsNetPot: number;
+  lastUpdated?: any; // Firestore Timestamp
+  _computeSig?: string; // Hash to detect changes
+}
