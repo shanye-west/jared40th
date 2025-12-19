@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 // RedirectCountdown removed; using explicit Go Home button instead
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import type { RoundFormat, HoleInputLoose } from "../types";
+import type { RoundFormat, HoleInputLoose, HoleInfo } from "../types";
 import { 
   SCORECARD_CELL_WIDTH, 
   SCORECARD_TOTAL_COL_WIDTH,
@@ -35,6 +35,7 @@ import { useMatchData } from "../hooks/useMatchData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
+import { calculateSkinsStrokes } from "../utils/ghin";
 
 import { predictClose, computeRunningStatus, type HoleData as MatchScoringHoleData, type HoleInput } from "../utils/matchScoring";
 
@@ -524,6 +525,128 @@ export default function Match() {
   const getLowScoreStatusB0 = useMemo(() => createGetLowScoreStatus("B", 0), [createGetLowScoreStatus]);
   const getLowScoreStatusB1 = useMemo(() => createGetLowScoreStatus("B", 1), [createGetLowScoreStatus]);
 
+  // Calculate skins winners per hole (for displaying $ icon)
+  const skinsWinnersByHole = useMemo(() => {
+    // Only calculate for skins-enabled rounds
+    const skinsEnabled = (round?.skinsGrossPot ?? 0) > 0 || (round?.skinsNetPot ?? 0) > 0;
+    const validFormat = format === "singles" || format === "twoManBestBall";
+    
+    if (!skinsEnabled || !validFormat || !round || !tournament || !course?.holes) {
+      return new Map<string, { grossWinnerId: string | null; netWinnerId: string | null }>();
+    }
+
+    const handicapPercent = round.skinsHandicapPercent ?? 100;
+    const slopeRating = course.slope ?? 113;
+    const courseRating = course.rating ?? (course.par ?? 72);
+    const coursePar = course.par ?? 72;
+
+    // Calculate skins strokes for each player
+    const getSkinsStrokesForPlayer = (playerId: string, teamKey: "teamA" | "teamB"): number[] => {
+      const teamData = teamKey === "teamA" ? tournament.teamA : tournament.teamB;
+      const handicapIndex = teamData?.handicapByPlayer?.[playerId] ?? 0;
+      
+      return calculateSkinsStrokes(
+        handicapIndex,
+        handicapPercent,
+        slopeRating,
+        courseRating,
+        coursePar,
+        course.holes as HoleInfo[]
+      );
+    };
+
+    const winners = new Map<string, { grossWinnerId: string | null; netWinnerId: string | null }>();
+
+    holes.forEach(hole => {
+      const holeKey = hole.k;
+      const holeNum = hole.num;
+      const { input } = hole;
+
+      // Collect all player scores for this hole
+      const playerScores: Array<{ playerId: string; gross: number | null; net: number | null }> = [];
+
+      if (format === "singles") {
+        const teamAPlayer = match?.teamAPlayers?.[0];
+        const teamBPlayer = match?.teamBPlayers?.[0];
+
+        if (teamAPlayer) {
+          const gross = input.teamAPlayerGross ?? null;
+          const skinsStrokes = getSkinsStrokesForPlayer(teamAPlayer.playerId, "teamA");
+          const strokesReceived = skinsStrokes[holeNum - 1];
+          const net = gross !== null ? gross - strokesReceived : null;
+          playerScores.push({ playerId: teamAPlayer.playerId, gross, net });
+        }
+
+        if (teamBPlayer) {
+          const gross = input.teamBPlayerGross ?? null;
+          const skinsStrokes = getSkinsStrokesForPlayer(teamBPlayer.playerId, "teamB");
+          const strokesReceived = skinsStrokes[holeNum - 1];
+          const net = gross !== null ? gross - strokesReceived : null;
+          playerScores.push({ playerId: teamBPlayer.playerId, gross, net });
+        }
+      } else if (format === "twoManBestBall") {
+        [match?.teamAPlayers, match?.teamBPlayers].forEach((team, teamIdx) => {
+          const isTeamA = teamIdx === 0;
+          team?.forEach((player, playerIdx) => {
+            const grossArray = isTeamA ? input.teamAPlayersGross : input.teamBPlayersGross;
+            const gross = grossArray?.[playerIdx] ?? null;
+            const teamKey: "teamA" | "teamB" = isTeamA ? "teamA" : "teamB";
+            const skinsStrokes = getSkinsStrokesForPlayer(player.playerId, teamKey);
+            const strokesReceived = skinsStrokes[holeNum - 1];
+            const net = gross !== null ? gross - strokesReceived : null;
+            playerScores.push({ playerId: player.playerId, gross, net });
+          });
+        });
+      }
+
+      // Find gross winner (lowest score, no ties)
+      const grossScores = playerScores.filter(s => s.gross !== null);
+      let grossWinnerId: string | null = null;
+      if (grossScores.length > 0) {
+        const lowGross = Math.min(...grossScores.map(s => s.gross!));
+        const grossWinners = grossScores.filter(s => s.gross === lowGross);
+        if (grossWinners.length === 1) {
+          grossWinnerId = grossWinners[0].playerId;
+        }
+      }
+
+      // Find net winner (lowest score, no ties)
+      const netScores = playerScores.filter(s => s.net !== null);
+      let netWinnerId: string | null = null;
+      if (netScores.length > 0) {
+        const lowNet = Math.min(...netScores.map(s => s.net!));
+        const netWinners = netScores.filter(s => s.net === lowNet);
+        if (netWinners.length === 1) {
+          netWinnerId = netWinners[0].playerId;
+        }
+      }
+
+      winners.set(holeKey, { grossWinnerId, netWinnerId });
+    });
+
+    return winners;
+  }, [holes, format, round, tournament, course, match?.teamAPlayers, match?.teamBPlayers]);
+
+  // Create hasSkinWin getter for each player
+  const createHasSkinWin = useCallback((team: "A" | "B", pIdx: number) => {
+    return (holeKey: string): boolean => {
+      const winner = skinsWinnersByHole.get(holeKey);
+      if (!winner) return false;
+      
+      const roster = team === "A" ? match?.teamAPlayers : match?.teamBPlayers;
+      const playerId = roster?.[pIdx]?.playerId;
+      if (!playerId) return false;
+      
+      // Player wins if they win either gross or net
+      return winner.grossWinnerId === playerId || winner.netWinnerId === playerId;
+    };
+  }, [skinsWinnersByHole, match?.teamAPlayers, match?.teamBPlayers]);
+
+  const hasSkinWinA0 = useMemo(() => createHasSkinWin("A", 0), [createHasSkinWin]);
+  const hasSkinWinA1 = useMemo(() => createHasSkinWin("A", 1), [createHasSkinWin]);
+  const hasSkinWinB0 = useMemo(() => createHasSkinWin("B", 0), [createHasSkinWin]);
+  const hasSkinWinB1 = useMemo(() => createHasSkinWin("B", 1), [createHasSkinWin]);
+
   // Check if hole is locked (includes auth check)
   // Note: Post-match holes are NOT locked - players can continue scoring after match closes
   const isHoleLocked = useCallback((_holeNum: number) => {
@@ -679,6 +802,7 @@ export default function Match() {
     hasStroke: (holeIdx: number) => boolean;
     getDriveValue: (holeKey: string) => 0 | 1 | 2 | 3 | null;
     getLowScoreStatus: (holeKey: string) => 'solo' | 'tied' | null;
+    hasSkinWin: (holeKey: string) => boolean;
   };
   const playerRows: PlayerRowConfig[] = [];
 
@@ -697,28 +821,28 @@ export default function Match() {
           <>
             <span>{getPlayerName(match.teamAPlayers?.[0]?.playerId)}</span>
           </>
-        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
+        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
       { team: "A", pIdx: 1, label: (
           <>
             <span>{getPlayerName(match.teamAPlayers?.[1]?.playerId)}</span>
           </>
-        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1 },
+        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA1, getCellValue: getCellValueA1, hasStroke: hasStrokeA1, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA1, hasSkinWin: hasSkinWinA1 },
       { team: "B", pIdx: 0, label: (
           <>
             <span>{getPlayerName(match.teamBPlayers?.[0]?.playerId)}</span>
           </>
-        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
+        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
       { team: "B", pIdx: 1, label: (
           <>
             <span>{getPlayerName(match.teamBPlayers?.[1]?.playerId)}</span>
           </>
-        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1 },
+        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB1, getCellValue: getCellValueB1, hasStroke: hasStrokeB1, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB1, hasSkinWin: hasSkinWinB1 },
     );
   } else if (isTeamFormat) {
     // 2 rows with TEAM NAMES for scramble only
     playerRows.push(
-      { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
-      { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
+      { team: "A", pIdx: 0, label: tournament?.teamA?.name || "Team A", color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
+      { team: "B", pIdx: 0, label: tournament?.teamB?.name || "Team B", color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
     );
   } else {
     // 2 rows: Player A, Player B (singles)
@@ -727,12 +851,12 @@ export default function Match() {
           <>
             <span>{getPlayerName(match.teamAPlayers?.[0]?.playerId)}</span>
           </>
-        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0 },
+        ), color: tournament?.teamA?.color || "var(--team-a-default)", onCellChange: cellChangeHandlerA0, getCellValue: getCellValueA0, hasStroke: hasStrokeA0, getDriveValue: getDriveValueA, getLowScoreStatus: getLowScoreStatusA0, hasSkinWin: hasSkinWinA0 },
       { team: "B", pIdx: 0, label: (
           <>
             <span>{getPlayerName(match.teamBPlayers?.[0]?.playerId)}</span>
           </>
-        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0 },
+        ), color: tournament?.teamB?.color || "var(--team-b-default)", onCellChange: cellChangeHandlerB0, getCellValue: getCellValueB0, hasStroke: hasStrokeB0, getDriveValue: getDriveValueB, getLowScoreStatus: getLowScoreStatusB0, hasSkinWin: hasSkinWinB0 },
     );
   }
 
@@ -832,6 +956,7 @@ export default function Match() {
                     hasStroke={pr.hasStroke}
                     getDriveValue={pr.getDriveValue}
                     getLowScoreStatus={pr.getLowScoreStatus}
+                    hasSkinWin={pr.hasSkinWin}
                     onCellChange={pr.onCellChange}
                     outTotal={totals.getOut(pr.team, pr.pIdx)}
                     inTotal={totals.getIn(pr.team, pr.pIdx)}
@@ -961,6 +1086,7 @@ export default function Match() {
                     hasStroke={pr.hasStroke}
                     getDriveValue={pr.getDriveValue}
                     getLowScoreStatus={pr.getLowScoreStatus}
+                    hasSkinWin={pr.hasSkinWin}
                     onCellChange={pr.onCellChange}
                     outTotal={totals.getOut(pr.team, pr.pIdx)}
                     inTotal={totals.getIn(pr.team, pr.pIdx)}

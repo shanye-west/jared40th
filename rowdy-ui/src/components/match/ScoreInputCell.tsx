@@ -17,6 +17,8 @@ export interface ScoreInputCellProps {
   onChange: (holeKey: string, value: number | null) => void;
   /** When true, cell is for a post-match hole (after match was decided) - uses muted styling */
   isPostMatch?: boolean;
+  /** When true, player is winning a skin on this hole (no ties) */
+  hasSkinWin?: boolean;
 }
 
 /** Memoized score input cell - prevents re-render unless props change */
@@ -32,6 +34,7 @@ export const ScoreInputCell = memo(function ScoreInputCell({
   teamColor,
   onChange,
   isPostMatch = false,
+  hasSkinWin = false,
 }: ScoreInputCellProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [pickerPos, setPickerPos] = useState<{left: number; top: number} | null>(null);
@@ -200,6 +203,9 @@ export const ScoreInputCell = memo(function ScoreInputCell({
       )}
       {hasDrive && (
         <div className="absolute bottom-0.5 left-0.5 text-[8px] font-bold text-green-600">D</div>
+      )}
+      {hasSkinWin && !hasDrive && (
+        <div className="absolute bottom-0.5 left-0.5 text-[9px] font-bold text-amber-500">$</div>
       )}
     </div>
   );
