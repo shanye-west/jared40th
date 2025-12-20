@@ -198,6 +198,7 @@ export type MatchDoc = {
   tournamentId?: string;
   matchNumber?: number; // For ordering matches on Round page (like day for rounds)
   teeTime?: any; // Firestore Timestamp - tee time for the match (stored as Pacific Time UTC-8)
+  completed?: boolean; // When true, match is finished and playerMatchFacts should be generated
   holes?: Record<string, HoleData>;
   result?: { 
     winner?: "teamA" | "teamB" | "AS";

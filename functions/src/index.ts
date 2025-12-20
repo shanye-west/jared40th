@@ -66,6 +66,7 @@ export const seedMatchBoilerplate = onDocumentCreated("matches/{matchId}", async
   await matchRef.set({
     tournamentId, roundId,
     matchNumber: match.matchNumber ?? 0, // For ordering matches on Round page
+    completed: match.completed ?? false, // Explicitly marks when match is finished
     teamAPlayers: teamA, teamBPlayers: teamB,
     status: match.status ?? defaultStatus(),
     holes,
@@ -228,14 +229,46 @@ export const computeMatchOnWrite = onDocumentWritten("matches/{matchId}", async 
   if (JSON.stringify(before.status) === JSON.stringify(status) && 
       JSON.stringify(before.result) === JSON.stringify(result)) return;
 
+  // Check if all 18 holes have scores entered
+  const holesData = after.holes || {};
+  let completedHolesCount = 0;
+  for (const key of Object.keys(holesData)) {
+    const holeNum = parseInt(key, 10);
+    if (holeNum >= 1 && holeNum <= 18) {
+      const input = holesData[key]?.input;
+      let hasScore = false;
+      if (format === "singles") {
+        hasScore = input?.teamAPlayerGross != null || input?.teamBPlayerGross != null;
+      } else if (format === "twoManScramble" || format === "fourManScramble") {
+        hasScore = input?.teamAGross != null || input?.teamBGross != null;
+      } else if (format === "twoManBestBall" || format === "twoManShamble") {
+        const aArr = input?.teamAPlayersGross;
+        const bArr = input?.teamBPlayersGross;
+        hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
+                   (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
+      }
+      if (hasScore) completedHolesCount++;
+    }
+  }
+  const allHolesCompleted = completedHolesCount === 18;
+  
+  // Auto-complete match when it's closed AND all 18 holes are scored
+  const shouldAutoComplete = status.closed && allHolesCompleted && !before.completed;
+
   // Store computation signature and context for updateMatchFacts to avoid re-fetching
   const roundData = rSnap.data();
-  await event.data!.after.ref.set({ 
+  const updateData: any = { 
     status, 
     result, 
     _computeSig: holesSig,
     _lastComputed: { format, roundId, courseId: roundData?.courseId },
-  }, { merge: true });
+  };
+  
+  if (shouldAutoComplete) {
+    updateData.completed = true;
+  }
+  
+  await event.data!.after.ref.set(updateData, { merge: true });
 });
 
 // ============================================================================
@@ -251,18 +284,16 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   const rId = after?.roundId || "";
   
   // Try to reuse context from computeMatchOnWrite to avoid redundant fetch
-  let roundLocked = false;
   let format: RoundFormat = (after?._lastComputed?.format as RoundFormat) || "twoManBestBall";
   let points = 1;
   let courseId = after?._lastComputed?.courseId || "";
   let day = 0;
   
-  // Only fetch round if we don't have cached context or need to check locked status
+  // Fetch round for format/points/courseId if not cached
   if (rId) {
     const rSnap = await db.collection("rounds").doc(rId).get();
     if (rSnap.exists) {
       const rData = rSnap.data();
-      roundLocked = rData?.locked === true;
       // Use cached format if available, otherwise fetch
       if (!after?._lastComputed?.format) {
         format = (rData?.format as RoundFormat) || "twoManBestBall";
@@ -275,37 +306,11 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     }
   }
   
-  // Count how many holes have input (any score entered)
-  const holesData = after?.holes || {};
-  let completedHolesCount = 0;
-  for (const key of Object.keys(holesData)) {
-    const holeNum = parseInt(key, 10);
-    if (holeNum >= 1 && holeNum <= 18) {
-      const input = holesData[key]?.input;
-      // Check if any score is entered for this hole based on format
-      let hasScore = false;
-      if (format === "singles") {
-        hasScore = input?.teamAPlayerGross != null || input?.teamBPlayerGross != null;
-      } else if (format === "twoManScramble" || format === "fourManScramble") {
-        hasScore = input?.teamAGross != null || input?.teamBGross != null;
-      } else if (format === "twoManBestBall" || format === "twoManShamble") {
-        const aArr = input?.teamAPlayersGross;
-        const bArr = input?.teamBPlayersGross;
-        hasScore = (Array.isArray(aArr) && (aArr[0] != null || aArr[1] != null)) ||
-                   (Array.isArray(bArr) && (bArr[0] != null || bArr[1] != null));
-      }
-      if (hasScore) completedHolesCount++;
-    }
-  }
-  
-  const allHolesCompleted = completedHolesCount === 18;
-  const matchClosed = after?.status?.closed === true;
-  
-  // Only write facts if: (match closed AND all 18 holes scored) OR round is locked
-  const shouldWriteFacts = (matchClosed && allHolesCompleted) || roundLocked;
+  // Only write facts when match.completed === true
+  const shouldWriteFacts = after?.completed === true;
   
   if (!after || !shouldWriteFacts) {
-    // Clean up facts if match re-opened, not ready, or deleted
+    // Clean up facts if match not completed, re-opened, or deleted
     const snap = await db.collection("playerMatchFacts").where("matchId", "==", matchId).get();
     if (snap.empty) return;
     const b = db.batch();
@@ -337,6 +342,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
   // This avoids redundant computation and race conditions
   const status = after?.status || { leader: null, margin: 0, thru: 0, dormie: false, closed: false };
   const result = after?.result || {};
+  
+  // Get holes data for stats computation
+  const holesData = after.holes || {};
   
   // Fetch course data ONCE (consolidating two separate fetches)
   let courseHoles: { number: number; par: number }[] = [];
