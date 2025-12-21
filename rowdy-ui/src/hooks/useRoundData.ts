@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { collection, doc, query, where, documentId, onSnapshot } from "firebase/firestore";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { collection, doc, query, where, documentId, onSnapshot, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundDoc, TournamentDoc, MatchDoc, PlayerDoc, CourseDoc } from "../types";
 import { ensureTournamentTeamColors } from "../utils/teamColors";
 import { FIRESTORE_IN_QUERY_LIMIT } from "../constants";
+import { useTournamentContextOptional } from "../contexts/TournamentContext";
 
 interface UseRoundDataResult {
   loading: boolean;
@@ -30,10 +31,16 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
   const [error, setError] = useState<string | null>(null);
   
   const [round, setRound] = useState<RoundDoc | null>(null);
-  const [tournament, setTournament] = useState<TournamentDoc | null>(null);
+  const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
   const [course, setCourse] = useState<CourseDoc | null>(null);
   const [matches, setMatches] = useState<MatchDoc[]>([]);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
+
+  // Try to get tournament from shared context
+  const tournamentContext = useTournamentContextOptional();
+  
+  // Cache refs to avoid re-fetching
+  const fetchedCourseIdRef = useRef<string | undefined>(undefined);
 
   // Track loading states for coordinated display
   const [roundLoaded, setRoundLoaded] = useState(false);
@@ -72,40 +79,75 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     return () => unsub();
   }, [roundId]);
 
-  // 2) Subscribe to tournament when round is loaded
+  // 2) Get tournament from context or fetch once (not subscribe)
   useEffect(() => {
     if (!round?.tournamentId) return;
 
-    const unsub = onSnapshot(
-      doc(db, "tournaments", round.tournamentId),
-      (snap) => {
-        if (snap.exists()) {
-          setTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
-        }
-      },
-      (err) => console.error("Tournament subscription error:", err)
-    );
-    return () => unsub();
-  }, [round?.tournamentId]);
+    // Check if context has this tournament
+    if (tournamentContext?.tournament?.id === round.tournamentId) {
+      setLocalTournament(tournamentContext.tournament);
+      return;
+    }
 
-  // 3) Subscribe to course when round is loaded
+    // Context doesn't have it - do a one-time fetch
+    let cancelled = false;
+    async function fetchTournament() {
+      try {
+        const snap = await getDoc(doc(db, "tournaments", round!.tournamentId));
+        if (cancelled) return;
+        if (snap.exists()) {
+          setLocalTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
+        }
+      } catch (err) {
+        console.error("Tournament fetch error:", err);
+      }
+    }
+    fetchTournament();
+
+    return () => { cancelled = true; };
+  }, [round?.tournamentId, tournamentContext?.tournament]);
+
+  // 3) Fetch course once (courses don't change during session)
   useEffect(() => {
     if (!round?.courseId) {
       setCourse(null);
       return;
     }
 
-    const unsub = onSnapshot(
-      doc(db, "courses", round.courseId),
-      (snap) => {
+    // Skip if already fetched this course
+    if (fetchedCourseIdRef.current === round.courseId && course?.id === round.courseId) {
+      return;
+    }
+
+    // Check context cache first
+    if (tournamentContext?.courses[round.courseId]) {
+      const cachedCourse = tournamentContext.courses[round.courseId];
+      setCourse(cachedCourse);
+      fetchedCourseIdRef.current = round.courseId;
+      return;
+    }
+
+    let cancelled = false;
+    const courseIdToFetch = round.courseId;
+    async function fetchCourse() {
+      try {
+        const snap = await getDoc(doc(db, "courses", courseIdToFetch));
+        if (cancelled) return;
         if (snap.exists()) {
-          setCourse({ id: snap.id, ...snap.data() } as CourseDoc);
+          const courseData = { id: snap.id, ...snap.data() } as CourseDoc;
+          setCourse(courseData);
+          fetchedCourseIdRef.current = courseIdToFetch;
+          // Add to context cache if available
+          tournamentContext?.addCourse(courseData);
         }
-      },
-      (err) => console.error("Course subscription error:", err)
-    );
-    return () => unsub();
-  }, [round?.courseId]);
+      } catch (err) {
+        console.error("Course fetch error:", err);
+      }
+    }
+    fetchCourse();
+
+    return () => { cancelled = true; };
+  }, [round?.courseId, tournamentContext?.courses]);
 
   // 4) Subscribe to matches for this round
   useEffect(() => {
@@ -216,7 +258,10 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     
     return { finalTeamA, finalTeamB, projectedTeamA, projectedTeamB };
   }, [matches, round]);
-
+  // Use tournament from context if available, otherwise use local fetch
+  const tournament = (tournamentContext?.tournament?.id === round?.tournamentId && tournamentContext?.tournament)
+    ? tournamentContext.tournament
+    : localTournament;
   return {
     loading,
     error,
