@@ -1,9 +1,22 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Public read for all collections
+    // Helper function: check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/players/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/players/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Public read for all collections (except gated by specific rules below)
     match /{document=**} {
       allow read: if true;
+    }
+    
+    // Tournaments: test tournaments only readable by admins
+    match /tournaments/{tournamentId} {
+      allow read: if resource.data.test != true || isAdmin();
+      allow write: if false; // Use Firestore console or seed scripts
     }
     
     // Players collection: public read
