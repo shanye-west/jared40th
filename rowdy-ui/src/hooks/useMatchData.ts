@@ -183,9 +183,10 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
       return;
     }
     
-    // Check if context has this course cached
+    // Check if context has this course cached (prioritize context cache)
     if (tournamentContext?.courses[round.courseId]) {
-      setCourse(tournamentContext.courses[round.courseId]);
+      const cachedCourse = tournamentContext.courses[round.courseId];
+      setCourse(cachedCourse);
       fetchedCourseIdRef.current = round.courseId;
       return;
     }
@@ -210,7 +211,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     fetchCourse();
     
     return () => { cancelled = true; };
-  }, [round?.courseId, course?.id, tournamentContext]);
+  }, [round?.courseId, tournamentContext?.courses]);
 
   // 6. Fetch match facts when match closes
   useEffect(() => {

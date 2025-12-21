@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -28,15 +28,19 @@ export default function History() {
     async function fetchHistory() {
       try {
         const snap = await getDocs(
-          query(collection(db, "tournaments"), where("active", "==", false))
+          query(
+            collection(db, "tournaments"),
+            where("active", "==", false),
+            orderBy("year", "desc"),
+            limit(20)
+          )
         );
         if (cancelled) return;
         
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TournamentDoc));
         // Filter out test tournaments (they should not appear in History)
         const publicTournaments = docs.filter(t => t.test !== true);
-        // Sort by year descending (most recent first)
-        publicTournaments.sort((a, b) => (b.year || 0) - (a.year || 0));
+        // Already sorted by query orderBy
         setTournaments(publicTournaments);
       } catch (err) {
         console.error("History fetch error:", err);
