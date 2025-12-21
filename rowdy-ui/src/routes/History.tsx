@@ -27,9 +27,11 @@ export default function History() {
       query(collection(db, "tournaments"), where("active", "==", false)),
       (snap) => {
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TournamentDoc));
+        // Filter out test tournaments (they should not appear in History)
+        const publicTournaments = docs.filter(t => t.test !== true);
         // Sort by year descending (most recent first)
-        docs.sort((a, b) => (b.year || 0) - (a.year || 0));
-        setTournaments(docs);
+        publicTournaments.sort((a, b) => (b.year || 0) - (a.year || 0));
+        setTournaments(publicTournaments);
         setLoading(false);
       },
       (err) => {
