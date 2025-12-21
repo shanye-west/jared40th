@@ -352,8 +352,9 @@ export function PostMatchStats({
   const showHoleResults = isScramble; // Holes Won/Lost/Halved only for scramble
   
   const hasLeadChanges = (factA?.leadChanges ?? 0) > 0;
+  // Do not include Jekyll & Hyde in UI badges (still tracked in data)
   const hasBadges = clutchWinA || clutchWinB || comebackWinA || comebackWinB || 
-                    neverBehindA || neverBehindB || jekyllHydeA || jekyllHydeB;
+                    neverBehindA || neverBehindB;
 
   // Player-level birdie/eagle counts
   const playerBirdies = [
@@ -504,8 +505,6 @@ export function PostMatchStats({
       
       {hasBadges && (
         <div className="pt-1">
-          {jekyllHydeA && <StoryBadge icon="🎭" title="Jekyll & Hyde" description="Great Best Ball Team...Horrible Worst Ball Team" teamColor={teamAColor} />}
-          {jekyllHydeB && <StoryBadge icon="🎭" title="Jekyll & Hyde" description="Great Best Ball Team...Horrible Worst Ball Team" teamColor={teamBColor} alignRight />}
           {clutchWinA && <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamAColor} />}
           {clutchWinB && <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamBColor} alignRight />}
           {comebackWinA && <StoryBadge icon="🔥" title="Comeback Win" description="Rallied from 3+ down on the back 9" teamColor={teamAColor} />}
