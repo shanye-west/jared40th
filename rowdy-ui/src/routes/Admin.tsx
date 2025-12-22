@@ -1,9 +1,30 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import type { TournamentDoc } from "../types";
 import Layout from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Admin() {
   const { player } = useAuth();
+  const [testTournaments, setTestTournaments] = useState<TournamentDoc[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchTestTournaments = async () => {
+      try {
+        const q = query(collection(db, "tournaments"), where("test", "==", true));
+        const snap = await getDocs(q);
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TournamentDoc));
+        if (mounted) setTestTournaments(docs);
+      } catch (err) {
+        console.error("Failed to fetch test tournaments:", err);
+      }
+    };
+    fetchTestTournaments();
+    return () => { mounted = false; };
+  }, []);
 
   // Access control: only admins can view this page
   if (!player?.isAdmin) {
@@ -106,6 +127,33 @@ export default function Admin() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Test tournaments (admin-only links) */}
+        <div className="card p-6">
+          <h2 className="text-xl font-bold mb-4">Test Tournaments</h2>
+          <p className="text-sm text-gray-600 mb-6">Quick links to tournaments flagged for testing.</p>
+          <div className="space-y-2">
+            {testTournaments.length === 0 ? (
+              <div className="text-sm text-gray-500">No test tournaments found.</div>
+            ) : (
+              testTournaments.map(t => (
+                <Link
+                  key={t.id}
+                  to={`/tournament/${t.id}`}
+                  className="block p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold">{t.name || t.id}</div>
+                      <div className="text-sm text-gray-600">{t.year || ""} — {t.series}</div>
+                    </div>
+                    <div className="text-2xl">→</div>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </div>

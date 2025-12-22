@@ -235,8 +235,6 @@ export function PostMatchStats({
   const comebackWinB = factB?.comebackWin;
   const neverBehindA = factA?.wasNeverBehind && !factB?.wasNeverBehind;
   const neverBehindB = factB?.wasNeverBehind && !factA?.wasNeverBehind;
-  const jekyllHydeA = factA?.jekyllAndHyde;
-  const jekyllHydeB = factB?.jekyllAndHyde;
   
   // Shared props
   const colors = { teamAColor, teamBColor };
@@ -352,8 +350,9 @@ export function PostMatchStats({
   const showHoleResults = isScramble; // Holes Won/Lost/Halved only for scramble
   
   const hasLeadChanges = (factA?.leadChanges ?? 0) > 0;
+  // Do not include Jekyll & Hyde in UI badges (still tracked in data)
   const hasBadges = clutchWinA || clutchWinB || comebackWinA || comebackWinB || 
-                    neverBehindA || neverBehindB || jekyllHydeA || jekyllHydeB;
+                    neverBehindA || neverBehindB;
 
   // Player-level birdie/eagle counts
   const playerBirdies = [
@@ -483,13 +482,6 @@ export function PostMatchStats({
       {(showHamAndEgg || hasLeadChanges) && (
         <div className="mt-3 pt-3 border-t border-slate-200">
           <TeamNamesHeader teamAName={teamAName} teamBName={teamBName} {...colors} />
-          {/* Worst Ball total (Best Ball & Shamble) */}
-          {(isBestBall || isShamble) && (factA?.worstBallTotal != null || factB?.worstBallTotal != null) && (
-            <TeamStatRow label="Worst Ball" {...colors}
-              valueA={factA?.worstBallTotal}
-              valueB={factB?.worstBallTotal}
-            />
-          )}
           {showHamAndEgg && (
             <TeamStatRow label="🍳 Ham & Eggs" {...colors}
               valueA={factA?.hamAndEggCount ?? 0}
@@ -504,8 +496,6 @@ export function PostMatchStats({
       
       {hasBadges && (
         <div className="pt-1">
-          {jekyllHydeA && <StoryBadge icon="🎭" title="Jekyll & Hyde" description="Great Best Ball Team...Horrible Worst Ball Team" teamColor={teamAColor} />}
-          {jekyllHydeB && <StoryBadge icon="🎭" title="Jekyll & Hyde" description="Great Best Ball Team...Horrible Worst Ball Team" teamColor={teamBColor} alignRight />}
           {clutchWinA && <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamAColor} />}
           {clutchWinB && <StoryBadge icon="⚡" title="Clutch Win" description="Won on 18 to take the match" teamColor={teamBColor} alignRight />}
           {comebackWinA && <StoryBadge icon="🔥" title="Comeback Win" description="Rallied from 3+ down on the back 9" teamColor={teamAColor} />}

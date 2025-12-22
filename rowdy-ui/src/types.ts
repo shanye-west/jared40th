@@ -119,6 +119,7 @@ export type TournamentDoc = {
   name: string;
   series: string;
   active: boolean;
+  test?: boolean; // If true, only admins can see this tournament (for testing/dev)
   roundIds?: string[];
   tournamentLogo?: string;
   totalPointsAvailable?: number; // Total points available in tournament (for score tracker bar)
@@ -306,6 +307,7 @@ export type PlayerMatchFact = {
   // Team ball totals (twoManBestBall, twoManShamble only)
   bestBallTotal?: number;      // Sum of team's best ball (lowest net/gross) per hole
   worstBallTotal?: number;     // Sum of team's worst ball (highest net/gross) per hole
+  worstBallStrokesVsPar?: number; // Worst ball total minus course par
 
   // Course context
   coursePar?: number;         // Course par for reference

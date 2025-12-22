@@ -1129,6 +1129,7 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       const worstBallTotal = team === "teamA" ? teamAWorstBallTotal : teamBWorstBallTotal;
       factData.bestBallTotal = bestBallTotal;
       factData.worstBallTotal = worstBallTotal;
+      factData.worstBallStrokesVsPar = worstBallTotal - coursePar;
     }
     
     factData.coursePar = coursePar;

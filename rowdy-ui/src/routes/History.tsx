@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
@@ -21,23 +21,36 @@ export default function History() {
   const [tournaments, setTournaments] = useState<TournamentDoc[]>([]);
   const [selectedSeries, setSelectedSeries] = useState<TournamentSeries>("rowdyCup");
 
-  // Subscribe to all non-active tournaments
+  // Fetch all non-active tournaments (one-time read - historical data doesn't change)
   useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, "tournaments"), where("active", "==", false)),
-      (snap) => {
+    let cancelled = false;
+    
+    async function fetchHistory() {
+      try {
+        const snap = await getDocs(
+          query(
+            collection(db, "tournaments"),
+            where("active", "==", false),
+            orderBy("year", "desc"),
+            limit(20)
+          )
+        );
+        if (cancelled) return;
+        
         const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as TournamentDoc));
-        // Sort by year descending (most recent first)
-        docs.sort((a, b) => (b.year || 0) - (a.year || 0));
-        setTournaments(docs);
-        setLoading(false);
-      },
-      (err) => {
-        console.error("History subscription error:", err);
-        setLoading(false);
+        // Filter out test tournaments (they should not appear in History)
+        const publicTournaments = docs.filter(t => t.test !== true);
+        // Already sorted by query orderBy
+        setTournaments(publicTournaments);
+      } catch (err) {
+        console.error("History fetch error:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    );
-    return () => unsub();
+    }
+    
+    fetchHistory();
+    return () => { cancelled = true; };
   }, []);
 
   // Filter tournaments by selected series

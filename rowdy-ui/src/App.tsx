@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { useTournamentData } from "./hooks/useTournamentData";
+import { useTournamentContext } from "./contexts/TournamentContext";
 import Layout from "./components/Layout";
 import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
@@ -33,15 +34,20 @@ export default function App() {
     updateServiceWorker(true);
   };
 
+  // Get tournament from shared context (already subscribed in TournamentProvider)
+  const { tournament, loading: tournamentLoading } = useTournamentContext();
+  
+  // Fetch rounds and matches only for the active tournament
   const {
-    loading,
-    tournament,
+    loading: dataLoading,
     rounds,
     coursesByRound,
     stats,
     roundStats,
     totalPointsAvailable,
-  } = useTournamentData({ fetchActive: true });
+  } = useTournamentData({ tournamentId: tournament?.id });
+  
+  const loading = tournamentLoading || dataLoading;
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
