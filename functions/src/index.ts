@@ -66,7 +66,6 @@ export const seedMatchBoilerplate = onDocumentCreated("matches/{matchId}", async
   await matchRef.set({
     tournamentId, roundId,
     matchNumber: match.matchNumber ?? 0, // For ordering matches on Round page
-    completed: match.completed ?? false, // Explicitly marks when match is finished
     teamAPlayers: teamA, teamBPlayers: teamB,
     status: match.status ?? defaultStatus(),
     holes,
@@ -306,11 +305,11 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
     }
   }
   
-  // Only write facts when match.completed === true
-  const shouldWriteFacts = after?.completed === true;
+  // Only write facts when match is closed (status.closed === true)
+  const shouldWriteFacts = after?.status?.closed === true;
   
   if (!after || !shouldWriteFacts) {
-    // Clean up facts if match not completed, re-opened, or deleted
+    // Clean up facts if match not closed, re-opened, or deleted
     const snap = await db.collection("playerMatchFacts").where("matchId", "==", matchId).get();
     if (snap.empty) return;
     const b = db.batch();
