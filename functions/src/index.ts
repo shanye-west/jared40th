@@ -1034,10 +1034,9 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
 
     if (format === "twoManBestBall" || format === "singles") {
       const grossSum = holePerformance.reduce((s, hh) => s + (typeof hh.gross === "number" ? hh.gross : 0), 0);
-      const netSum = holePerformance.reduce((s, hh) => s + (typeof hh.net === "number" ? hh.net : 0), 0);
       totalGross = grossSum;
-      // Prefer summed net (per-hole net) when available; fall back to course-handicap subtraction
-      totalNet = netSum || (typeof totalGross === "number" ? totalGross - playerCourseHandicap : null);
+      // totalNet should be based on course handicap, not strokesReceived
+      totalNet = typeof totalGross === "number" ? totalGross - playerCourseHandicap : null;
       strokesVsParGross = typeof totalGross === "number" ? (totalGross - coursePar) : null;
       // Use player's course handicap for strokesVsParNet calculation (not strokesReceived)
       strokesVsParNet = typeof totalGross === "number" ? (totalGross - playerCourseHandicap - coursePar) : null;
