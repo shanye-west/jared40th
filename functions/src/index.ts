@@ -2150,3 +2150,160 @@ export const recalculateMatchStrokes = onCall(async (request) => {
 
   return { success: true, matchId, courseHandicaps: allCourseHandicaps };
 });
+
+/**
+ * Admin-only function to recalculate all playerMatchFacts for a tournament.
+ * 
+ * IMPORTANT: This function ensures data integrity by:
+ * 1. Deleting ALL existing playerMatchFacts for the tournament (clean slate)
+ * 2. Deleting ALL playerStats/{playerId}/bySeries/{series} for affected players
+ * 3. "Touching" each closed match to trigger updateMatchFacts regeneration
+ * 4. aggregatePlayerStats automatically rebuilds from fresh facts
+ * 
+ * This prevents double-counting or stale stats from corrupting the data.
+ * 
+ * Data payload:
+ * - tournamentId: string - Tournament to recalculate
+ * - dryRun?: boolean - If true, only report what would be done (no changes)
+ */
+export const recalculateTournamentStats = onCall(async (request) => {
+  // Auth check
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Must be logged in");
+  }
+
+  // Rate limiting check (very restrictive - this is expensive)
+  const rateLimit = checkRateLimit(uid, "recalculateTournamentStats", { maxCalls: 3, windowSeconds: 300 });
+  if (!rateLimit.allowed) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
+    );
+  }
+
+  // Verify admin status
+  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
+  if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
+    throw new HttpsError("permission-denied", "Admin access required");
+  }
+
+  // Extract data
+  const { tournamentId, dryRun = false } = request.data;
+
+  if (!tournamentId) {
+    throw new HttpsError("invalid-argument", "Missing tournamentId");
+  }
+
+  // Verify tournament exists
+  const tournamentDoc = await db.collection("tournaments").doc(tournamentId).get();
+  if (!tournamentDoc.exists) {
+    throw new HttpsError("not-found", "Tournament not found");
+  }
+
+  const tournament = tournamentDoc.data()!;
+  const series = tournament.series;
+
+  if (!series) {
+    throw new HttpsError("failed-precondition", "Tournament has no series defined");
+  }
+
+  // Step 1: Find all existing playerMatchFacts for this tournament
+  const existingFactsSnap = await db.collection("playerMatchFacts")
+    .where("tournamentId", "==", tournamentId)
+    .get();
+  
+  const factsToDelete = existingFactsSnap.docs.length;
+  const affectedPlayerIds = new Set<string>();
+  existingFactsSnap.docs.forEach(d => {
+    const playerId = d.data().playerId;
+    if (playerId) affectedPlayerIds.add(playerId);
+  });
+
+  // Step 2: Find all closed matches for this tournament
+  const matchesSnap = await db.collection("matches")
+    .where("tournamentId", "==", tournamentId)
+    .get();
+  
+  const closedMatches = matchesSnap.docs.filter(d => d.data().status?.closed === true);
+  const matchesToRecalculate = closedMatches.length;
+
+  // Also collect player IDs from matches (in case facts were never created)
+  closedMatches.forEach(d => {
+    const data = d.data();
+    (data.teamAPlayers || []).forEach((p: any) => {
+      if (p.playerId) affectedPlayerIds.add(p.playerId);
+    });
+    (data.teamBPlayers || []).forEach((p: any) => {
+      if (p.playerId) affectedPlayerIds.add(p.playerId);
+    });
+  });
+
+  // If dry run, just report what would happen
+  if (dryRun) {
+    return {
+      success: true,
+      dryRun: true,
+      tournamentId,
+      tournamentName: tournament.name,
+      series,
+      factsToDelete,
+      affectedPlayers: affectedPlayerIds.size,
+      playerIds: Array.from(affectedPlayerIds),
+      matchesToRecalculate,
+      message: `Would delete ${factsToDelete} facts, reset stats for ${affectedPlayerIds.size} players, and regenerate facts for ${matchesToRecalculate} matches.`
+    };
+  }
+
+  // Step 3: Delete all existing playerMatchFacts for this tournament
+  // Use batched deletes (max 500 per batch)
+  const factDocs = existingFactsSnap.docs;
+  for (let i = 0; i < factDocs.length; i += 500) {
+    const batch = db.batch();
+    const chunk = factDocs.slice(i, i + 500);
+    chunk.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // Step 4: Delete playerStats/{playerId}/bySeries/{series} for ALL affected players
+  // This is CRITICAL - prevents double-counting when facts are regenerated
+  const playerIdsArray = Array.from(affectedPlayerIds);
+  for (let i = 0; i < playerIdsArray.length; i += 500) {
+    const batch = db.batch();
+    const chunk = playerIdsArray.slice(i, i + 500);
+    for (const playerId of chunk) {
+      const statsRef = db.collection("playerStats").doc(playerId)
+        .collection("bySeries").doc(series);
+      batch.delete(statsRef);
+    }
+    await batch.commit();
+  }
+
+  // Step 5: "Touch" each closed match to trigger updateMatchFacts
+  // We update a _recalculatedAt timestamp field to trigger the onDocumentWritten
+  const touchTimestamp = FieldValue.serverTimestamp();
+  const touchedMatchIds: string[] = [];
+  
+  for (let i = 0; i < closedMatches.length; i += 500) {
+    const batch = db.batch();
+    const chunk = closedMatches.slice(i, i + 500);
+    chunk.forEach(d => {
+      batch.update(d.ref, { _recalculatedAt: touchTimestamp });
+      touchedMatchIds.push(d.id);
+    });
+    await batch.commit();
+  }
+
+  return {
+    success: true,
+    dryRun: false,
+    tournamentId,
+    tournamentName: tournament.name,
+    series,
+    factsDeleted: factsToDelete,
+    statsReset: playerIdsArray.length,
+    matchesRecalculated: touchedMatchIds.length,
+    matchIds: touchedMatchIds,
+    message: `Deleted ${factsToDelete} facts, reset stats for ${playerIdsArray.length} players, and triggered regeneration for ${touchedMatchIds.length} matches.`
+  };
+});
