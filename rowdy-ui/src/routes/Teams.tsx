@@ -136,9 +136,9 @@ function TeamsComponent() {
     };
   }, [tournament]);
 
-  // 3) Subscribe to pre-aggregated playerStats using collection group query (1 query instead of N)
+  // 3) Subscribe to pre-aggregated byTournament stats using collection group query
   useEffect(() => {
-    if (!tournament?.id || !tournament?.series) {
+    if (!tournament?.id) {
       setStats({});
       setFactsLoaded(tournamentLoaded);
       return;
@@ -150,11 +150,11 @@ function TeamsComponent() {
       return;
     }
 
-    // Use collection group query to fetch all stats for this series in one query
+    // Use collection group query to fetch all stats for this tournament in one query
     const unsub = onSnapshot(
       query(
-        collectionGroup(db, "bySeries"),
-        where("series", "==", tournament.series)
+        collectionGroup(db, "byTournament"),
+        where("tournamentId", "==", tournament.id)
       ),
       (snap) => {
         const newStats: Record<string, TournamentStat> = {};
@@ -185,7 +185,7 @@ function TeamsComponent() {
     );
     
     return () => unsub();
-  }, [tournament?.id, tournament?.series, players, tournamentLoaded]);
+  }, [tournament?.id, players, tournamentLoaded]);
 
   // Coordinated loading state
   useEffect(() => {

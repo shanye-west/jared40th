@@ -1473,39 +1473,17 @@ export const computeRoundSkins = onDocumentWritten("matches/{matchId}", async (e
 
 // ============================================================================
 // PLAYER STATS AGGREGATION
-// Aggregates PlayerMatchFact documents into PlayerStats by tournament series
-// Collection: playerStats/{playerId}/bySeries/{series}
+// Aggregates PlayerMatchFact documents into PlayerStats by series, tournament, and round
+// Collections: 
+//   - playerStats/{playerId}/bySeries/{series}
+//   - playerStats/{playerId}/byTournament/{tournamentId}
+//   - playerStats/{playerId}/byRound/{roundId}
 // ============================================================================
 
-export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}", async (event) => {
-  const data = event.data?.after?.data() || event.data?.before?.data();
-  if (!data?.playerId) return;
-  
-  const playerId = data.playerId;
-  const series = data.tournamentSeries;
-  
-  // If no series, skip aggregation (shouldn't happen but be safe)
-  if (!series) {
-    console.warn(`playerMatchFact ${event.params.factId} has no tournamentSeries, skipping aggregation`);
-    return;
-  }
-
-  // Query all REMAINING facts for this player in this series
-  // (after any deletion has occurred)
-  const snap = await db.collection("playerMatchFacts")
-    .where("playerId", "==", playerId)
-    .where("tournamentSeries", "==", series)
-    .get();
-  
-  // If no facts remain, DELETE the stats document
-  const statsRef = db.collection("playerStats").doc(playerId)
-    .collection("bySeries").doc(series);
-  
-  if (snap.empty) {
-    await statsRef.delete();
-    return;
-  }
-  
+/**
+ * Helper to build stats object from an array of playerMatchFact documents
+ */
+function buildStatsFromFacts(facts: FirebaseFirestore.QueryDocumentSnapshot[], idField: string, idValue: string): any {
   // Initialize stats
   let wins = 0, losses = 0, halves = 0, points = 0, matchesPlayed = 0;
   let totalGross = 0, totalNet = 0, holesPlayed = 0;
@@ -1518,6 +1496,9 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
   let captainWins = 0, captainLosses = 0, captainHalves = 0;
   let captainVsCaptainWins = 0, captainVsCaptainLosses = 0, captainVsCaptainHalves = 0;
   
+  // Get playerId from first fact (all should have same playerId)
+  const playerId = facts.length > 0 ? facts[0].data().playerId : null;
+  
   // Format breakdown
   const formatBreakdown: Record<string, { wins: number; losses: number; halves: number; matches: number }> = {
     singles: { wins: 0, losses: 0, halves: 0, matches: 0 },
@@ -1526,7 +1507,7 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
     twoManScramble: { wins: 0, losses: 0, halves: 0, matches: 0 },
   };
 
-  snap.forEach(d => {
+  facts.forEach(d => {
     const f = d.data();
     matchesPlayed++;
     points += (f.pointsEarned || 0);
@@ -1614,7 +1595,7 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
   // Build the stats document
   const statsDoc: any = {
     playerId,
-    series,
+    [idField]: idValue,
     wins,
     losses,
     halves,
@@ -1661,9 +1642,75 @@ export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}
     statsDoc.captainVsCaptainHalves = captainVsCaptainHalves;
   }
 
-  // Write to subcollection: playerStats/{playerId}/bySeries/{series}
-  // Use set() without merge to ensure stale fields are removed
-  await statsRef.set(statsDoc);
+  return statsDoc;
+}
+
+export const aggregatePlayerStats = onDocumentWritten("playerMatchFacts/{factId}", async (event) => {
+  const data = event.data?.after?.data() || event.data?.before?.data();
+  if (!data?.playerId) return;
+  
+  const playerId = data.playerId;
+  const series = data.tournamentSeries;
+  const tournamentId = data.tournamentId;
+  const roundId = data.roundId;
+  
+  // If no series, skip aggregation (shouldn't happen but be safe)
+  if (!series) {
+    console.warn(`playerMatchFact ${event.params.factId} has no tournamentSeries, skipping aggregation`);
+    return;
+  }
+
+  // Aggregate by series
+  const seriesSnap = await db.collection("playerMatchFacts")
+    .where("playerId", "==", playerId)
+    .where("tournamentSeries", "==", series)
+    .get();
+  
+  const seriesStatsRef = db.collection("playerStats").doc(playerId)
+    .collection("bySeries").doc(series);
+  
+  if (seriesSnap.empty) {
+    await seriesStatsRef.delete();
+  } else {
+    const seriesStats = buildStatsFromFacts(seriesSnap.docs, "series", series);
+    await seriesStatsRef.set(seriesStats);
+  }
+
+  // Aggregate by tournament
+  if (tournamentId) {
+    const tournamentSnap = await db.collection("playerMatchFacts")
+      .where("playerId", "==", playerId)
+      .where("tournamentId", "==", tournamentId)
+      .get();
+    
+    const tournamentStatsRef = db.collection("playerStats").doc(playerId)
+      .collection("byTournament").doc(tournamentId);
+    
+    if (tournamentSnap.empty) {
+      await tournamentStatsRef.delete();
+    } else {
+      const tournamentStats = buildStatsFromFacts(tournamentSnap.docs, "tournamentId", tournamentId);
+      await tournamentStatsRef.set(tournamentStats);
+    }
+  }
+
+  // Aggregate by round
+  if (roundId) {
+    const roundSnap = await db.collection("playerMatchFacts")
+      .where("playerId", "==", playerId)
+      .where("roundId", "==", roundId)
+      .get();
+    
+    const roundStatsRef = db.collection("playerStats").doc(playerId)
+      .collection("byRound").doc(roundId);
+    
+    if (roundSnap.empty) {
+      await roundStatsRef.delete();
+    } else {
+      const roundStats = buildStatsFromFacts(roundSnap.docs, "roundId", roundId);
+      await roundStatsRef.set(roundStats);
+    }
+  }
 });
 
 // ============================================================================
