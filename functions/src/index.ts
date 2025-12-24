@@ -1040,7 +1040,8 @@ export const updateMatchFacts = onDocumentWritten("matches/{matchId}", async (ev
       // Prefer summed net (per-hole net) when available; fall back to course-handicap subtraction
       totalNet = netSum || (typeof totalGross === "number" ? totalGross - playerCourseHandicap : null);
       strokesVsParGross = typeof totalGross === "number" ? (totalGross - coursePar) : null;
-      strokesVsParNet = typeof totalNet === "number" ? (totalNet - coursePar) : null;
+      // Use player's course handicap for strokesVsParNet calculation (not strokesReceived)
+      strokesVsParNet = typeof totalGross === "number" ? (totalGross - playerCourseHandicap - coursePar) : null;
     }
 
     // Opponent/Partner arrays
