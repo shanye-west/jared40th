@@ -149,11 +149,36 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     return () => { cancelled = true; };
   }, [round?.courseId, tournamentContext?.courses]);
 
-  // 4) Subscribe to matches for this round
+  // 4) Subscribe to matches for this round (optimized for locked rounds)
+  // Locked rounds use one-time batch read; active rounds use real-time subscription
   useEffect(() => {
-    if (!roundId) return;
+    if (!roundId || !round) return;
 
-    const unsub = onSnapshot(
+    let unsub: (() => void) | undefined;
+    
+    // If round is locked, use one-time batch read (static data)
+    if (round.locked) {
+      const fetchStaticMatches = async () => {
+        try {
+          const snap = await getDocs(
+            query(collection(db, "matches"), where("roundId", "==", roundId))
+          );
+          const ms = snap.docs
+            .map(d => ({ id: d.id, ...d.data() } as MatchDoc))
+            .sort((a, b) => (a.matchNumber ?? 0) - (b.matchNumber ?? 0) || a.id.localeCompare(b.id));
+          setMatches(ms);
+          setMatchesLoaded(true);
+        } catch (err) {
+          console.error("Matches fetch error:", err);
+          setMatchesLoaded(true);
+        }
+      };
+      fetchStaticMatches();
+      return;
+    }
+    
+    // Real-time subscription for active/unlocked rounds
+    unsub = onSnapshot(
       query(collection(db, "matches"), where("roundId", "==", roundId)),
       (snap) => {
         const ms = snap.docs
@@ -167,8 +192,8 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
         setMatchesLoaded(true);
       }
     );
-    return () => unsub();
-  }, [roundId]);
+    return () => unsub?.();
+  }, [roundId, round?.locked]);
 
   // 5) Subscribe to players when matches change
   useEffect(() => {

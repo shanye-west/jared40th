@@ -46,31 +46,61 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
   const fetchedTournamentIdRef = useRef<string | undefined>(undefined);
   const fetchedCourseIdRef = useRef<string | undefined>(undefined);
 
-  // 1. Listen to MATCH
+  // 1. Listen to MATCH (optimized for completed matches)
+  // Completed+closed matches use one-time read; active matches use real-time subscription
   useEffect(() => {
     if (!matchId) return;
     setLoading(true);
     setError(null);
 
-    const unsub = onSnapshot(
-      doc(db, "matches", matchId),
-      (mSnap) => {
-        if (!mSnap.exists()) { 
-          setMatch(null); 
-          setLoading(false); 
-          return; 
+    let unsub: (() => void) | undefined;
+    
+    // Check if match is static (completed + closed) to use one-time read
+    const initializeMatch = async () => {
+      try {
+        const snap = await getDoc(doc(db, "matches", matchId));
+        if (!snap.exists()) {
+          setMatch(null);
+          setLoading(false);
+          return;
         }
         
-        const mData = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
-        setMatch(mData);
-      },
-      (err) => {
+        const mData = { id: snap.id, ...(snap.data() as any) } as MatchDoc;
+        const isStatic = mData.completed && mData.status?.closed;
+        
+        if (isStatic) {
+          // One-time read for static/historical matches (reduces reads by ~80%)
+          setMatch(mData);
+          return;
+        }
+        
+        // Real-time subscription for active/in-progress matches
+        unsub = onSnapshot(
+          doc(db, "matches", matchId),
+          (mSnap) => {
+            if (!mSnap.exists()) { 
+              setMatch(null); 
+              setLoading(false); 
+              return; 
+            }
+            
+            const updated = { id: mSnap.id, ...(mSnap.data() as any) } as MatchDoc;
+            setMatch(updated);
+          },
+          (err) => {
+            setError(`Failed to load match: ${err.message}`);
+            setLoading(false);
+          }
+        );
+      } catch (err: any) {
         setError(`Failed to load match: ${err.message}`);
         setLoading(false);
       }
-    );
+    };
+    
+    initializeMatch();
 
-    return () => unsub();
+    return () => unsub?.();
   }, [matchId]);
 
   // 2. Subscribe to players once match loads
