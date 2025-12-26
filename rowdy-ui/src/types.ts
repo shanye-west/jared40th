@@ -485,6 +485,15 @@ export interface BirdieEagleLeader {
   holes: number[]; // Hole numbers where achieved
 }
 
+export interface ScoringLeader {
+  playerId: string;
+  playerName: string;
+  strokesVsPar: number; // Display value (actual strokes vs par)
+  holesCompleted: number; // Number of holes actually played
+  strokesVsParPer18: number; // Normalized value for ranking: (strokesVsPar * 18) / holesCompleted
+  teamKey?: string; // For team formats
+}
+
 export interface RoundRecapDoc {
   roundId: string;
   tournamentId: string;
@@ -506,6 +515,12 @@ export interface RoundRecapDoc {
     birdiesNet: BirdieEagleLeader[];
     eaglesGross: BirdieEagleLeader[];
     eaglesNet: BirdieEagleLeader[];
+    
+    // Scoring leaders (strokes vs par)
+    scoringGross?: ScoringLeader[];
+    scoringNet?: ScoringLeader[];
+    scoringTeamGross?: ScoringLeader[]; // Team gross for shamble/scramble
+    scoringTeamNet?: ScoringLeader[]; // Team net for bestBall
     
     // Best/worst holes
     bestHole?: { holeNumber: number; avgStrokesUnderPar: number }; // Lowest avg vs par

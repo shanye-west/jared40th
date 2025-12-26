@@ -2601,6 +2601,162 @@ export const computeRoundRecap = onCall(async (request) => {
   const eaglesGross = toLeaderArray(eagleGrossMap);
   const eaglesNet = toLeaderArray(eagleNetMap);
 
+  // Compute scoring leaders (gross/net to par)
+  const scoringGross: any[] = [];
+  const scoringNet: any[] = [];
+  const scoringTeamGross: any[] = [];
+  const scoringTeamNet: any[] = [];
+
+  // For singles and bestBall: individual gross and net
+  // For bestBall: also team net
+  // For shamble and scramble: team gross only
+  const isSingles = round.format === "singles";
+  const isBestBall = round.format === "twoManBestBall";
+  const isShamble = round.format === "twoManShamble";
+  const isScramble = round.format === "twoManScramble" || round.format === "fourManScramble";
+
+  if (isSingles || isBestBall) {
+    // Individual scoring leaders
+    const playerScores = new Map<string, { gross: number; net: number; holesPlayed: number }>();
+    
+    for (const fact of allFacts) {
+      if (fact.strokesVsParGross != null && fact.holesPlayed) {
+        playerScores.set(fact.playerId, {
+          gross: fact.strokesVsParGross,
+          net: fact.strokesVsParNet || 0,
+          holesPlayed: fact.holesPlayed,
+        });
+      }
+    }
+
+    // Individual gross leaders
+    for (const [playerId, scores] of playerScores.entries()) {
+      const per18 = (scores.gross * 18) / scores.holesPlayed;
+      scoringGross.push({
+        playerId,
+        playerName: playerNames[playerId] || playerId,
+        strokesVsPar: scores.gross,
+        holesCompleted: scores.holesPlayed,
+        strokesVsParPer18: Math.round(per18 * 100) / 100,
+      });
+    }
+    scoringGross.sort((a, b) => a.strokesVsParPer18 - b.strokesVsParPer18);
+
+    // Individual net leaders
+    for (const [playerId, scores] of playerScores.entries()) {
+      const per18 = (scores.net * 18) / scores.holesPlayed;
+      scoringNet.push({
+        playerId,
+        playerName: playerNames[playerId] || playerId,
+        strokesVsPar: scores.net,
+        holesCompleted: scores.holesPlayed,
+        strokesVsParPer18: Math.round(per18 * 100) / 100,
+      });
+    }
+    scoringNet.sort((a, b) => a.strokesVsParPer18 - b.strokesVsParPer18);
+  }
+
+  if (isBestBall) {
+    // Team net leaders for bestBall
+    // Group by team (partner pairs)
+    const teamNetScores = new Map<string, { net: number; holesPlayed: number; playerNames: string[] }>();
+    
+    for (const fact of allFacts) {
+      // Create team key from sorted player IDs
+      const allPlayerIds = [fact.playerId, ...(fact.partnerIds || [])];
+      allPlayerIds.sort();
+      const teamKey = allPlayerIds.join("_");
+      
+      if (!teamNetScores.has(teamKey)) {
+        const teamPlayerNames = allPlayerIds.map(id => playerNames[id] || id);
+        
+        // Compute team net by summing hole-by-hole best net scores
+        let teamNetTotal = 0;
+        let holesWithScores = 0;
+        
+        // Get all facts for this team
+        const teamFacts = allFacts.filter(f => {
+          const fPlayerIds = [f.playerId, ...(f.partnerIds || [])];
+          fPlayerIds.sort();
+          return fPlayerIds.join("_") === teamKey;
+        });
+        
+        // For each hole, find best net
+        for (let holeNum = 1; holeNum <= 18; holeNum++) {
+          const holeNets: number[] = [];
+          
+          for (const tf of teamFacts) {
+            const perf = tf.holePerformance?.find((p: any) => p.hole === holeNum);
+            if (perf && perf.net != null && perf.par != null) {
+              holeNets.push(perf.net - perf.par);
+            }
+          }
+          
+          if (holeNets.length > 0) {
+            teamNetTotal += Math.min(...holeNets);
+            holesWithScores++;
+          }
+        }
+        
+        if (holesWithScores > 0) {
+          teamNetScores.set(teamKey, {
+            net: teamNetTotal,
+            holesPlayed: holesWithScores,
+            playerNames: teamPlayerNames,
+          });
+        }
+      }
+    }
+    
+    // Build team net leaders
+    for (const [teamKey, scores] of teamNetScores.entries()) {
+      const per18 = (scores.net * 18) / scores.holesPlayed;
+      scoringTeamNet.push({
+        playerId: teamKey,
+        playerName: scores.playerNames.join(" / "),
+        strokesVsPar: scores.net,
+        holesCompleted: scores.holesPlayed,
+        strokesVsParPer18: Math.round(per18 * 100) / 100,
+        teamKey,
+      });
+    }
+    scoringTeamNet.sort((a, b) => a.strokesVsParPer18 - b.strokesVsParPer18);
+  }
+
+  if (isShamble || isScramble) {
+    // Team gross leaders for shamble/scramble
+    const teamGrossScores = new Map<string, { gross: number; holesPlayed: number; playerNames: string[] }>();
+    
+    for (const fact of allFacts) {
+      const allPlayerIds = [fact.playerId, ...(fact.partnerIds || [])];
+      allPlayerIds.sort();
+      const teamKey = allPlayerIds.join("_");
+      
+      if (!teamGrossScores.has(teamKey) && fact.teamStrokesVsParGross != null && fact.holesPlayed) {
+        const teamPlayerNames = allPlayerIds.map(id => playerNames[id] || id);
+        teamGrossScores.set(teamKey, {
+          gross: fact.teamStrokesVsParGross,
+          holesPlayed: fact.holesPlayed,
+          playerNames: teamPlayerNames,
+        });
+      }
+    }
+    
+    // Build team gross leaders
+    for (const [teamKey, scores] of teamGrossScores.entries()) {
+      const per18 = (scores.gross * 18) / scores.holesPlayed;
+      scoringTeamGross.push({
+        playerId: teamKey,
+        playerName: scores.playerNames.join(" / "),
+        strokesVsPar: scores.gross,
+        holesCompleted: scores.holesPlayed,
+        strokesVsParPer18: Math.round(per18 * 100) / 100,
+        teamKey,
+      });
+    }
+    scoringTeamGross.sort((a, b) => a.strokesVsParPer18 - b.strokesVsParPer18);
+  }
+
   // Best/worst holes (by average strokes vs par)
   const holesWithScores = holeAverages.filter(h => h.avgGross != null);
   let bestHole = null;
@@ -2650,6 +2806,10 @@ export const computeRoundRecap = onCall(async (request) => {
       eaglesNet,
       bestHole,
       worstHole,
+      scoringGross: scoringGross.length > 0 ? scoringGross : undefined,
+      scoringNet: scoringNet.length > 0 ? scoringNet : undefined,
+      scoringTeamGross: scoringTeamGross.length > 0 ? scoringTeamGross : undefined,
+      scoringTeamNet: scoringTeamNet.length > 0 ? scoringTeamNet : undefined,
     },
     computedAt: FieldValue.serverTimestamp(),
     computedBy: uid,
