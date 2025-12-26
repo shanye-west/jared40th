@@ -154,7 +154,6 @@ export default function RoundRecap() {
         {/* vs All View */}
         {viewMode === "vsAll" && (
           <div className="card p-6">
-            <h2 className="text-xl font-bold mb-4">vs All Simulation</h2>
             <p className="text-sm text-gray-600 mb-6">
               Simulated record if each player/team played against all others
             </p>
@@ -210,7 +209,7 @@ export default function RoundRecap() {
         {viewMode === "grossScoring" && (
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Gross Scoring</h2>
+              <div />
               <div className="flex gap-2">
                 <button
                   onClick={() => setGrossTab("scores")}
@@ -355,7 +354,7 @@ export default function RoundRecap() {
         {viewMode === "netScoring" && (
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Net Scoring</h2>
+              <div />
               <div className="flex gap-2">
                 <button
                   onClick={() => setNetTab("scores")}
