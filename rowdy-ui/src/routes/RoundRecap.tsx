@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import type { RoundRecapDoc, VsAllRecord } from "../types";
@@ -13,6 +13,7 @@ export default function RoundRecap() {
   const [viewMode, setViewMode] = useState<"vsAll" | "grossScoring" | "netScoring" | "holes">("vsAll");
   const [grossTab, setGrossTab] = useState<"scores" | "birdies" | "eagles">("scores");
   const [netTab, setNetTab] = useState<"scores" | "birdies" | "eagles">("scores");
+  const [netScoreView, setNetScoreView] = useState<"team" | "individual">("team");
 
   useEffect(() => {
     if (!roundId) return;
@@ -40,48 +41,43 @@ export default function RoundRecap() {
     fetchRecap();
   }, [roundId]);
 
+  // Short-circuit while loading / error / missing recap to avoid many null checks below
   if (loading) {
     return (
       <Layout title="Round Recap" showBack>
-        <div className="flex items-center justify-center p-8">
-          <div className="text-lg text-gray-500">Loading recap...</div>
-        </div>
+        <div className="p-4">Loading recap…</div>
       </Layout>
     );
   }
 
-  if (error || !recap) {
+  if (error) {
     return (
       <Layout title="Round Recap" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">📊</div>
-          <div className="empty-state-text">{error || "Recap not available"}</div>
-          <Link to={`/round/${roundId}`} className="btn btn-primary mt-4">
-            Back to Round
-          </Link>
-        </div>
+        <div className="p-4 text-red-600">{error}</div>
+      </Layout>
+    );
+  }
+
+  if (!recap) {
+    return (
+      <Layout title="Round Recap" showBack>
+        <div className="p-4">Recap not available</div>
       </Layout>
     );
   }
 
   // For team formats, deduplicate vsAll records by teamKey
-  // Group players with the same teamKey into a single display entry
   const isTeamFormat = recap.format !== "singles";
-  
   let displayVsAll: Array<VsAllRecord & { displayName?: string }> = [];
-  
+
   if (isTeamFormat) {
-    // Group by teamKey
     const teamMap = new Map<string, VsAllRecord[]>();
     for (const record of recap.vsAllRecords) {
       const key = record.teamKey || record.playerId;
-      if (!teamMap.has(key)) {
-        teamMap.set(key, []);
-      }
+      if (!teamMap.has(key)) teamMap.set(key, []);
       teamMap.get(key)!.push(record);
     }
-    
-    // Create one entry per team with combined player names
+
     for (const [teamKey, members] of teamMap.entries()) {
       const firstMember = members[0];
       const playerNames = members.map(m => m.playerName).join(" / ");
@@ -241,26 +237,22 @@ export default function RoundRecap() {
                 {/* Individual and team gross scoring leaders */}
                 {recap.leaders.scoringGross && recap.leaders.scoringGross.length > 0 && (
                   <>
-                    <div className="font-semibold mb-2">Individual Gross</div>
+                    <div className="font-semibold mb-2">Individual Gross <span className="text-sm text-gray-500">— ranked by score per 18 holes</span></div>
                     {recap.leaders.scoringGross.map((leader, idx) => (
                       <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
                         <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
                         <div className="flex-1">
                           <div className="font-semibold text-lg">{leader.playerName}</div>
                           <div className="text-sm text-gray-600">
-                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                            {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
+                            {leader.totalGross != null ? `Gross ${leader.totalGross}` : `${leader.strokesVsPar > 0 ? "+" : ""}${leader.strokesVsPar}`}
+                            {leader.holesCompleted < 18 && ` (thru ${leader.holesCompleted})`}
                           </div>
                         </div>
                         <div className="text-right">
                           <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
                             {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
                           </div>
-                          {leader.holesCompleted < 18 && (
-                            <div className="text-xs text-gray-500">
-                              ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
-                            </div>
-                          )}
+                          {/* per-18 removed; ranking note shown in header */}
                         </div>
                       </div>
                     ))}
@@ -280,18 +272,14 @@ export default function RoundRecap() {
                           </div>
                           <div className="text-sm text-gray-600">
                             {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                            {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
+                            {leader.holesCompleted < 18 && ` (thru ${leader.holesCompleted})`}
                           </div>
                         </div>
                         <div className="text-right">
                           <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
                             {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
                           </div>
-                          {leader.holesCompleted < 18 && (
-                            <div className="text-xs text-gray-500">
-                              ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
-                            </div>
-                          )}
+                          {/* per-18 removed */}
                         </div>
                       </div>
                     ))}
@@ -391,65 +379,80 @@ export default function RoundRecap() {
             </div>
             {netTab === "scores" && (
               <div className="space-y-3">
-                {/* Individual and team net scoring leaders */}
-                {recap.leaders.scoringNet && recap.leaders.scoringNet.length > 0 && (
-                  <>
-                    <div className="font-semibold mb-2">Individual Net</div>
-                    {recap.leaders.scoringNet.map((leader, idx) => (
-                      <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                        <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-lg">{leader.playerName}</div>
-                          <div className="text-sm text-gray-600">
-                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                            {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
-                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                          </div>
-                          {leader.holesCompleted < 18 && (
-                            <div className="text-xs text-gray-500">
-                              ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </>
+                {/* For twoManBestBall, allow toggling between Team and Individual Net views */}
+                {recap.format === "twoManBestBall" && (
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => setNetScoreView("team")}
+                      className={`px-3 py-1 rounded-lg font-medium ${netScoreView === "team" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                    >
+                      Team Score
+                    </button>
+                    <button
+                      onClick={() => setNetScoreView("individual")}
+                      className={`px-3 py-1 rounded-lg font-medium ${netScoreView === "individual" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                    >
+                      Individual Score
+                    </button>
+                  </div>
                 )}
-                {recap.leaders.scoringTeamNet && recap.leaders.scoringTeamNet.length > 0 && (
-                  <>
-                    <div className="font-semibold mt-6 mb-2">Team Net</div>
-                    {recap.leaders.scoringTeamNet.map((leader, idx) => (
-                      <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                        <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-lg">
-                            {leader.playerName.split(" / ").map((n, i) => (
-                              <div key={i}>{n}</div>
-                            ))}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                            {leader.holesCompleted < 18 && ` (${leader.holesCompleted})`}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
-                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
-                          </div>
-                          {leader.holesCompleted < 18 && (
-                            <div className="text-xs text-gray-500">
-                              ({leader.strokesVsParPer18 > 0 ? "+" : ""}{leader.strokesVsParPer18.toFixed(1)} per 18)
+
+                {/* Individual Net */}
+                {(recap.format !== "twoManBestBall" || netScoreView === "individual") && (
+                  recap.leaders.scoringNet && recap.leaders.scoringNet.length > 0 ? (
+                    <>
+                      <div className="font-semibold mb-2">Individual Net <span className="text-sm text-gray-500">— ranked by score per 18 holes</span></div>
+                      {recap.leaders.scoringNet.map((leader, idx) => (
+                        <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                          <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-lg">{leader.playerName}</div>
+                            <div className="text-sm text-gray-600">
+                              {leader.totalNet != null ? `Net ${leader.totalNet}` : `${leader.strokesVsPar > 0 ? "+" : ""}${leader.strokesVsPar}`}
+                              {leader.holesCompleted < 18 && ` (thru ${leader.holesCompleted})`}
                             </div>
-                          )}
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
+                              {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </>
+                      ))}
+                    </>
+                  ) : null
                 )}
+
+                {/* Team Net */}
+                {(recap.format !== "twoManBestBall" || netScoreView === "team") && (
+                  recap.leaders.scoringTeamNet && recap.leaders.scoringTeamNet.length > 0 ? (
+                    <>
+                      <div className="font-semibold mt-6 mb-2">Team Net</div>
+                      {recap.leaders.scoringTeamNet.map((leader, idx) => (
+                        <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                          <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-lg">
+                              {leader.playerName.split(" / ").map((n, i) => (
+                                <div key={i}>{n}</div>
+                              ))}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {leader.totalNet != null ? `Net ${leader.totalNet}` : `${leader.strokesVsPar > 0 ? "+" : ""}${leader.strokesVsPar}`}
+                              {leader.holesCompleted < 18 && ` (thru ${leader.holesCompleted})`}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
+                              {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : null
+                )}
+
                 {(!recap.leaders.scoringNet || recap.leaders.scoringNet.length === 0) && (!recap.leaders.scoringTeamNet || recap.leaders.scoringTeamNet.length === 0) && (
                   <div className="text-gray-500 text-center py-8">No net scoring data available</div>
                 )}

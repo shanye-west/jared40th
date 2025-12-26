@@ -491,6 +491,8 @@ export interface ScoringLeader {
   strokesVsPar: number; // Display value (actual strokes vs par)
   holesCompleted: number; // Number of holes actually played
   strokesVsParPer18: number; // Normalized value for ranking: (strokesVsPar * 18) / holesCompleted
+  totalGross?: number;
+  totalNet?: number;
   teamKey?: string; // For team formats
 }
 

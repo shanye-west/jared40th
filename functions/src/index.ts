@@ -2623,7 +2623,7 @@ export const computeRoundRecap = onCall(async (request) => {
 
   if (isSingles || isBestBall) {
     // Individual scoring leaders
-    const playerScores = new Map<string, { gross: number; net: number; holesPlayed: number }>();
+    const playerScores = new Map<string, { gross: number; net: number; holesPlayed: number; totalGross?: number; totalNet?: number }>();
     for (const fact of allFacts) {
       if (fact.totalGross != null && fact.holesPlayed && fact.holePerformance) {
         // Calculate actual par for holes played using authoritative holePars
@@ -2643,6 +2643,8 @@ export const computeRoundRecap = onCall(async (request) => {
           gross: grossVsPar,
           net: netVsPar,
           holesPlayed: fact.holesPlayed,
+          totalGross: fact.totalGross,
+          totalNet: fact.totalNet,
         });
       }
     }
@@ -2656,6 +2658,7 @@ export const computeRoundRecap = onCall(async (request) => {
         strokesVsPar: scores.gross,
         holesCompleted: scores.holesPlayed,
         strokesVsParPer18: Math.round(per18 * 100) / 100,
+        totalGross: typeof scores.totalGross === 'number' ? scores.totalGross : undefined,
       });
     }
     scoringGross.sort((a, b) => a.strokesVsParPer18 - b.strokesVsParPer18);
@@ -2669,6 +2672,7 @@ export const computeRoundRecap = onCall(async (request) => {
         strokesVsPar: scores.net,
         holesCompleted: scores.holesPlayed,
         strokesVsParPer18: Math.round(per18 * 100) / 100,
+        totalNet: typeof scores.totalNet === 'number' ? scores.totalNet : undefined,
       });
     }
     scoringNet.sort((a, b) => a.strokesVsParPer18 - b.strokesVsParPer18);
@@ -2677,7 +2681,7 @@ export const computeRoundRecap = onCall(async (request) => {
   if (isBestBall) {
     // Team net leaders for bestBall
     // Group by team (partner pairs)
-    const teamNetScores = new Map<string, { net: number; holesPlayed: number; playerNames: string[] }>();
+    const teamNetScores = new Map<string, { net: number; holesPlayed: number; playerNames: string[]; totalNet?: number }>();
     
     for (const fact of allFacts) {
       // Create team key from sorted player IDs
@@ -2690,6 +2694,7 @@ export const computeRoundRecap = onCall(async (request) => {
         
         // Compute team net by summing hole-by-hole best net scores
         let teamNetTotal = 0;
+        let teamTotalNetAbsolute = 0;
         let holesWithScores = 0;
         
         // Get all facts for this team
@@ -2699,19 +2704,22 @@ export const computeRoundRecap = onCall(async (request) => {
           return fPlayerIds.join("_") === teamKey;
         });
         
-        // For each hole, find best net
+        // For each hole, find best net (relative) and best absolute net
         for (let holeNum = 1; holeNum <= 18; holeNum++) {
-          const holeNets: number[] = [];
-          
+          const holeNetsRel: number[] = [];
+          const holeNetsAbs: number[] = [];
+
           for (const tf of teamFacts) {
             const perf = tf.holePerformance?.find((p: any) => p.hole === holeNum);
             if (perf && perf.net != null && perf.par != null) {
-              holeNets.push(perf.net - perf.par);
+              holeNetsRel.push(perf.net - perf.par);
+              holeNetsAbs.push(perf.net);
             }
           }
-          
-          if (holeNets.length > 0) {
-            teamNetTotal += Math.min(...holeNets);
+
+          if (holeNetsRel.length > 0) {
+            teamNetTotal += Math.min(...holeNetsRel);
+            teamTotalNetAbsolute += Math.min(...holeNetsAbs);
             holesWithScores++;
           }
         }
@@ -2721,6 +2729,7 @@ export const computeRoundRecap = onCall(async (request) => {
             net: teamNetTotal,
             holesPlayed: holesWithScores,
             playerNames: teamPlayerNames,
+            totalNet: teamTotalNetAbsolute,
           });
         }
       }
@@ -2735,6 +2744,7 @@ export const computeRoundRecap = onCall(async (request) => {
         strokesVsPar: scores.net,
         holesCompleted: scores.holesPlayed,
         strokesVsParPer18: Math.round(per18 * 100) / 100,
+        totalNet: typeof scores.totalNet === 'number' ? scores.totalNet : undefined,
         teamKey,
       });
     }
@@ -2743,7 +2753,7 @@ export const computeRoundRecap = onCall(async (request) => {
 
   if (isShamble || isScramble) {
     // Team gross leaders for shamble/scramble
-    const teamGrossScores = new Map<string, { gross: number; holesPlayed: number; playerNames: string[] }>();
+    const teamGrossScores = new Map<string, { gross: number; holesPlayed: number; playerNames: string[]; totalGross?: number }>();
     
     for (const fact of allFacts) {
       const allPlayerIds = [fact.playerId, ...(fact.partnerIds || [])];
@@ -2763,11 +2773,12 @@ export const computeRoundRecap = onCall(async (request) => {
         
         // Calculate team gross vs par for holes actually played
         const teamGrossVsPar = fact.teamTotalGross - actualPar;
-        
+
         teamGrossScores.set(teamKey, {
           gross: teamGrossVsPar,
           holesPlayed: fact.holesPlayed,
           playerNames: teamPlayerNames,
+          totalGross: fact.teamTotalGross,
         });
       }
     }
@@ -2781,6 +2792,7 @@ export const computeRoundRecap = onCall(async (request) => {
         strokesVsPar: scores.gross,
         holesCompleted: scores.holesPlayed,
         strokesVsParPer18: Math.round(per18 * 100) / 100,
+        totalGross: typeof (scores as any).totalGross === 'number' ? (scores as any).totalGross : undefined,
         teamKey,
       });
     }
