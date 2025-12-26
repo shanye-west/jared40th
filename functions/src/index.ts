@@ -2340,32 +2340,33 @@ export const recalculateAllStats = onCall(async (request) => {
 // ============================================================================
 
 export const computeRoundRecap = onCall(async (request) => {
-  // Auth check
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Must be logged in");
-  }
+  try {
+    // Auth check
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "Must be logged in");
+    }
 
-  // Rate limiting (2 calls per 30 seconds)
-  const rateLimit = checkRateLimit(uid, "computeRoundRecap", { maxCalls: 2, windowSeconds: 30 });
-  if (!rateLimit.allowed) {
-    throw new HttpsError(
-      "resource-exhausted",
-      `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
-    );
-  }
+    // Rate limiting (2 calls per 30 seconds)
+    const rateLimit = checkRateLimit(uid, "computeRoundRecap", { maxCalls: 2, windowSeconds: 30 });
+    if (!rateLimit.allowed) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `Rate limit exceeded. Try again in ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)}s`
+      );
+    }
 
-  // Verify admin status
-  const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
-  if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
-    throw new HttpsError("permission-denied", "Admin access required");
-  }
+    // Verify admin status
+    const playerSnap = await db.collection("players").where("authUid", "==", uid).get();
+    if (playerSnap.empty || !playerSnap.docs[0].data().isAdmin) {
+      throw new HttpsError("permission-denied", "Admin access required");
+    }
 
-  // Extract data
-  const { roundId } = request.data;
-  if (!roundId) {
-    throw new HttpsError("invalid-argument", "roundId is required");
-  }
+    // Extract data
+    const { roundId } = request.data;
+    if (!roundId) {
+      throw new HttpsError("invalid-argument", "roundId is required");
+    }
 
   // Check if recap already exists - FAIL if it does
   const existingRecapSnap = await db.collection("roundRecaps").doc(roundId).get();
@@ -2788,7 +2789,22 @@ export const computeRoundRecap = onCall(async (request) => {
     }
   }
 
-  // Build recap document
+  // Build recap document - only include defined fields to avoid Firestore undefined errors
+  const leaders: any = {
+    birdiesGross,
+    birdiesNet,
+    eaglesGross,
+    eaglesNet,
+    bestHole,
+    worstHole,
+  };
+  
+  // Only add scoring fields if they have data
+  if (scoringGross.length > 0) leaders.scoringGross = scoringGross;
+  if (scoringNet.length > 0) leaders.scoringNet = scoringNet;
+  if (scoringTeamGross.length > 0) leaders.scoringTeamGross = scoringTeamGross;
+  if (scoringTeamNet.length > 0) leaders.scoringTeamNet = scoringTeamNet;
+  
   const recapDoc = {
     roundId,
     tournamentId: round.tournamentId,
@@ -2799,18 +2815,7 @@ export const computeRoundRecap = onCall(async (request) => {
     coursePar,
     vsAllRecords,
     holeAverages,
-    leaders: {
-      birdiesGross,
-      birdiesNet,
-      eaglesGross,
-      eaglesNet,
-      bestHole,
-      worstHole,
-      scoringGross: scoringGross.length > 0 ? scoringGross : undefined,
-      scoringNet: scoringNet.length > 0 ? scoringNet : undefined,
-      scoringTeamGross: scoringTeamGross.length > 0 ? scoringTeamGross : undefined,
-      scoringTeamNet: scoringTeamNet.length > 0 ? scoringTeamNet : undefined,
-    },
+    leaders,
     computedAt: FieldValue.serverTimestamp(),
     computedBy: uid,
   };
@@ -2833,5 +2838,20 @@ export const computeRoundRecap = onCall(async (request) => {
     },
     message: "Round recap generated successfully",
   };
+  } catch (error: any) {
+    console.error("computeRoundRecap error:", error);
+    console.error("Error stack:", error.stack);
+    
+    // If it's already an HttpsError, rethrow it
+    if (error.code && error.message) {
+      throw error;
+    }
+    
+    // Otherwise, wrap in an internal error with details
+    throw new HttpsError(
+      "internal",
+      `Internal error: ${error.message || "Unknown error"}`,
+      { originalError: error.toString(), stack: error.stack }
+    );
+  }
 });
-
