@@ -2398,7 +2398,12 @@ export const computeRoundRecap = onCall(async (request) => {
   }
   const course = courseSnap.data()!;
   const courseHoles = course.holes || [];
-  const coursePar = course.par || 72;
+  // Build authoritative per-hole par array (1-indexed)
+  const holePars = Array.from({ length: 18 }, (_, i) => {
+    const h = courseHoles.find((hh: any) => hh.number === i + 1);
+    return h?.par ?? 4;
+  });
+  const coursePar = holePars.reduce((a, b) => a + b, 0);
   const slopeRating = course.slope || 113;
   const courseRating = course.rating || coursePar;
 
@@ -2619,12 +2624,24 @@ export const computeRoundRecap = onCall(async (request) => {
   if (isSingles || isBestBall) {
     // Individual scoring leaders
     const playerScores = new Map<string, { gross: number; net: number; holesPlayed: number }>();
-    
     for (const fact of allFacts) {
-      if (fact.strokesVsParGross != null && fact.holesPlayed) {
+      if (fact.totalGross != null && fact.holesPlayed && fact.holePerformance) {
+        // Calculate actual par for holes played using authoritative holePars
+        let actualPar = 0;
+        for (const perf of fact.holePerformance) {
+          if (perf.hole != null && perf.gross != null) {
+            const idx = typeof perf.hole === "number" ? perf.hole - 1 : null;
+            if (idx !== null && idx >= 0 && idx < holePars.length) {
+              actualPar += holePars[idx];
+            }
+          }
+        }
+        // Calculate strokes vs par for holes actually played
+        const grossVsPar = fact.totalGross - actualPar;
+        const netVsPar = (fact.totalNet != null) ? fact.totalNet - actualPar : 0;
         playerScores.set(fact.playerId, {
-          gross: fact.strokesVsParGross,
-          net: fact.strokesVsParNet || 0,
+          gross: grossVsPar,
+          net: netVsPar,
           holesPlayed: fact.holesPlayed,
         });
       }
@@ -2733,10 +2750,22 @@ export const computeRoundRecap = onCall(async (request) => {
       allPlayerIds.sort();
       const teamKey = allPlayerIds.join("_");
       
-      if (!teamGrossScores.has(teamKey) && fact.teamStrokesVsParGross != null && fact.holesPlayed) {
+      if (!teamGrossScores.has(teamKey) && fact.teamTotalGross != null && fact.holesPlayed && fact.holePerformance) {
         const teamPlayerNames = allPlayerIds.map(id => playerNames[id] || id);
+        
+        // Calculate actual par for holes played
+        let actualPar = 0;
+        for (const perf of fact.holePerformance) {
+          if (perf.par != null) {
+            actualPar += perf.par;
+          }
+        }
+        
+        // Calculate team gross vs par for holes actually played
+        const teamGrossVsPar = fact.teamTotalGross - actualPar;
+        
         teamGrossScores.set(teamKey, {
-          gross: fact.teamStrokesVsParGross,
+          gross: teamGrossVsPar,
           holesPlayed: fact.holesPlayed,
           playerNames: teamPlayerNames,
         });
@@ -2813,6 +2842,7 @@ export const computeRoundRecap = onCall(async (request) => {
     courseId: round.courseId,
     courseName: course.name || "Unknown Course",
     coursePar,
+    holePars, // authoritative per-hole par array
     vsAllRecords,
     holeAverages,
     leaders,
