@@ -196,7 +196,15 @@ export default function RoundRecap() {
                   {sortedVsAll.map((record, idx) => (
                     <tr key={record.playerId} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-2 font-bold text-gray-500">{idx + 1}</td>
-                      <td className="py-3 px-2 font-medium">{record.displayName || record.playerName}</td>
+                      <td className="py-3 px-2 font-medium">
+                        {isTeamFormat && (record.displayName || record.playerName).includes(" / ") ? (
+                          (record.displayName || record.playerName).split(" / ").map((n, i) => (
+                            <div key={i} className="leading-tight">{n}</div>
+                          ))
+                        ) : (
+                          <div className="whitespace-nowrap truncate">{record.displayName || record.playerName}</div>
+                        )}
+                      </td>
                       <td className="py-3 px-2 text-center text-green-700 font-semibold">
                         {record.wins}
                       </td>
@@ -254,7 +262,15 @@ export default function RoundRecap() {
                   <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                     <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
                     <div className="flex-1">
-                      <div className="font-semibold">{leader.playerName}</div>
+                      <div className="font-semibold">
+                        {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
+                          (leader.playerName || "").split(" / ").map((n, i) => (
+                            <div key={i} className="leading-tight">{n}</div>
+                          ))
+                        ) : (
+                          <div className="whitespace-nowrap truncate">{leader.playerName}</div>
+                        )}
+                      </div>
                       <div className="text-sm text-gray-600">
                         Holes: {leader.holes.join(", ")}
                       </div>
@@ -304,7 +320,15 @@ export default function RoundRecap() {
                   <div key={leader.playerId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                     <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
                     <div className="flex-1">
-                      <div className="font-semibold">{leader.playerName}</div>
+                      <div className="font-semibold">
+                        {recap.format !== "singles" && (leader.playerName || "").includes(" / ") ? (
+                          (leader.playerName || "").split(" / ").map((n, i) => (
+                            <div key={i} className="leading-tight">{n}</div>
+                          ))
+                        ) : (
+                          <div className="whitespace-nowrap truncate">{leader.playerName}</div>
+                        )}
+                      </div>
                       <div className="text-sm text-gray-600">
                         Holes: {leader.holes.join(", ")}
                       </div>
