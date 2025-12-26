@@ -2346,8 +2346,8 @@ export const computeRoundRecap = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "Must be logged in");
   }
 
-  // Rate limiting (2 calls per 10 minutes)
-  const rateLimit = checkRateLimit(uid, "computeRoundRecap", { maxCalls: 2, windowSeconds: 600 });
+  // Rate limiting (2 calls per 30 seconds)
+  const rateLimit = checkRateLimit(uid, "computeRoundRecap", { maxCalls: 2, windowSeconds: 30 });
   if (!rateLimit.allowed) {
     throw new HttpsError(
       "resource-exhausted",

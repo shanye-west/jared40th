@@ -43,20 +43,6 @@ export default function GenerateRoundRecap() {
   const [result, setResult] = useState<ComputeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Access control: only admins can view this page
-  if (!player?.isAdmin) {
-    return (
-      <Layout title="Generate Round Recap" showBack>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <div className="empty-state-text">Access Denied</div>
-          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
-          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
-        </div>
-      </Layout>
-    );
-  }
-
   // Load tournaments
   useEffect(() => {
     const loadTournaments = async () => {
@@ -151,6 +137,20 @@ export default function GenerateRoundRecap() {
     setSelectedTournamentId("");
     setSelectedRoundId("");
   };
+
+  // Access control: only admins can view this page
+  if (!player?.isAdmin) {
+    return (
+      <Layout title="Generate Round Recap" showBack>
+        <div className="empty-state">
+          <div className="empty-state-icon">🔒</div>
+          <div className="empty-state-text">Access Denied</div>
+          <div className="text-sm text-gray-500 mt-2">Admin access required</div>
+          <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Generate Round Recap" showBack>
