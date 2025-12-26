@@ -112,6 +112,11 @@ export default function RoundRecap() {
     return pct.toFixed(1) + "%";
   };
 
+  const formatPar = (n: number) => {
+    if (n === 0) return "E";
+    return n > 0 ? `+${n}` : `${n}`;
+  };
+
   return (
     <Layout title="Round Recap" showBack>
       <div className="p-4 space-y-4 max-w-6xl mx-auto">
@@ -242,13 +247,13 @@ export default function RoundRecap() {
                         <div className="flex-1">
                           <div className="font-semibold text-lg">{leader.playerName}</div>
                           <div className="text-sm text-gray-600">
-                            {leader.totalGross != null ? `Gross ${leader.totalGross}` : `${leader.strokesVsPar > 0 ? "+" : ""}${leader.strokesVsPar}`}
+                            {leader.totalGross != null ? `Gross ${leader.totalGross}` : formatPar(leader.strokesVsPar)}
                             {leader.holesCompleted < 18 && ` (thru ${leader.holesCompleted})`}
                           </div>
                         </div>
                         <div className="text-right">
                           <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
-                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                            {formatPar(leader.strokesVsPar)}
                           </div>
                           {/* per-18 removed; ranking note shown in header */}
                         </div>
@@ -269,13 +274,13 @@ export default function RoundRecap() {
                             ))}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                            {formatPar(leader.strokesVsPar)}
                             {leader.holesCompleted < 18 && ` (thru ${leader.holesCompleted})`}
                           </div>
                         </div>
                         <div className="text-right">
                           <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
-                            {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                            {formatPar(leader.strokesVsPar)}
                           </div>
                           {/* per-18 removed */}
                         </div>
@@ -405,13 +410,13 @@ export default function RoundRecap() {
                           <div className="flex-1">
                             <div className="font-semibold text-lg">{leader.playerName}</div>
                             <div className="text-sm text-gray-600">
-                              {leader.totalNet != null ? `Net ${leader.totalNet}` : `${leader.strokesVsPar > 0 ? "+" : ""}${leader.strokesVsPar}`}
+                              {leader.totalNet != null ? `Net ${leader.totalNet}` : formatPar(leader.strokesVsPar)}
                               {leader.holesCompleted < 18 && ` (thru ${leader.holesCompleted})`}
                             </div>
                           </div>
                           <div className="text-right">
                             <div className={`text-3xl font-bold ${leader.strokesVsPar <= 0 ? "text-green-600" : "text-red-600"}`}>
-                              {leader.strokesVsPar > 0 ? "+" : ""}{leader.strokesVsPar}
+                              {formatPar(leader.strokesVsPar)}
                             </div>
                           </div>
                         </div>
