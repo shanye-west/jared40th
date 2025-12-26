@@ -53,10 +53,12 @@ export function simulateHeadToHead(
   coursePar: number,
   teamMembersA?: PlayerFactForSim[],
   teamMembersB?: PlayerFactForSim[]
-): { winner: "A" | "B" | "tie"; holesWonA: number; holesWonB: number } {
+): { winner: "A" | "B" | "tie"; holesWonA: number; holesWonB: number; holeResults: string } {
   let holesWonA = 0;
   let holesWonB = 0;
   let margin = 0; // positive = A leading, negative = B leading
+  // per-hole result chars: 'A' = A wins, 'B' = B wins, 'T' = tie, 'X' = not computed/skipped
+  const holeResultsArr: string[] = Array(18).fill('X');
 
   // For bestBall with team members, compute team-level strokes
   if (isBestBallFormat(format) && teamMembersA && teamMembersB) {
@@ -102,24 +104,33 @@ export function simulateHeadToHead(
       }
 
       // Skip hole if either team has no scores
-      if (teamANets.length === 0 || teamBNets.length === 0) continue;
+      if (teamANets.length === 0 || teamBNets.length === 0) {
+        holeResultsArr[holeIndex] = 'X';
+        // continue to next hole but do not count this hole
+        // Check closure condition: holesRemaining calculation still applies
+      } else {
+        // Team hole score = best (minimum) net
+        const teamAScore = Math.min(...teamANets);
+        const teamBScore = Math.min(...teamBNets);
 
-      // Team hole score = best (minimum) net
-      const teamAScore = Math.min(...teamANets);
-      const teamBScore = Math.min(...teamBNets);
-
-      // Determine hole winner
-      if (teamAScore < teamBScore) {
-        holesWonA++;
-        margin++;
-      } else if (teamBScore < teamAScore) {
-        holesWonB++;
-        margin--;
+        // Determine hole winner
+        if (teamAScore < teamBScore) {
+          holesWonA++;
+          margin++;
+          holeResultsArr[holeIndex] = 'A';
+        } else if (teamBScore < teamAScore) {
+          holesWonB++;
+          margin--;
+          holeResultsArr[holeIndex] = 'B';
+        } else {
+          holeResultsArr[holeIndex] = 'T';
+        }
       }
 
       // Check if match is closed
       const holesRemaining = 18 - holeNum;
       if (Math.abs(margin) > holesRemaining) {
+        // Match is decided; leave remaining holes as 'X'
         break;
       }
     }
@@ -134,7 +145,7 @@ export function simulateHeadToHead(
       winner = "tie";
     }
 
-    return { winner, holesWonA, holesWonB };
+    return { winner, holesWonA, holesWonB, holeResults: holeResultsArr.join('') };
   }
 
   // For singles and bestBall (without team members), compute new strokesReceived based on spin-down
@@ -169,7 +180,9 @@ export function simulateHeadToHead(
     const perfA = playerA.holePerformance.find((p) => p.hole === holeNum);
     const perfB = playerB.holePerformance.find((p) => p.hole === holeNum);
 
+    const holeIndex = holeNum - 1;
     if (!perfA || !perfB || perfA.gross == null || perfB.gross == null) {
+      holeResultsArr[holeIndex] = 'X';
       continue; // Skip if either player has no score
     }
 
@@ -202,16 +215,20 @@ export function simulateHeadToHead(
     if (scoreA < scoreB) {
       holesWonA++;
       margin++;
+      holeResultsArr[holeIndex] = 'A';
     } else if (scoreB < scoreA) {
       holesWonB++;
       margin--;
+      holeResultsArr[holeIndex] = 'B';
+    } else {
+      holeResultsArr[holeIndex] = 'T';
     }
     // Tie: no change to holesWon or margin
 
     // Check if match is closed (mathematically decided)
     const holesRemaining = 18 - holeNum;
     if (Math.abs(margin) > holesRemaining) {
-      // Match is decided, stop processing further holes
+      // Match is decided, stop processing further holes; remaining holes remain 'X'
       break;
     }
   }
@@ -226,7 +243,7 @@ export function simulateHeadToHead(
     winner = "tie";
   }
 
-  return { winner, holesWonA, holesWonB };
+  return { winner, holesWonA, holesWonB, holeResults: holeResultsArr.join('') };
 }
 
 /**

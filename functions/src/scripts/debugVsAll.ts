@@ -9,6 +9,7 @@ import {
   type CourseHoleInfo,
 } from "../helpers/vsAllSimulation.js";
 import { calculateCourseHandicap, calculateStrokesReceived } from "../ghin.js";
+import { isBestBallFormat } from "../types.js";
 
 const roundIdArg = process.argv[2] || "2025CC-R01-twoManBestBall";
 
@@ -134,6 +135,7 @@ async function run(roundId: string) {
           sim.winner,
           sim.holesWonA,
           sim.holesWonB,
+          `"${sim.holeResults || ''}"`,
         ].join(','));
       }
 
@@ -155,7 +157,7 @@ async function run(roundId: string) {
     }
   } else {
     // Team format: detailed CSV shows team-vs-team matchups with member details
-    detailedLines.push('teamA,teamB,teamAMembers,teamBMembers,teamACourseHandicaps,teamBCourseHandicaps,teamAAdjusted,teamBAdjusted,teamAStrokes,teamBStrokes,winner,holesWonA,holesWonB');
+    detailedLines.push('teamA,teamB,teamAMembers,teamBMembers,teamACourseHandicaps,teamBCourseHandicaps,teamAAdjusted,teamBAdjusted,teamAStrokes,teamBStrokes,winner,holesWonA,holesWonB,holeResults');
 
     const teams = new Map<string, PlayerFactForSim[]>();
     for (const pmf of playerMatchFacts) {
@@ -232,6 +234,11 @@ async function run(roundId: string) {
         else if (holesWonB > holesWonA) winner = 'B';
         else winner = 'tie';
 
+        // run a representative sim that also returns holeResults when appropriate
+        const repSim = isBestBallFormat(round.format)
+          ? simulateHeadToHead(membersA[0], membersB[0], course.holes as CourseHoleInfo[], round.format, slope, rating, par, membersA, membersB)
+          : simulateHeadToHead(membersA[0], membersB[0], course.holes as CourseHoleInfo[], round.format, slope, rating, par);
+
         detailedLines.push([
           `"${teamANames}"`,
           `"${teamBNames}"`,
@@ -243,9 +250,10 @@ async function run(roundId: string) {
           `"${teamBAdj}"`,
           `"${teamAStrokesAll}"`,
           `"${teamBStrokesAll}"`,
-          winner,
+          repSim.winner,
           holesWonA,
           holesWonB,
+          `"${repSim.holeResults || ''}"`,
         ].join(','));
       }
 
