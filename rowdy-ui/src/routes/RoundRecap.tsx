@@ -148,12 +148,6 @@ export default function RoundRecap() {
         {/* View Mode Tabs */}
         <div className="flex gap-2 overflow-x-auto">
           <button
-            onClick={() => setViewMode("vsAll")}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${viewMode === "vsAll" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
-          >
-            vs All
-          </button>
-          <button
             onClick={() => setViewMode("grossScoring")}
             className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${viewMode === "grossScoring" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
           >
@@ -164,6 +158,12 @@ export default function RoundRecap() {
             className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${viewMode === "netScoring" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
           >
             Net Scoring
+          </button>
+          <button
+            onClick={() => setViewMode("vsAll")}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${viewMode === "vsAll" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+          >
+            vs All
           </button>
           <button
             onClick={() => setViewMode("holes")}
