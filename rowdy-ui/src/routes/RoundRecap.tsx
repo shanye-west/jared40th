@@ -235,7 +235,7 @@ export default function RoundRecap() {
                 {/* Individual and team gross scoring leaders */}
                 {recap.leaders.scoringGross && recap.leaders.scoringGross.length > 0 && (
                   <>
-                    <div className="font-semibold mb-2">Individual Gross <span className="text-sm text-gray-500">— ranked by score per 18 holes</span></div>
+                    <div className="font-semibold mb-2">Individual Gross</div>
                     {recap.leaders.scoringGross.map((leader, idx) => (
                       <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
                         <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
@@ -398,7 +398,7 @@ export default function RoundRecap() {
                 {(recap.format !== "twoManBestBall" || netScoreView === "individual") && (
                   recap.leaders.scoringNet && recap.leaders.scoringNet.length > 0 ? (
                     <>
-                      <div className="font-semibold mb-2">Individual Net <span className="text-sm text-gray-500">— ranked by score per 18 holes</span></div>
+                      <div className="font-semibold mb-2">Individual Net</div>
                       {recap.leaders.scoringNet.map((leader, idx) => (
                         <div key={leader.playerId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
                           <div className="text-2xl font-bold text-gray-400 w-8">{idx + 1}</div>
