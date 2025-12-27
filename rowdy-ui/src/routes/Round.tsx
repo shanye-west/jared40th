@@ -1,5 +1,7 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 import { useRoundData } from "../hooks/useRoundData";
 import { formatRoundType } from "../utils";
 import { getPlayerShortName as getPlayerShortNameFromLookup } from "../utils/playerHelpers";
@@ -13,6 +15,8 @@ import { RoundPageSkeleton } from "../components/Skeleton";
 
 function RoundComponent() {
   const { roundId } = useParams();
+  const [hasRecap, setHasRecap] = useState(false);
+  const [checkingRecap, setCheckingRecap] = useState(true);
   
   const {
     loading,
@@ -24,6 +28,25 @@ function RoundComponent() {
     players,
     stats: { finalTeamA: fA, finalTeamB: fB, projectedTeamA: pA, projectedTeamB: pB },
   } = useRoundData(roundId);
+
+  // Check if recap exists for this round
+  useEffect(() => {
+    if (!roundId) return;
+    
+    const checkRecap = async () => {
+      try {
+        const recapSnap = await getDoc(doc(db, "roundRecaps", roundId));
+        setHasRecap(recapSnap.exists());
+      } catch (err) {
+        console.error("Failed to check recap:", err);
+        setHasRecap(false);
+      } finally {
+        setCheckingRecap(false);
+      }
+    };
+    
+    checkRecap();
+  }, [roundId]);
 
   // Alias stats for template compatibility
   const stats = { fA, fB, pA, pB };
@@ -69,16 +92,16 @@ function RoundComponent() {
         
         {/* ROUND HEADER / SCOREBOARD */}
         <section className="card" style={{ padding: 20, textAlign: 'center', position: 'relative' }}>
-          {/* Skins Link (top-right corner) */}
-          {skinsEnabled && (
+          {/* Recap Link (top-left corner) */}
+          {hasRecap && !checkingRecap && (
             <Link
-              to={`/round/${round.id}/skins`}
+              to={`/round/${round.id}/recap`}
               style={{
                 position: 'absolute',
                 top: 16,
-                right: 16,
+                left: 16,
                 padding: '8px 12px',
-                backgroundColor: '#f59e0b',
+                backgroundColor: '#3b82f6',
                 color: 'white',
                 borderRadius: 6,
                 fontSize: '0.75rem',
@@ -90,12 +113,40 @@ function RoundComponent() {
                 alignItems: 'center',
                 gap: 4,
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              }}
-              className="hover:bg-amber-600 transition-colors"
-            >
-              Skins
-            </Link>
-          )}
+                }}
+                className="hover:bg-blue-700 transition-colors"
+              >
+                Recap
+              </Link>
+            )}
+          
+          {/* Skins Link (top-right corner) */}
+          {skinsEnabled && (
+            <Link
+              to={`/round/${round.id}/skins`}
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                padding: '8px 12px',
+                backgroundColor: '#f59e0b',
+                  color: 'white',
+                  borderRadius: 6,
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                }}
+                className="hover:bg-amber-600 transition-colors"
+              >
+                Skins
+              </Link>
+            )}
           
           <h1 style={{ margin: "0 0 4px 0", fontSize: "1.4rem" }}>
             Round {round.day ?? ""}
