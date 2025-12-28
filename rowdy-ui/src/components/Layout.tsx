@@ -1,9 +1,24 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useLocation, matchPath } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ChevronLeft,
+  Menu,
+  X,
+  Home,
+  Users,
+  History,
+  Shield,
+  LogOut,
+  LogIn,
+  Wifi,
+} from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
 import OfflineImage from "./OfflineImage";
 import { useAuth } from "../contexts/AuthContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
 
 type LayoutProps = {
   title: string;
@@ -11,6 +26,13 @@ type LayoutProps = {
   showBack?: boolean;
   tournamentLogo?: string;
   children: React.ReactNode;
+};
+
+const menuMotion = {
+  initial: { opacity: 0, y: 10, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: 10, scale: 0.98 },
+  transition: { duration: 0.18 },
 };
 
 export default function Layout({ title, series, showBack, tournamentLogo, children }: LayoutProps) {
@@ -53,172 +75,159 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
   const teamLink = tournamentMatch && (tournamentMatch.params as any)?.tournamentId
     ? `/teams?tournamentId=${encodeURIComponent((tournamentMatch.params as any).tournamentId)}`
     : "/teams";
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <>
       {/* STICKY HEADER */}
       <header className="app-header">
         {/* Left: Back Button (if shown) + Tournament Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div className="flex items-center gap-2">
           {showBack && (
-            <button onClick={() => navigate(-1)} className="btn-back" aria-label="Go Back">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="text-white/90 hover:bg-white/10 hover:text-white"
+              aria-label="Go Back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
           )}
-          <Link to="/" aria-label="Home">
-            <OfflineImage 
-              src={tournamentLogo} 
-              alt="Tournament Logo"
-              fallbackIcon="⛳"
-              fallbackSrc={
-                series === "christmasClassic" 
-                  ? "/images/rowdycup-logo-christmas.svg" 
-                  : "/images/rowdycup-logo.svg"
-              }
-              style={{ height: 44, width: 44, objectFit: "contain" }} 
-            />
+          <Link to="/" aria-label="Home" className="flex items-center">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25">
+              <OfflineImage 
+                src={tournamentLogo} 
+                alt="Tournament Logo"
+                fallbackIcon="⛳"
+                fallbackSrc={
+                  series === "christmasClassic" 
+                    ? "/images/rowdycup-logo-christmas.svg" 
+                    : "/images/rowdycup-logo.svg"
+                }
+                style={{ height: 36, width: 36, objectFit: "contain" }} 
+              />
+            </div>
           </Link>
         </div>
 
         {/* Center: Tournament Title (year small on top, main title below) */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, textAlign: "center", lineHeight: 1.1 }}>
+        <div className="flex flex-1 flex-col items-center text-center leading-tight">
           {year && (
-            <div style={{ fontSize: "0.65rem", fontWeight: 600, opacity: 0.85, letterSpacing: "0.05em" }}>
+            <div className="text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/70">
               {year}
             </div>
           )}
-          <div style={{ fontSize: "1rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          <div className="text-sm font-semibold uppercase tracking-[0.22em] text-white drop-shadow-sm sm:text-base">
             {mainTitle}
           </div>
         </div>
 
         {/* Right: Hamburger Menu */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", minWidth: 48, position: "relative" }}>
-          {/* menu toggle */}
-          <button 
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }} 
-            className="btn-back" 
+        <div className="relative flex min-w-[48px] items-center justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
+            className="text-white/90 hover:bg-white/10 hover:text-white"
             aria-label="Menu"
-            style={{ padding: 8 }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
 
-          {/* Dropdown Menu */}
-          {menuOpen && (
-            <div 
-              style={{
-                position: "absolute",
-                top: "100%",
-                right: 0,
-                marginTop: 8,
-                background: "white",
-                borderRadius: 8,
-                boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
-                minWidth: 180,
-                zIndex: 100,
-                overflow: "hidden",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Auth Status Section */}
-              {!authLoading && player && (
-                <div style={{ 
-                  padding: "12px 16px", 
-                  background: "#f8fafc", 
-                  borderBottom: "1px solid #e2e8f0",
-                  fontSize: "0.875rem"
-                }}>
-                  <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                    {player.displayName}
-                  </div>
-                  <div style={{ color: "#64748b", fontSize: "0.75rem" }}>
-                    {player.email || "Logged in"}
-                  </div>
-                </div>
-              )}
-              
-              <Link 
-                to="/" 
-                style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
-                onClick={() => setMenuOpen(false)}
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.div
+                {...menuMotion}
+                className="absolute right-0 top-[calc(100%+0.6rem)] w-64 origin-top-right"
+                onClick={(e) => e.stopPropagation()}
               >
-                Home
-              </Link>
-                  {/* Team Rosters: if viewing a specific tournament page, link to that tournament's rosters */}
-                  <Link
-                    to={teamLink}
-                    style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Team Rosters
-                  </Link>
-              <Link 
-                to="/history" 
-                style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
-                onClick={() => setMenuOpen(false)}
-              >
-                History
-              </Link>
-
-              {/* Admin - only visible to admins */}
-              {player?.isAdmin && (
-                <Link 
-                  to="/admin" 
-                  style={{ display: "block", padding: "12px 16px", color: "#0f172a", textDecoration: "none", fontWeight: 600, borderBottom: "1px solid #e2e8f0" }}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Admin
-                </Link>
-              )}
-              
-              {/* Auth Actions */}
-              {!authLoading && (
-                <>
-                  {player ? (
-                    <button
-                      onClick={async () => {
-                        setMenuOpen(false);
-                        await logout();
-                        setShowLogoutConfirm(true);
-                        setTimeout(() => setShowLogoutConfirm(false), 3000);
-                        navigate("/");
-                      }}
-                      style={{ 
-                        display: "block", 
-                        width: "100%", 
-                        padding: "12px 16px", 
-                        color: "#dc2626", 
-                        textDecoration: "none", 
-                        fontWeight: 600,
-                        background: "none",
-                        border: "none",
-                        textAlign: "left",
-                        cursor: "pointer",
-                        fontSize: "1rem"
-                      }}
-                    >
-                      Logout
-                    </button>
-                  ) : (
-                    <Link 
-                      to="/login" 
-                      style={{ display: "block", padding: "12px 16px", color: "#2563eb", textDecoration: "none", fontWeight: 600 }}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Login
-                    </Link>
+                <Card className="border border-white/30 bg-white/95 shadow-2xl backdrop-blur">
+                  {!authLoading && player && (
+                    <div className="px-4 py-3">
+                      <div className="text-sm font-semibold text-slate-900">
+                        {player.displayName}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {player.email || "Logged in"}
+                      </div>
+                      {player.isAdmin && (
+                        <div className="mt-2 inline-flex rounded-full bg-slate-900 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-white">
+                          Admin
+                        </div>
+                      )}
+                    </div>
                   )}
-                </>
-              )}
-            </div>
-          )}
+
+                  <div className="h-px bg-slate-200/80" />
+
+                  <div className="space-y-1 p-2">
+                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                      <Link to="/" onClick={closeMenu}>
+                        <Home className="h-4 w-4 text-slate-500" />
+                        Home
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                      <Link to={teamLink} onClick={closeMenu}>
+                        <Users className="h-4 w-4 text-slate-500" />
+                        Team Rosters
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                      <Link to="/history" onClick={closeMenu}>
+                        <History className="h-4 w-4 text-slate-500" />
+                        History
+                      </Link>
+                    </Button>
+
+                    {player?.isAdmin && (
+                      <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                        <Link to="/admin" onClick={closeMenu}>
+                          <Shield className="h-4 w-4 text-slate-500" />
+                          Admin
+                        </Link>
+                      </Button>
+                    )}
+
+                    {!authLoading && (
+                      <>
+                        {player ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="w-full justify-start gap-2 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={async () => {
+                              closeMenu();
+                              await logout();
+                              setShowLogoutConfirm(true);
+                              setTimeout(() => setShowLogoutConfirm(false), 3000);
+                              navigate("/");
+                            }}
+                          >
+                            <LogOut className="h-4 w-4" />
+                            Logout
+                          </Button>
+                        ) : (
+                          <Button asChild variant="ghost" className="w-full justify-start gap-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
+                            <Link to="/login" onClick={closeMenu}>
+                              <LogIn className="h-4 w-4" />
+                              Login
+                            </Link>
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
@@ -228,42 +237,16 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
         
         {/* Back Online Banner (auto-dismisses after 3s) */}
         {wasOffline && isOnline && (
-          <div 
-            style={{
-              background: "#22c55e",
-              color: "white",
-              padding: "8px 16px",
-              textAlign: "center",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <span>✓</span>
+          <div className="flex items-center justify-center gap-2 bg-emerald-500/90 px-4 py-2 text-sm font-semibold text-white shadow-sm">
+            <Wifi className="h-4 w-4" />
             <span>Back online — syncing changes</span>
           </div>
         )}
 
         {/* Logout Confirmation Banner (auto-dismisses after 3s) */}
         {showLogoutConfirm && (
-          <div 
-            style={{
-              background: "#3b82f6",
-              color: "white",
-              padding: "8px 16px",
-              textAlign: "center",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <span>👋</span>
+          <div className="flex items-center justify-center gap-2 bg-blue-600/90 px-4 py-2 text-sm font-semibold text-white shadow-sm">
+            <LogOut className="h-4 w-4" />
             <span>You've been logged out</span>
           </div>
         )}
