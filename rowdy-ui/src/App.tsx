@@ -183,13 +183,10 @@ export default function App() {
           </motion.section>
 
           <motion.section className="space-y-3" variants={itemVariants}>
-            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2 pl-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                   Schedule
                 </div>
-              <Badge variant="outline" className="border-slate-200 text-slate-600">
-                {rounds.length} rounds
-              </Badge>
             </div>
 
             <div className="space-y-3">
