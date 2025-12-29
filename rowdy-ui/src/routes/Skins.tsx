@@ -206,43 +206,17 @@ function SkinsComponent() {
                 </div>
               )}
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3">
                 <Card className="border-slate-200/70 bg-slate-50/80">
-                  <CardContent className="flex items-center gap-3 py-4">
-                    
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                        Total Pot
-                      </div>
-                      <div className="text-xl font-semibold text-slate-900">
-                        ${totalPot.toFixed(0)}
-                      </div>
+                  <CardContent className="text-center py-6">
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Total Pot
                     </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-slate-200/70 bg-slate-50/80">
-                  <CardContent className="flex items-center gap-3 py-4">
-                    
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                        Skins Won
-                      </div>
-                      <div className="text-xl font-semibold text-slate-900">
-                        {skinsWonCount}
-                      </div>
+                    <div className="text-2xl font-semibold text-slate-900 mt-2">
+                      ${totalPot.toFixed(0)}
                     </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-slate-200/70 bg-slate-50/80">
-                  <CardContent className="flex items-center gap-3 py-4">
-                    
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                        Per Skin
-                      </div>
-                      <div className="text-xl font-semibold text-slate-900">
-                        {skinsWonCount > 0 ? `$${valuePerSkin.toFixed(2)}` : "--"}
-                      </div>
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      {skinsWonCount} skin{skinsWonCount !== 1 ? "s" : ""} won • {skinsWonCount > 0 ? `$${valuePerSkin.toFixed(2)} per skin` : "--"}
                     </div>
                   </CardContent>
                 </Card>
