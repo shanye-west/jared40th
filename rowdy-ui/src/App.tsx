@@ -8,8 +8,6 @@ import {
   Flag,
   MapPin,
   RefreshCw,
-  Sparkles,
-  Trophy,
   X,
 } from "lucide-react";
 import { useTournamentData } from "./hooks/useTournamentData";
@@ -115,26 +113,16 @@ export default function App() {
             <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
               <CardContent className="relative space-y-6 pt-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                    <Trophy className="h-4 w-4 text-primary" />
+                <div className="text-center">
+                  <div className="text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-muted-foreground">
                     Total Score
                   </div>
-                  {showPoints && (
-                    <Badge variant="secondary" className="shadow-sm">
-                      First to {pointsToWinDisplay}
-                    </Badge>
-                  )}
                 </div>
 
                 {showPoints && (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                      <span>Points Race</span>
-                      <span className="flex items-center gap-1">
-                        <Sparkles className="h-3.5 w-3.5 text-secondary" />
-                        {totalPointsAvailable} total
-                      </span>
+                    <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                      First to {pointsToWinDisplay}
                     </div>
                     <div className="rounded-xl bg-white/80 p-3 shadow-inner">
                       <ScoreTrackerBar
@@ -153,14 +141,12 @@ export default function App() {
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                   <div className="flex flex-col items-center gap-2">
                     <Link to="/teams?team=A" className="group flex flex-col items-center gap-2">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-sm ring-1 ring-slate-200/70 transition group-hover:-translate-y-0.5">
-                        <OfflineImage 
-                          src={tournament.teamA?.logo} 
-                          alt={tournament.teamA?.name || "Team A"}
-                          fallbackIcon="🔵"
-                          style={{ width: 40, height: 40, objectFit: "contain" }}
-                        />
-                      </div>
+                      <OfflineImage 
+                        src={tournament.teamA?.logo} 
+                        alt={tournament.teamA?.name || "Team A"}
+                        fallbackIcon="🔵"
+                        style={{ width: 40, height: 40, objectFit: "contain" }}
+                      />
                       <div className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">
                         {tournament.teamA?.name || "Team A"}
                       </div>
@@ -179,14 +165,12 @@ export default function App() {
 
                   <div className="flex flex-col items-center gap-2">
                     <Link to="/teams?team=B" className="group flex flex-col items-center gap-2">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-sm ring-1 ring-slate-200/70 transition group-hover:-translate-y-0.5">
-                        <OfflineImage 
-                          src={tournament.teamB?.logo} 
-                          alt={tournament.teamB?.name || "Team B"}
-                          fallbackIcon="🔴"
-                          style={{ width: 40, height: 40, objectFit: "contain" }}
-                        />
-                      </div>
+                      <OfflineImage 
+                        src={tournament.teamB?.logo} 
+                        alt={tournament.teamB?.name || "Team B"}
+                        fallbackIcon="🔴"
+                        style={{ width: 40, height: 40, objectFit: "contain" }}
+                      />
                       <div className="text-sm font-semibold text-slate-700 group-hover:text-slate-900">
                         {tournament.teamB?.name || "Team B"}
                       </div>
@@ -226,14 +210,12 @@ export default function App() {
                       <Card className="border-slate-200/80 bg-white/80 transition-all group-hover:-translate-y-0.5 group-hover:border-slate-200 group-hover:shadow-lg">
                         <CardContent className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200/70">
-                              <OfflineImage 
-                                src={tournament.teamA?.logo} 
-                                alt={tournament.teamA?.name || "Team A"}
-                                fallbackIcon="🔵"
-                                style={{ width: 22, height: 22, objectFit: "contain" }}
-                              />
-                            </div>
+                            <OfflineImage 
+                              src={tournament.teamA?.logo} 
+                              alt={tournament.teamA?.name || "Team A"}
+                              fallbackIcon="🔵"
+                              style={{ width: 22, height: 22, objectFit: "contain" }}
+                            />
                             <div className="text-lg font-semibold text-slate-900">
                               <ScoreBlock
                                 final={rs?.teamAConfirmed ?? 0}
@@ -265,14 +247,12 @@ export default function App() {
                                 projLeft
                               />
                             </div>
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200/70">
-                              <OfflineImage 
-                                src={tournament.teamB?.logo} 
-                                alt={tournament.teamB?.name || "Team B"}
-                                fallbackIcon="🔴"
-                                style={{ width: 22, height: 22, objectFit: "contain" }}
-                              />
-                            </div>
+                            <OfflineImage 
+                              src={tournament.teamB?.logo} 
+                              alt={tournament.teamB?.name || "Team B"}
+                              fallbackIcon="🔴"
+                              style={{ width: 22, height: 22, objectFit: "contain" }}
+                            />
                           </div>
                         </CardContent>
                       </Card>

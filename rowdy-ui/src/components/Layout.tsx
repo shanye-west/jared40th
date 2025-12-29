@@ -96,19 +96,17 @@ export default function Layout({ title, series, showBack, tournamentLogo, childr
             </Button>
           )}
           <Link to="/" aria-label="Home" className="flex items-center">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25">
-              <OfflineImage 
-                src={tournamentLogo} 
-                alt="Tournament Logo"
-                fallbackIcon="⛳"
-                fallbackSrc={
-                  series === "christmasClassic" 
-                    ? "/images/rowdycup-logo-christmas.svg" 
-                    : "/images/rowdycup-logo.svg"
-                }
-                style={{ height: 36, width: 36, objectFit: "contain" }} 
-              />
-            </div>
+            <OfflineImage 
+              src={tournamentLogo} 
+              alt="Tournament Logo"
+              fallbackIcon="⛳"
+              fallbackSrc={
+                series === "christmasClassic" 
+                  ? "/images/rowdycup-logo-christmas.svg" 
+                  : "/images/rowdycup-logo.svg"
+              }
+              style={{ height: 40, width: 40, objectFit: "contain" }} 
+            />
           </Link>
         </div>
 
