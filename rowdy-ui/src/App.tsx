@@ -106,30 +106,32 @@ export default function App() {
             <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
               <CardContent className="relative space-y-6 pt-6">
-                <div className="text-center">
-                  <div className="text-[1.0rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                    Total Score
+                <div className="space-y-2">
+                  <div className="text-center">
+                    <div className="text-[1.0rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                      Total Score
+                    </div>
                   </div>
-                </div>
 
-                {showPoints && (
-                  <div className="space-y-2">
-                    <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                      First to {pointsToWinDisplay}
+                  {showPoints && (
+                    <div className="space-y-1">
+                      <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                        First to {pointsToWinDisplay}
+                      </div>
+                      <div className="rounded-xl bg-white/80 p-2 shadow-inner">
+                        <ScoreTrackerBar
+                          totalPoints={totalPointsAvailable}
+                          teamAConfirmed={stats.teamAConfirmed}
+                          teamBConfirmed={stats.teamBConfirmed}
+                          teamAPending={stats.teamAPending}
+                          teamBPending={stats.teamBPending}
+                          teamAColor={tournament.teamA?.color}
+                          teamBColor={tournament.teamB?.color}
+                        />
+                      </div>
                     </div>
-                    <div className="rounded-xl bg-white/80 p-3 shadow-inner">
-                      <ScoreTrackerBar
-                        totalPoints={totalPointsAvailable}
-                        teamAConfirmed={stats.teamAConfirmed}
-                        teamBConfirmed={stats.teamBConfirmed}
-                        teamAPending={stats.teamAPending}
-                        teamBPending={stats.teamBPending}
-                        teamAColor={tournament.teamA?.color}
-                        teamBColor={tournament.teamB?.color}
-                      />
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                   <div className="flex flex-col items-center gap-2">
