@@ -139,7 +139,12 @@ function RoundComponent() {
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                 <div className="flex items-center">
                   {hasRecap && !checkingRecap && (
-                    <Button asChild size="sm" variant="secondary">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
+                    >
                       <Link to={`/round/${round.id}/recap`}>
                         Recap
                       </Link>
@@ -151,7 +156,12 @@ function RoundComponent() {
                 </div>
                 <div className="flex items-center justify-end">
                   {skinsEnabled && (
-                    <Button asChild size="sm" variant="outline">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
+                    >
                       <Link to={`/round/${round.id}/skins`}>
                         Skins
                       </Link>
