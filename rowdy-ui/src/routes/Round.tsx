@@ -180,7 +180,7 @@ function RoundComponent() {
               </div>
 
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-slate-200/70 bg-white/80 p-4">
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-1">
                   <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=A`}>
                     <OfflineImage 
                       src={tournament?.teamA?.logo} 
@@ -208,7 +208,7 @@ function RoundComponent() {
 
                 <div className="h-14 w-px bg-slate-200" />
 
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-1">
                   <Link to={`/teams?tournamentId=${encodeURIComponent(tournament?.id || "")}&team=B`}>
                     <OfflineImage 
                       src={tournament?.teamB?.logo} 
@@ -240,7 +240,7 @@ function RoundComponent() {
 
         <motion.section variants={itemVariants} className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <div className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+            <div className="pl-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               Matches
             </div>
             <Badge variant="outline" className="uppercase tracking-[0.2em]">
