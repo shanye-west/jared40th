@@ -136,7 +136,7 @@ function RoundComponent() {
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-baseline gap-3">
                 <div className="flex items-center">
                   {hasRecap && !checkingRecap && (
                     <Button
