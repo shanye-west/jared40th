@@ -241,7 +241,7 @@ function RoundComponent() {
 
         <motion.section variants={itemVariants} className="space-y-3">
             <div className="flex items-center px-1">
-              <div className="pl-1 text-[0.9rem] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+              <div className="pl-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Matches
               </div>
             </div>
