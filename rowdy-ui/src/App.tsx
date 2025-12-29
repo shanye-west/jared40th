@@ -2,14 +2,7 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ArrowRight,
-  Calendar,
-  Flag,
-  MapPin,
-  RefreshCw,
-  X,
-} from "lucide-react";
+import { ArrowRight, Flag, RefreshCw, X } from "lucide-react";
 import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
 import Layout from "./components/Layout";
@@ -189,10 +182,9 @@ export default function App() {
 
           <motion.section className="space-y-3" variants={itemVariants}>
             <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                <Calendar className="h-4 w-4 text-primary" />
-                Schedule
-              </div>
+              <div className="flex items-center gap-2 pl-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                  Schedule
+                </div>
               <Badge variant="outline" className="border-slate-200 text-slate-600">
                 {rounds.length} rounds
               </Badge>
@@ -232,7 +224,6 @@ export default function App() {
                             </Badge>
                             {courseName && (
                               <div className="mt-2 flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                                <MapPin className="h-3.5 w-3.5" />
                                 {courseName}
                               </div>
                             )}
