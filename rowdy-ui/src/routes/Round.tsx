@@ -4,8 +4,6 @@ import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
-  Coins,
-  Trophy,
 } from "lucide-react";
 import { db } from "../firebase";
 import { useRoundData } from "../hooks/useRoundData";
@@ -138,22 +136,23 @@ function RoundComponent() {
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div className="flex items-center">
                   {hasRecap && !checkingRecap && (
                     <Button asChild size="sm" variant="secondary">
-                      <Link to={`/round/${round.id}/recap`} className="gap-2">
-                        <Trophy className="h-4 w-4" />
+                      <Link to={`/round/${round.id}/recap`}>
                         Recap
                       </Link>
                     </Button>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="text-center">
+                  <div className="text-2xl font-semibold text-slate-900">{roundLabel}</div>
+                </div>
+                <div className="flex items-center justify-end">
                   {skinsEnabled && (
                     <Button asChild size="sm" variant="outline">
-                      <Link to={`/round/${round.id}/skins`} className="gap-2">
-                        <Coins className="h-4 w-4" />
+                      <Link to={`/round/${round.id}/skins`}>
                         Skins
                       </Link>
                     </Button>
@@ -162,8 +161,7 @@ function RoundComponent() {
               </div>
 
               <div className="text-center">
-                <div className="text-2xl font-semibold text-slate-900">{roundLabel}</div>
-                <div className="mt-1 text-sm text-muted-foreground">{formatRoundType(round.format)}</div>
+                <div className="text-sm text-muted-foreground">{formatRoundType(round.format)}</div>
                 {courseName && (
                   <div className="mt-2 text-xs text-muted-foreground">
                     {courseName}
@@ -303,7 +301,7 @@ function RoundComponent() {
                       </Card>
                     </Link>
 
-                    <div className="-mt-3 px-2">
+                    <div className="mt-2 px-2">
                       <HoleByHoleTracker
                         match={match}
                         format={round?.format || null}
