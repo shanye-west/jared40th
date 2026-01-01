@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 // RedirectCountdown removed; using explicit Go Home button instead
 import { doc, updateDoc } from "firebase/firestore";
@@ -36,6 +36,7 @@ import { useSkinsData } from "../hooks/useSkinsData";
 import { useDebouncedSave } from "../hooks/useDebouncedSave";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useVisibilityFlush } from "../hooks/useVisibilityFlush";
+import ComponentErrorBoundary from "../components/ComponentErrorBoundary";
 
 import { predictClose, computeRunningStatus, type HoleData as MatchScoringHoleData, type HoleInput } from "../utils/matchScoring";
 
@@ -94,7 +95,11 @@ export default function Match() {
   
   // Track horizontal scroll position for scroll indicator
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Scroll position tracking with proper cleanup
+  useEffect(() => {
+    const node = scrollContainerRef.current;
     if (!node) return;
     
     const checkScroll = () => {
@@ -105,14 +110,13 @@ export default function Match() {
     
     checkScroll();
     node.addEventListener('scroll', checkScroll, { passive: true });
-    // Also check on resize
     window.addEventListener('resize', checkScroll);
     
     return () => {
       node.removeEventListener('scroll', checkScroll);
       window.removeEventListener('resize', checkScroll);
     };
-  }, []);
+  }, [match]); // Re-attach when match changes (scorecard may resize)
   
   // DRIVE_TRACKING: Modal state for drive picker
   const [driveModal, setDriveModal] = useState<{ hole: HoleData; team: "A" | "B" } | null>(null);
@@ -1040,30 +1044,34 @@ export default function Match() {
 
         {/* MATCH FLOW GRAPH */}
         {match.status?.marginHistory && match.status.marginHistory.length > 0 && (
-          <MatchFlowGraph
-            marginHistory={match.status.marginHistory}
-            teamAColor={teamAColor}
-            teamBColor={teamBColor}
-            teamALogo={tournament?.teamA?.logo}
-            teamBLogo={tournament?.teamB?.logo}
-          />
+          <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-slate-500 text-sm">Match flow graph unavailable</div>}>
+            <MatchFlowGraph
+              marginHistory={match.status.marginHistory}
+              teamAColor={teamAColor}
+              teamBColor={teamBColor}
+              teamALogo={tournament?.teamA?.logo}
+              teamBLogo={tournament?.teamB?.logo}
+            />
+          </ComponentErrorBoundary>
         )}
 
         {/* POST-MATCH STATS */}
         {/* Show when: match closed AND (all 18 holes scored OR round locked) */}
         {showPostMatchStats && (
-          <PostMatchStats
-            matchFacts={matchFacts}
-            format={format}
-            teamAPlayers={match.teamAPlayers || []}
-            teamBPlayers={match.teamBPlayers || []}
-            teamAColor={teamAColor}
-            teamBColor={teamBColor}
-            getPlayerName={getPlayerName}
-            teamAName={tournament?.teamA?.name}
-            teamBName={tournament?.teamB?.name}
-            marginHistory={match.status?.marginHistory}
-          />
+          <ComponentErrorBoundary fallback={<div className="card p-4 text-center text-slate-500 text-sm">Match stats unavailable</div>}>
+            <PostMatchStats
+              matchFacts={matchFacts}
+              format={format}
+              teamAPlayers={match.teamAPlayers || []}
+              teamBPlayers={match.teamBPlayers || []}
+              teamAColor={teamAColor}
+              teamBColor={teamBColor}
+              getPlayerName={getPlayerName}
+              teamAName={tournament?.teamA?.name}
+              teamBName={tournament?.teamB?.name}
+              marginHistory={match.status?.marginHistory}
+            />
+          </ComponentErrorBoundary>
         )}
 
         <LastUpdated />

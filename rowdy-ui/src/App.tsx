@@ -14,16 +14,7 @@ import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
 import { formatRoundType } from "./utils";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
+import { containerVariants, itemVariants } from "./utils/animations";
 
 export default function App() {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);

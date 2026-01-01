@@ -10,6 +10,7 @@ import OfflineImage from "../components/OfflineImage";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent } from "../components/ui/card";
 import { formatRoundType } from "../utils";
+import { containerVariants, itemVariants } from "../utils/animations";
 // RedirectCountdown removed; show Go Home button instead
 
 /**
@@ -28,16 +29,6 @@ function TournamentComponent() {
     roundStats,
     totalPointsAvailable,
   } = useTournamentData({ tournamentId });
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 12 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-  };
 
   if (loading) {
     return (

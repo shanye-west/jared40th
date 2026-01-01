@@ -20,16 +20,7 @@ import { RoundPageSkeleton } from "../components/Skeleton";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { cn } from "../lib/utils";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
+import { containerVariants, itemVariants } from "../utils/animations";
 
 function RoundComponent() {
   const { roundId } = useParams();
