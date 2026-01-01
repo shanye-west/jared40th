@@ -88,7 +88,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   
   // Render page content with slide transition
   const pageContent = children ?? (
-    <AnimatePresence mode="wait" custom={direction}>
+    <AnimatePresence initial={false} custom={direction}>
       <motion.div
         key={location.pathname}
         custom={direction}
@@ -286,8 +286,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
           </div>
         )}
 
-        <main className="app-container overflow-hidden">
-          {pageContent}
+        <main className="app-container overflow-hidden">{pageContent}
         </main>
       </PullToRefresh>
     </>
