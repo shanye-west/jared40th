@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 
 /**
@@ -45,25 +45,10 @@ export function supportsViewTransitions(): boolean {
  * Wrapper to start a view transition if supported
  */
 export function startViewTransition(callback: () => void | Promise<void>): void {
-  if (supportsViewTransitions()) {
+  if (supportsViewTransitions() && (document as any).startViewTransition) {
     (document as any).startViewTransition(callback);
   } else {
     callback();
   }
 }
 
-/**
- * Custom hook that provides a navigate function with view transitions
- */
-export function useViewTransitionNavigate() {
-  const navigate = useCallback((to: string | number) => {
-    // We don't need to wrap navigate here - the router handles it
-    // View Transitions are applied via CSS based on same-document navigation
-    if (typeof to === "number") {
-      window.history.go(to);
-    }
-    // Let React Router handle navigation normally for strings
-  }, []);
-  
-  return navigate;
-}

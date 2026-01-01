@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -10,6 +9,7 @@ import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
 import ScoreTrackerBar from "./components/ScoreTrackerBar";
 import OfflineImage from "./components/OfflineImage";
+import { ViewTransitionLink } from "./components/ViewTransitionLink";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
@@ -83,7 +83,7 @@ export default function App() {
                 <div className="text-lg font-semibold text-slate-900">No active tournament</div>
               </div>
               <Button asChild variant="outline" className="mx-auto">
-                <Link to="/history">View tournament history</Link>
+                <ViewTransitionLink to="/history">View tournament history</ViewTransitionLink>
               </Button>
             </CardContent>
           </Card>
@@ -128,7 +128,7 @@ export default function App() {
 
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                   <div className="flex flex-col items-center gap-2">
-                    <Link to="/teams?team=A" className="group flex flex-col items-center gap-2">
+                    <ViewTransitionLink to="/teams?team=A" className="group flex flex-col items-center gap-2">
                       <OfflineImage 
                         src={tournament.teamA?.logo} 
                         alt={tournament.teamA?.name || "Team A"}
@@ -141,7 +141,7 @@ export default function App() {
                       >
                         {tournament.teamA?.name || "Team A"}
                       </div>
-                    </Link>
+                    </ViewTransitionLink>
                     <div
                       className="text-4xl font-semibold tracking-tight"
                       style={{ color: teamAColor }}
@@ -155,7 +155,7 @@ export default function App() {
                   </div>
 
                   <div className="flex flex-col items-center gap-2">
-                    <Link to="/teams?team=B" className="group flex flex-col items-center gap-2">
+                    <ViewTransitionLink to="/teams?team=B" className="group flex flex-col items-center gap-2">
                       <OfflineImage 
                         src={tournament.teamB?.logo} 
                         alt={tournament.teamB?.name || "Team B"}
@@ -168,7 +168,7 @@ export default function App() {
                       >
                         {tournament.teamB?.name || "Team B"}
                       </div>
-                    </Link>
+                    </ViewTransitionLink>
                     <div
                       className="text-4xl font-semibold tracking-tight"
                       style={{ color: teamBColor }}
@@ -196,7 +196,7 @@ export default function App() {
 
                 return (
                   <motion.div key={r.id} variants={itemVariants}>
-                    <Link to={`/round/${r.id}`} className="group block">
+                    <ViewTransitionLink to={`/round/${r.id}`} className="group block">
                       <Card className="border-slate-200/80 bg-white/80 transition-all group-hover:-translate-y-0.5 group-hover:border-slate-200 group-hover:shadow-lg">
                         <CardContent className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-4">
                           <div className="flex items-center gap-3">
@@ -245,7 +245,7 @@ export default function App() {
                           </div>
                         </CardContent>
                       </Card>
-                    </Link>
+                    </ViewTransitionLink>
                   </motion.div>
                 );
               })}

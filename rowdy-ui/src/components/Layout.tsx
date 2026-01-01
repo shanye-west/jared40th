@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useLocation, matchPath, Outlet } from "react-router-dom";
+import { useNavigate, useLocation, matchPath, Outlet } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft,
@@ -15,10 +15,11 @@ import {
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
 import OfflineImage from "./OfflineImage";
+import { ViewTransitionLink } from "./ViewTransitionLink";
 import { useAuth } from "../contexts/AuthContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
-import { useViewTransitionDirection } from "../hooks/useViewTransition";
+import { useViewTransitionDirection, supportsViewTransitions } from "../hooks/useViewTransition";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -53,6 +54,17 @@ export function LayoutShell({ children }: LayoutShellProps) {
   
   // Track navigation direction for CSS View Transitions
   useViewTransitionDirection();
+
+  // Handle back navigation with view transition
+  const handleBack = () => {
+    if (supportsViewTransitions() && (document as any).startViewTransition) {
+      (document as any).startViewTransition(() => {
+        navigate(-1);
+      });
+    } else {
+      navigate(-1);
+    }
+  };
 
   // Parse title to extract year (if present at start) and main name
   const { year, mainTitle } = useMemo(() => {
@@ -112,14 +124,14 @@ export function LayoutShell({ children }: LayoutShellProps) {
               type="button"
               variant="ghost"
               size="icon"
-              onClick={() => navigate(-1)}
+              onClick={handleBack}
               className="text-white/90 hover:bg-white/10 hover:text-white"
               aria-label="Go Back"
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
           )}
-          <Link to="/" aria-label="Home" className="flex items-center">
+          <ViewTransitionLink to="/" aria-label="Home" className="flex items-center">
             <OfflineImage 
               src={tournamentLogo} 
               alt="Tournament Logo"
@@ -131,7 +143,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
               }
               style={{ height: 40, width: 40, objectFit: "contain" }} 
             />
-          </Link>
+          </ViewTransitionLink>
         </div>
 
         {/* Center: Tournament Title (year small on top, main title below) */}
@@ -190,30 +202,30 @@ export function LayoutShell({ children }: LayoutShellProps) {
 
                   <div className="space-y-1 p-2">
                     <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
-                      <Link to="/" onClick={closeMenu}>
+                      <ViewTransitionLink to="/" onClick={closeMenu}>
                         <Home className="h-4 w-4 text-slate-500" />
                         Home
-                      </Link>
+                      </ViewTransitionLink>
                     </Button>
                     <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
-                      <Link to={teamLink} onClick={closeMenu}>
+                      <ViewTransitionLink to={teamLink} onClick={closeMenu}>
                         <Users className="h-4 w-4 text-slate-500" />
                         Team Rosters
-                      </Link>
+                      </ViewTransitionLink>
                     </Button>
                     <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
-                      <Link to="/history" onClick={closeMenu}>
+                      <ViewTransitionLink to="/history" onClick={closeMenu}>
                         <History className="h-4 w-4 text-slate-500" />
                         History
-                      </Link>
+                      </ViewTransitionLink>
                     </Button>
 
                     {player?.isAdmin && (
                       <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
-                        <Link to="/admin" onClick={closeMenu}>
+                        <ViewTransitionLink to="/admin" onClick={closeMenu}>
                           <Shield className="h-4 w-4 text-slate-500" />
                           Admin
-                        </Link>
+                        </ViewTransitionLink>
                       </Button>
                     )}
 
@@ -237,10 +249,10 @@ export function LayoutShell({ children }: LayoutShellProps) {
                           </Button>
                         ) : (
                           <Button asChild variant="ghost" className="w-full justify-start gap-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
-                            <Link to="/login" onClick={closeMenu}>
+                            <ViewTransitionLink to="/login" onClick={closeMenu}>
                               <LogIn className="h-4 w-4" />
                               Login
-                            </Link>
+                            </ViewTransitionLink>
                           </Button>
                         )}
                       </>

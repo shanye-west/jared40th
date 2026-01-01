@@ -105,11 +105,6 @@
      CSS VIEW TRANSITIONS - Page Slide
      ========================================= */
   
-  /* Enable view transitions for the page content */
-  @view-transition {
-    navigation: auto;
-  }
-  
   /* Name the main content area for transitions */
   .app-container {
     view-transition-name: page-content;
