@@ -136,48 +136,49 @@ function RoundComponent() {
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.05),_transparent_65%)]" />
             <CardContent className="relative space-y-5 py-6">
-              <div className="grid grid-cols-[1fr_auto_1fr] items-baseline gap-3">
-                <div className="flex items-center">
-                  {hasRecap && !checkingRecap && (
-                    <Button
-                      asChild
-                      size="sm"
-                      variant="outline"
-                      className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
-                    >
-                      <Link to={`/round/${round.id}/recap`}>
-                        Recap
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-semibold text-slate-900">{roundLabel}</div>
-                </div>
-                <div className="flex items-center justify-end">
-                  {skinsEnabled && (
-                    <Button
-                      asChild
-                      size="sm"
-                      variant="outline"
-                      className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
-                    >
-                      <Link to={`/round/${round.id}/skins`}>
-                        Skins
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">{formatRoundType(round.format)}</div>
-                {courseName && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    {courseName}
+              <div className="space-y-1">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-baseline gap-3">
+                  <div className="flex items-center">
+                    {hasRecap && !checkingRecap && (
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
+                      >
+                        <Link to={`/round/${round.id}/recap`}>
+                          Recap
+                        </Link>
+                      </Button>
+                    )}
                   </div>
-                )}
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-slate-900">{roundLabel}</div>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    {skinsEnabled && (
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="h-9 rounded-full px-4 bg-white/90 shadow-sm hover:bg-slate-50"
+                      >
+                        <Link to={`/round/${round.id}/skins`}>
+                          Skins
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground">{formatRoundType(round.format)}</div>
+                  {courseName && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {courseName}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-xl border border-slate-200/70 bg-white/80 p-4">
