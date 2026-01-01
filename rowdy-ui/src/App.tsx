@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, Flag, RefreshCw, X } from "lucide-react";
 import { useTournamentData } from "./hooks/useTournamentData";
 import { useTournamentContext } from "./contexts/TournamentContext";
 import Layout from "./components/Layout";
@@ -8,7 +10,20 @@ import LastUpdated from "./components/LastUpdated";
 import ScoreBlock from "./components/ScoreBlock";
 import ScoreTrackerBar from "./components/ScoreTrackerBar";
 import OfflineImage from "./components/OfflineImage";
+import { Badge } from "./components/ui/badge";
+import { Button } from "./components/ui/button";
+import { Card, CardContent } from "./components/ui/card";
 import { formatRoundType } from "./utils";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 export default function App() {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
@@ -59,240 +74,242 @@ export default function App() {
   const tSeries = tournament?.series; // "rowdyCup" or "christmasClassic"
   const tLogo = tournament?.tournamentLogo;
   const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;
+  const teamAColor = tournament?.teamA?.color || "var(--team-a-default)";
+  const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
   const pointsToWinDisplay = pointsToWin !== null ? (Number.isInteger(pointsToWin) ? String(pointsToWin) : pointsToWin.toFixed(1)) : "";
+  const showPoints = totalPointsAvailable > 0;
 
   return (
     <Layout title={tName} series={tSeries} tournamentLogo={tLogo}>
       {!tournament ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🏌️</div>
-          <div className="empty-state-text">No active tournament found.</div>
+        <div className="px-4 pt-10">
+          <Card className="mx-auto max-w-sm border-slate-200/80 bg-white/85 text-center shadow-xl backdrop-blur">
+            <CardContent className="space-y-4 py-8">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Flag className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="text-lg font-semibold text-slate-900">No active tournament</div>
+              </div>
+              <Button asChild variant="outline" className="mx-auto">
+                <Link to="/history">View tournament history</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       ) : (
-        <div style={{ padding: 16, display: "grid", gap: 24 }}>
-          
-          {/* HERO SCOREBOARD */}
-          <section className="card" style={{ textAlign: 'center', padding: 24 }}>
-            <h2 style={{ 
-              margin: "0 0 6px 0", 
-              fontSize: "0.85rem", 
-              color: "var(--text-secondary)", 
-              textTransform: "uppercase", 
-              letterSpacing: "0.1em" 
-            }}>
-              Total Score
-            </h2>
+        <motion.div
+          className="space-y-6 px-4 py-6"
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.section variants={itemVariants}>
+            <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
+              <CardContent className="relative space-y-6 pt-6">
+                <div className="space-y-2">
+                  <div className="text-center">
+                    <div className="text-[1.0rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Total Score
+                    </div>
+                  </div>
 
-            {/* Score Tracker Bar (above logos) */}
-            {totalPointsAvailable > 0 && (
-              <div style={{ margin: "4px 0 16px 0" }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                  {pointsToWinDisplay} points needed to win
+                  {showPoints && (
+                    <div className="space-y-1">
+                      <div className="text-center text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                        {pointsToWinDisplay} points needed to win
+                      </div>
+                      <div className="rounded-xl bg-white/80 p-2 shadow-inner">
+                        <ScoreTrackerBar
+                          totalPoints={totalPointsAvailable}
+                          teamAConfirmed={stats.teamAConfirmed}
+                          teamBConfirmed={stats.teamBConfirmed}
+                          teamAPending={stats.teamAPending}
+                          teamBPending={stats.teamBPending}
+                          teamAColor={teamAColor}
+                          teamBColor={teamBColor}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <ScoreTrackerBar
-                  totalPoints={totalPointsAvailable}
-                  teamAConfirmed={stats.teamAConfirmed}
-                  teamBConfirmed={stats.teamBConfirmed}
-                  teamAPending={stats.teamAPending}
-                  teamBPending={stats.teamBPending}
-                  teamAColor={tournament.teamA?.color}
-                  teamBColor={tournament.teamB?.color}
-                />
-              </div>
-            )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 16, alignItems: "center" }}>
-              {/* Team A */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Link to="/teams?team=A">
-                  <OfflineImage 
-                    src={tournament.teamA?.logo} 
-                    alt={tournament.teamA?.name || "Team A"}
-                    fallbackIcon="🔵"
-                    style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8, cursor: "pointer" }}
-                  />
-                </Link>
-                <div style={{ 
-                  fontWeight: 800, 
-                  color: tournament.teamA?.color || "var(--team-a-default)", 
-                  fontSize: "1.1rem", 
-                  marginBottom: 4 
-                }}>
-                  {tournament.teamA?.name || "Team A"}
-                </div>
-                <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
-                  <span style={{ color: tournament.teamA?.color || "var(--team-a-default)" }}>{stats.teamAConfirmed}</span>
-                </div>
-              </div>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                  <div className="flex flex-col items-center gap-2">
+                    <Link to="/teams?team=A" className="group flex flex-col items-center gap-2">
+                      <OfflineImage 
+                        src={tournament.teamA?.logo} 
+                        alt={tournament.teamA?.name || "Team A"}
+                        fallbackIcon="🔵"
+                        style={{ width: 40, height: 40, objectFit: "contain" }}
+                      />
+                      <div
+                        className="text-sm font-semibold transition-opacity group-hover:opacity-90"
+                        style={{ color: teamAColor }}
+                      >
+                        {tournament.teamA?.name || "Team A"}
+                      </div>
+                    </Link>
+                    <div
+                      className="text-4xl font-semibold tracking-tight"
+                      style={{ color: teamAColor }}
+                    >
+                      {stats.teamAConfirmed}
+                    </div>
+                  </div>
 
-              {/* Center spacer (midpoint marker moved into ScoreTrackerBar) */}
-              <div style={{ height: 40, width: 2 }}></div>
+                  <div className="flex h-12 items-center justify-center">
+                    <div className="h-10 w-px bg-slate-200/80" />
+                  </div>
 
-              {/* Team B */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Link to="/teams?team=B">
-                  <OfflineImage 
-                    src={tournament.teamB?.logo} 
-                    alt={tournament.teamB?.name || "Team B"}
-                    fallbackIcon="🔴"
-                    style={{ width: 48, height: 48, objectFit: "contain", marginBottom: 8, cursor: "pointer" }}
-                  />
-                </Link>
-                <div style={{ 
-                  fontWeight: 800, 
-                  color: tournament.teamB?.color || "var(--team-b-default)", 
-                  fontSize: "1.1rem", 
-                  marginBottom: 4 
-                }}>
-                  {tournament.teamB?.name || "Team B"}
+                  <div className="flex flex-col items-center gap-2">
+                    <Link to="/teams?team=B" className="group flex flex-col items-center gap-2">
+                      <OfflineImage 
+                        src={tournament.teamB?.logo} 
+                        alt={tournament.teamB?.name || "Team B"}
+                        fallbackIcon="🔴"
+                        style={{ width: 40, height: 40, objectFit: "contain" }}
+                      />
+                      <div
+                        className="text-sm font-semibold transition-opacity group-hover:opacity-90"
+                        style={{ color: teamBColor }}
+                      >
+                        {tournament.teamB?.name || "Team B"}
+                      </div>
+                    </Link>
+                    <div
+                      className="text-4xl font-semibold tracking-tight"
+                      style={{ color: teamBColor }}
+                    >
+                      {stats.teamBConfirmed}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: "2.5rem", fontWeight: 800, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
-                  <span style={{ color: tournament.teamB?.color || "var(--team-b-default)" }}>{stats.teamBConfirmed}</span>
+              </CardContent>
+            </Card>
+          </motion.section>
+
+          <motion.section className="space-y-3" variants={itemVariants}>
+              <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2 pl-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                  Schedule
                 </div>
-              </div>
             </div>
 
-            
-          </section>
+            <div className="space-y-3">
+              {rounds.map((r, idx) => {
+                const rs = roundStats[r.id];
+                const course = coursesByRound[r.id];
+                const courseName = course?.name || r.course?.name;
 
-          {/* ROUNDS LIST */}
-          <section style={{ display: "grid", gap: 12 }}>
-            <h3 style={{ 
-              margin: "0 0 8px 0", 
-              fontSize: "0.9rem", 
-              textTransform: "uppercase", 
-              color: "var(--text-secondary)",
-              letterSpacing: "0.05em",
-              paddingLeft: 4
-            }}>
-              Schedule
-            </h3>
-            
-            {rounds.map((r, idx) => {
-              const rs = roundStats[r.id];
-              const course = coursesByRound[r.id];
-              // Get course name only (no tees) for round tiles
-              const courseName = course?.name || r.course?.name;
-              
-              return (
-                <Link 
-                  key={r.id} 
-                  to={`/round/${r.id}`} 
-                  className="card card-hover"
-                  style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12 }}
-                >
-                  {/* Team A - Left */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <OfflineImage 
-                      src={tournament.teamA?.logo} 
-                      alt={tournament.teamA?.name || "Team A"}
-                      fallbackIcon="🔵"
-                      style={{ width: 28, height: 28, objectFit: "contain" }}
-                    />
-                    <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-                      <ScoreBlock
-                        final={rs?.teamAConfirmed ?? 0}
-                        proj={rs?.teamAPending ?? 0}
-                        color={tournament.teamA?.color}
-                      />
-                    </span>
-                  </div>
+                return (
+                  <motion.div key={r.id} variants={itemVariants}>
+                    <Link to={`/round/${r.id}`} className="group block">
+                      <Card className="border-slate-200/80 bg-white/80 transition-all group-hover:-translate-y-0.5 group-hover:border-slate-200 group-hover:shadow-lg">
+                        <CardContent className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-4">
+                          <div className="flex items-center gap-3">
+                            <OfflineImage 
+                              src={tournament.teamA?.logo} 
+                              alt={tournament.teamA?.name || "Team A"}
+                              fallbackIcon="🔵"
+                              style={{ width: 22, height: 22, objectFit: "contain" }}
+                            />
+                            <div className="text-lg font-semibold text-slate-900">
+                              <ScoreBlock
+                                final={rs?.teamAConfirmed ?? 0}
+                                proj={rs?.teamAPending ?? 0}
+                                color={teamAColor}
+                              />
+                            </div>
+                          </div>
 
-                  {/* Round Info - Center */}
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: 2 }}>Round {idx + 1}</div>
-                    <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{formatRoundType(r.format)}</div>
-                    {courseName && (
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 2 }}>{courseName}</div>
-                    )}
-                  </div>
+                          <div className="text-center">
+                            <div className="text-sm font-semibold text-slate-900">Round {idx + 1}</div>
+                            <Badge variant="outline" className="mt-1 border-slate-200 text-[0.55rem]">
+                              {formatRoundType(r.format)}
+                            </Badge>
+                            {courseName && (
+                              <div className="mt-2 flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                                {courseName}
+                              </div>
+                            )}
+                          </div>
 
-                  {/* Team B - Right */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>  
-                    <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>
-                      <ScoreBlock
-                        final={rs?.teamBConfirmed ?? 0}
-                        proj={rs?.teamBPending ?? 0}
-                        color={tournament.teamB?.color}
-                        projLeft
-                      />
-                    </span>
-                    <OfflineImage 
-                      src={tournament.teamB?.logo} 
-                      alt={tournament.teamB?.name || "Team B"}
-                      fallbackIcon="🔴"
-                      style={{ width: 28, height: 28, objectFit: "contain" }}
-                    />
-                  </div>
-                </Link>
-              );
-            })}
-          </section>
+                          <div className="flex items-center justify-end gap-3">
+                            <div className="text-lg font-semibold text-slate-900">
+                              <ScoreBlock
+                                final={rs?.teamBConfirmed ?? 0}
+                                proj={rs?.teamBPending ?? 0}
+                                color={teamBColor}
+                                projLeft
+                              />
+                            </div>
+                            <OfflineImage 
+                              src={tournament.teamB?.logo} 
+                              alt={tournament.teamB?.name || "Team B"}
+                              fallbackIcon="🔴"
+                              style={{ width: 22, height: 22, objectFit: "contain" }}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.section>
 
-          <LastUpdated />
-        </div>
+          <motion.div variants={itemVariants}>
+            <LastUpdated />
+          </motion.div>
+        </motion.div>
       )}
 
       {/* PWA Update Prompt */}
-      {showUpdatePrompt && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 20,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 1000,
-            maxWidth: "90%",
-            width: "400px",
-          }}
-        >
-          <div
-            className="card"
-            style={{
-              padding: "16px 20px",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              backgroundColor: "var(--brand-primary, #1e40af)",
-              color: "white",
-              boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
-            }}
+      <AnimatePresence>
+        {showUpdatePrompt && (
+          <motion.div
+            className="fixed bottom-6 left-1/2 z-[1000] w-[92%] max-w-md -translate-x-1/2"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
           >
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>Update Available</div>
-              <div style={{ fontSize: "0.85rem", opacity: 0.9 }}>
-                A new version is ready. Reload to update.
-              </div>
-            </div>
-            <button
-              onClick={handleUpdateClick}
-              className="btn btn-primary"
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "white",
-                color: "var(--brand-primary, #1e40af)",
-                fontWeight: 600,
-              }}
-            >
-              Reload
-            </button>
-            <button
-              onClick={() => setShowUpdatePrompt(false)}
-              style={{
-                padding: "8px",
-                background: "none",
-                border: "none",
-                color: "white",
-                cursor: "pointer",
-                opacity: 0.7,
-              }}
-              aria-label="Dismiss"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+            <Card className="border-white/20 bg-slate-900 text-white shadow-2xl">
+              <CardContent className="flex items-center gap-3 py-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15">
+                  <RefreshCw className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold">Update Available</div>
+                  <div className="text-xs text-white/75">
+                    A new version is ready. Reload to update.
+                  </div>
+                </div>
+                <Button
+                  onClick={handleUpdateClick}
+                  variant="secondary"
+                  className="bg-white text-slate-900 hover:bg-white/90"
+                >
+                  Reload
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowUpdatePrompt(false)}
+                  className="text-white/70 hover:bg-white/10 hover:text-white"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Layout>
   );
 }

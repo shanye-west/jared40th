@@ -1,10 +1,33 @@
 /* rowdy-ui/src/index.css */
 
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
 /* Tailwind CSS */
 @import "tailwindcss";
 
 /* Custom Theme - extend Tailwind with CSS variables */
 @theme {
+  /* Shadcn UI Tokens */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
   /* Brand Colors */
   --color-brand-primary: #132448;
   --color-brand-secondary: #bf203c;
@@ -15,19 +38,40 @@
   --color-team-b: #bf203c;
   
   /* Font */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-display: "Fraunces", "Times New Roman", serif;
 }
 
 /* Base layer for global styles */
 @layer base {
   :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 58% 18%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 349 71% 44%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 94%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 58% 18%;
+
     /* --- ROWDY CUP (SUMMER/DEFAULT) THEME --- */
     --brand-primary: #132448;
     --brand-secondary: #bf203c;
     --brand-accent: #ffffff;
     
     /* UI Colors */
-    --app-bg: #f1f5f9;
+    --app-bg: #f6f6f6;
     --card-bg: #ffffff;
     --text-primary: #0f172a;
     --text-secondary: #64748b;
@@ -38,24 +82,27 @@
     --team-b-default: #bf203c;
 
     /* Dimensions */
-    --header-height: 60px;
-    --max-width: 600px;
-    --radius-lg: 16px;
-    --radius-md: 12px;
-    --radius-sm: 8px;
+    --header-height: 64px;
+    --max-width: 720px;
+    --radius-lg: 18px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
   }
 
   /* --- CHRISTMAS CLASSIC OVERRIDE --- */
   body.theme-christmas {
     --brand-primary: #ef211c;
     --brand-secondary: #00863c;
-    --app-bg: #fdfdfd;
+    --app-bg: #f6f6f6;
     --team-a-default: #00863c;
     --team-b-default: #ef211c;
+    --primary: 1 87% 52%;
+    --secondary: 147 100% 26%;
+    --ring: 1 87% 52%;
   }
 
   body {
-    @apply bg-slate-100 text-slate-900 antialiased;
+    @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
     background-color: var(--app-bg);
     color: var(--text-primary);
@@ -68,6 +115,7 @@
 
   h1, h2, h3, h4, h5 {
     @apply m-0 font-bold tracking-tight;
+    font-family: var(--font-display);
   }
 
   a {
@@ -90,17 +138,18 @@
   /* Sticky Header - extends into safe area (notch area) on mobile */
   .app-header {
     @apply flex items-center justify-between px-4 sticky top-0 z-50;
-    /* Default Rowdy Cup: diagonal split (navy bottom-left, red top-right) */
-    background: linear-gradient(135deg, #132448 50%, #bf203c 50%);
+    background: linear-gradient(120deg, rgba(19, 36, 72, 0.98) 0% 50%, rgba(191, 32, 60, 0.96) 50% 100%);
     color: var(--brand-accent);
     height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
     padding-top: env(safe-area-inset-top, 0px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.24);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 
   /* Christmas Classic: diagonal split header (green bottom-left, red top-right) */
   body.theme-christmas .app-header {
-    background: linear-gradient(135deg, #00863c 50%, #ef211c 50%);
+    background: linear-gradient(120deg, rgba(0, 134, 60, 0.96) 0% 50%, rgba(239, 33, 28, 0.95) 50% 100%);
   }
 
   .header-title {
@@ -110,17 +159,17 @@
 
   /* Cards */
   .card {
-    @apply bg-white rounded-xl p-4 mb-3 relative overflow-hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
-    border: 1px solid rgba(0,0,0,0.04);
+    @apply rounded-2xl p-4 mb-3 relative overflow-hidden border border-slate-200/70 bg-white/80 backdrop-blur;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+    -webkit-backdrop-filter: blur(12px);
   }
 
   .card-hover {
     @apply transition-all duration-200;
   }
   .card-hover:hover {
-    @apply shadow-lg;
-    transform: translateY(-1px);
+    @apply shadow-xl;
+    transform: translateY(-2px);
   }
 
   /* Buttons */
@@ -134,11 +183,11 @@
 
   .btn-primary {
     @apply inline-flex items-center justify-center font-semibold rounded-lg 
-           transition-all duration-200 cursor-pointer px-4 py-3 text-white;
-    background-color: var(--brand-primary);
+           transition-all duration-200 cursor-pointer px-4 py-3 text-white shadow-sm;
+    background: linear-gradient(135deg, var(--brand-primary), #1f3a69);
   }
   .btn-primary:hover:not(:disabled) {
-    @apply brightness-110 shadow-md;
+    @apply brightness-110 shadow-lg;
   }
   .btn-primary:active:not(:disabled) {
     @apply brightness-95;
@@ -149,7 +198,7 @@
 
   .btn-secondary {
     @apply inline-flex items-center justify-center font-semibold rounded-lg 
-           transition-all duration-200 cursor-pointer px-4 py-3 bg-white border border-slate-200 text-slate-700;
+           transition-all duration-200 cursor-pointer px-4 py-3 bg-white/80 border border-slate-200 text-slate-700 shadow-sm;
   }
   .btn-secondary:hover:not(:disabled) {
     @apply bg-slate-50 border-slate-300;
@@ -182,25 +231,25 @@
     @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase;
   }
   .badge-default {
-    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-slate-200 text-slate-600;
+    @apply inline-block px-2 py-1 rounded-full text-[0.65rem] font-semibold uppercase tracking-wider bg-slate-200 text-slate-600;
   }
   .badge-success {
-    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-emerald-100 text-emerald-700;
+    @apply inline-block px-2 py-1 rounded-full text-[0.65rem] font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-700;
   }
   .badge-warning {
-    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-amber-100 text-amber-700;
+    @apply inline-block px-2 py-1 rounded-full text-[0.65rem] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700;
   }
   .badge-error {
-    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-red-100 text-red-700;
+    @apply inline-block px-2 py-1 rounded-full text-[0.65rem] font-semibold uppercase tracking-wider bg-red-100 text-red-700;
   }
   .badge-info {
-    @apply inline-block px-2 py-1 rounded text-xs font-extrabold uppercase bg-blue-100 text-blue-700;
+    @apply inline-block px-2 py-1 rounded-full text-[0.65rem] font-semibold uppercase tracking-wider bg-blue-100 text-blue-700;
   }
 
   /* Score Inputs */
   .score-input {
     @apply w-full h-12 text-2xl text-center font-bold rounded-lg 
-           bg-slate-50 border border-slate-200 text-slate-900
+           bg-white/70 border border-slate-200 text-slate-900
            transition-all duration-150;
     appearance: none;
   }
@@ -214,7 +263,7 @@
 
   /* Section Headers */
   .section-header {
-    @apply bg-slate-100 px-4 py-1.5 text-xs font-bold text-slate-500 
+    @apply bg-slate-100/80 px-4 py-1.5 text-xs font-bold text-slate-500 
            uppercase tracking-wider border-b border-slate-200;
   }
 
@@ -233,12 +282,12 @@
   .spinner {
     @apply inline-block w-5 h-5 rounded-full animate-spin;
     border: 2px solid #e2e8f0;
-    border-top-color: #475569;
+    border-top-color: hsl(var(--primary));
   }
   .spinner-lg {
     @apply inline-block w-8 h-8 rounded-full animate-spin;
     border: 3px solid #e2e8f0;
-    border-top-color: #475569;
+    border-top-color: hsl(var(--primary));
   }
 
   /* Divider */

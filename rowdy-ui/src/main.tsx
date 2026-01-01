@@ -1,13 +1,14 @@
-import React, { Suspense, lazy, useEffect } from "react";
+import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { Outlet, useLocation } from "react-router-dom";
 import "./index.css";
 import "./firebase";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TournamentProvider } from "./contexts/TournamentContext";
+import { LayoutProvider } from "./contexts/LayoutContext";
 import App from "./App";
 import ErrorBoundary, { NotFound } from "./components/ErrorBoundary";
+import { LayoutShell } from "./components/Layout";
 
 // Lazy load routes for code splitting - reduces initial bundle size
 const Match = lazy(() => import("./routes/Match"));
@@ -15,6 +16,7 @@ const Round = lazy(() => import("./routes/Round"));
 const Skins = lazy(() => import("./routes/Skins"));
 const RoundRecap = lazy(() => import("./routes/RoundRecap"));
 const Teams = lazy(() => import("./routes/Teams"));
+const Player = lazy(() => import("./routes/Player"));
 const Login = lazy(() => import("./routes/Login"));
 const History = lazy(() => import("./routes/History"));
 const Tournament = lazy(() => import("./routes/Tournament"));
@@ -32,19 +34,15 @@ const RouteLoader = () => (
   </div>
 );
 
-function RootWrapper() {
-  const location = useLocation();
-  useEffect(() => {
-    try { window.scrollTo({ top: 0, left: 0 }); } catch (e) {}
-  }, [location.pathname]);
-  return <Outlet />;
-}
-
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <RootWrapper />,
-    errorElement: <ErrorBoundary />,
+    element: <LayoutShell />,
+    errorElement: (
+      <LayoutShell>
+        <ErrorBoundary />
+      </LayoutShell>
+    ),
     children: [
       { index: true, element: <App /> },
       { path: "round/:roundId", element: <Suspense fallback={<RouteLoader />}><Round /></Suspense> },
@@ -52,6 +50,7 @@ const router = createBrowserRouter([
       { path: "round/:roundId/recap", element: <Suspense fallback={<RouteLoader />}><RoundRecap /></Suspense> },
       { path: "match/:matchId", element: <Suspense fallback={<RouteLoader />}><Match /></Suspense> },
       { path: "teams", element: <Suspense fallback={<RouteLoader />}><Teams /></Suspense> },
+      { path: "player/:playerId", element: <Suspense fallback={<RouteLoader />}><Player /></Suspense> },
       { path: "history", element: <Suspense fallback={<RouteLoader />}><History /></Suspense> },
       { path: "tournament/:tournamentId", element: <Suspense fallback={<RouteLoader />}><Tournament /></Suspense> },
       { path: "login", element: <Suspense fallback={<RouteLoader />}><Login /></Suspense> },
@@ -70,7 +69,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AuthProvider>
       <TournamentProvider>
-        <RouterProvider router={router} />
+        <LayoutProvider>
+          <RouterProvider router={router} />
+        </LayoutProvider>
       </TournamentProvider>
     </AuthProvider>
   </React.StrictMode>
