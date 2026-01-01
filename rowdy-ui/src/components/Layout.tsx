@@ -18,6 +18,7 @@ import OfflineImage from "./OfflineImage";
 import { useAuth } from "../contexts/AuthContext";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
+import { useNavigationDirection, pageTransitionVariants, pageTransitionConfig } from "../hooks/useNavigationDirection";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -49,6 +50,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const { config } = useLayout();
   const { title, series, showBack, tournamentLogo } = config;
   const location = useLocation();
+  const direction = useNavigationDirection();
 
   // Parse title to extract year (if present at start) and main name
   const { year, mainTitle } = useMemo(() => {
@@ -83,7 +85,24 @@ export function LayoutShell({ children }: LayoutShellProps) {
     ? `/teams?tournamentId=${encodeURIComponent((tournamentMatch.params as any).tournamentId)}`
     : "/teams";
   const closeMenu = () => setMenuOpen(false);
-  const content = children ?? <Outlet />;
+  
+  // Render page content with slide transition
+  const pageContent = children ?? (
+    <AnimatePresence mode="wait" custom={direction}>
+      <motion.div
+        key={location.pathname}
+        custom={direction}
+        variants={pageTransitionVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={pageTransitionConfig}
+        style={{ width: "100%" }}
+      >
+        <Outlet />
+      </motion.div>
+    </AnimatePresence>
+  );
 
   useEffect(() => {
     try {
@@ -267,8 +286,8 @@ export function LayoutShell({ children }: LayoutShellProps) {
           </div>
         )}
 
-        <main className="app-container">
-          {content}
+        <main className="app-container overflow-hidden">
+          {pageContent}
         </main>
       </PullToRefresh>
     </>
