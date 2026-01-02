@@ -128,24 +128,24 @@
     animation: slide-in-left 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
   
-  /* Slide animations - smooth native feel with visible motion */
+  /* Slide animations - smooth native feel with fade combo */
   @keyframes slide-out-left {
     from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(-30%); opacity: 0; }
+    to { transform: translateX(-50px); opacity: 0; }
   }
   
   @keyframes slide-in-right {
-    from { transform: translateX(100%); opacity: 0; }
+    from { transform: translateX(50px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
   }
   
   @keyframes slide-out-right {
     from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(30%); opacity: 0; }
+    to { transform: translateX(50px); opacity: 0; }
   }
   
   @keyframes slide-in-left {
-    from { transform: translateX(-100%); opacity: 0; }
+    from { transform: translateX(-50px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
   }
   
