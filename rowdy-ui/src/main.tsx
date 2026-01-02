@@ -28,36 +28,43 @@ const RecalculateTournamentStats = lazy(() => import("./routes/RecalculateTourna
 const GenerateRoundRecap = lazy(() => import("./routes/GenerateRoundRecap"));
 
 // No loading fallback - CSS View Transitions handle page navigation smoothly
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <LayoutShell />,
+      errorElement: (
+        <LayoutShell>
+          <ErrorBoundary />
+        </LayoutShell>
+      ),
+      children: [
+        { index: true, element: <App /> },
+        { path: "round/:roundId", element: <Round /> },
+        { path: "round/:roundId/skins", element: <Skins /> },
+        { path: "round/:roundId/recap", element: <RoundRecap /> },
+        { path: "match/:matchId", element: <Match /> },
+        { path: "teams", element: <Teams /> },
+        { path: "player/:playerId", element: <Player /> },
+        { path: "history", element: <History /> },
+        { path: "tournament/:tournamentId", element: <Tournament /> },
+        { path: "login", element: <Login /> },
+        { path: "admin", element: <Admin /> },
+        { path: "admin/match", element: <AddMatch /> },
+        { path: "admin/match/edit", element: <EditMatch /> },
+        { path: "admin/match/recalculate", element: <RecalculateMatchStrokes /> },
+        { path: "admin/round/recap", element: <GenerateRoundRecap /> },
+        { path: "admin/tournament/recalculate", element: <RecalculateTournamentStats /> },
+        { path: "*", element: <NotFound /> },
+      ],
+    },
+  ],
   {
-    path: "/",
-    element: <LayoutShell />,
-    errorElement: (
-      <LayoutShell>
-        <ErrorBoundary />
-      </LayoutShell>
-    ),
-    children: [
-      { index: true, element: <App /> },
-      { path: "round/:roundId", element: <Round /> },
-      { path: "round/:roundId/skins", element: <Skins /> },
-      { path: "round/:roundId/recap", element: <RoundRecap /> },
-      { path: "match/:matchId", element: <Match /> },
-      { path: "teams", element: <Teams /> },
-      { path: "player/:playerId", element: <Player /> },
-      { path: "history", element: <History /> },
-      { path: "tournament/:tournamentId", element: <Tournament /> },
-      { path: "login", element: <Login /> },
-      { path: "admin", element: <Admin /> },
-      { path: "admin/match", element: <AddMatch /> },
-      { path: "admin/match/edit", element: <EditMatch /> },
-      { path: "admin/match/recalculate", element: <RecalculateMatchStrokes /> },
-      { path: "admin/round/recap", element: <GenerateRoundRecap /> },
-      { path: "admin/tournament/recalculate", element: <RecalculateTournamentStats /> },
-      { path: "*", element: <NotFound /> },
-    ],
-  },
-]);
+    future: {
+      v7_skipActionErrorRevalidation: true,
+    },
+  }
+);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

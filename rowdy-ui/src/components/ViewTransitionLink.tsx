@@ -24,8 +24,20 @@ export const ViewTransitionLink = forwardRef<HTMLAnchorElement, LinkProps>(
       const href = typeof to === "string" ? to : to.pathname || "/";
 
       if (supportsViewTransitions() && (document as any).startViewTransition) {
-        (document as any).startViewTransition(() => {
+        // Capture current scroll position to maintain during transition
+        const currentScrollY = window.scrollY;
+        
+        const transition = (document as any).startViewTransition(() => {
           navigate(href);
+        });
+        
+        // Keep scroll position during transition, then scroll to top after
+        transition.ready.then(() => {
+          window.scrollTo(0, currentScrollY);
+        });
+        
+        transition.finished.then(() => {
+          window.scrollTo(0, 0);
         });
       } else {
         navigate(href);
