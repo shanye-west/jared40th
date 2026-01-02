@@ -36,6 +36,10 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
   const [localRound, setLocalRound] = useState<RoundDoc | null>(null);
   const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
   const [skinsResult, setSkinsResult] = useState<SkinsResultDoc | null>(null);
+  
+  const [roundLoaded, setRoundLoaded] = useState(false);
+  const [tournamentLoaded, setTournamentLoaded] = useState(false);
+  const [skinsLoaded, setSkinsLoaded] = useState(false);
 
   // Try to get tournament from shared context first
   const tournamentContext = useTournamentContextOptional();
@@ -47,29 +51,33 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
   useEffect(() => {
     // Skip subscription if we have a prefetched round
     if (prefetchedRound !== undefined) {
+      setRoundLoaded(true);
       return;
     }
     
     if (!roundId) {
-      setLoading(false);
+      setRoundLoaded(true);
       return;
     }
+    
+    setRoundLoaded(false);
 
     const unsub = onSnapshot(
       doc(db, "rounds", roundId),
       (snap) => {
         if (snap.exists()) {
           setLocalRound({ id: snap.id, ...snap.data() } as RoundDoc);
+          setRoundLoaded(true);
         } else {
           setLocalRound(null);
           setError("Round not found");
-          setLoading(false);
+          setRoundLoaded(true);
         }
       },
       (err) => {
         console.error("Error loading round:", err);
         setError("Failed to load round");
-        setLoading(false);
+        setRoundLoaded(true);
       }
     );
 
@@ -78,13 +86,19 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
 
   // Get tournament from context cache or fetch once
   useEffect(() => {
-    if (!round?.tournamentId) return;
+    if (!round?.tournamentId) {
+      setTournamentLoaded(true);
+      return;
+    }
+    
+    if (!roundLoaded) return;
 
     const tournamentId = round.tournamentId;
 
     // Check if context has this tournament as the main tournament
     if (tournamentContext?.tournament?.id === tournamentId) {
       setLocalTournament(tournamentContext.tournament);
+      setTournamentLoaded(true);
       return;
     }
 
@@ -92,10 +106,12 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
     const cachedTournament = tournamentContext?.getTournamentById(tournamentId);
     if (cachedTournament) {
       setLocalTournament(cachedTournament);
+      setTournamentLoaded(true);
       return;
     }
 
     // Not in cache - fetch it and add to cache
+    setTournamentLoaded(false);
     let cancelled = false;
     async function fetchTournament() {
       try {
@@ -109,18 +125,25 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
             tournamentContext?.addTournament(tournament);
           }
         }
+        setTournamentLoaded(true);
       } catch (err) {
         console.error("Error fetching tournament:", err);
+        setTournamentLoaded(true);
       }
     }
     fetchTournament();
 
     return () => { cancelled = true; };
-  }, [round?.tournamentId, tournamentContext?.tournament]);
+  }, [round?.tournamentId, tournamentContext?.tournament, roundLoaded]);
 
   // Subscribe to pre-computed skins results
   useEffect(() => {
-    if (!roundId) return;
+    if (!roundId) {
+      setSkinsLoaded(true);
+      return;
+    }
+    
+    setSkinsLoaded(false);
 
     const unsub = onSnapshot(
       doc(db, "rounds", roundId, "skinsResults", "computed"),
@@ -130,18 +153,24 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
         } else {
           setSkinsResult(null);
         }
-        setLoading(false);
+        setSkinsLoaded(true);
       },
       (err) => {
         console.error("Error loading skins results:", err);
         // Don't set error - skins may just not be configured yet
         setSkinsResult(null);
-        setLoading(false);
+        setSkinsLoaded(true);
       }
     );
 
     return () => unsub();
   }, [roundId]);
+
+  // Coordinate all loading states
+  useEffect(() => {
+    const allLoaded = roundLoaded && tournamentLoaded && skinsLoaded;
+    setLoading(!allLoaded);
+  }, [roundLoaded, tournamentLoaded, skinsLoaded]);
 
   // Use tournament from context if available, otherwise use local fetch
   const tournament = (tournamentContext?.tournament?.id === round?.tournamentId && tournamentContext?.tournament)

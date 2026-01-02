@@ -21,13 +21,19 @@ export default function RoundRecap() {
   const [netTab, setNetTab] = useState<"scores" | "birdies" | "eagles">("scores");
   const [netScoreView, setNetScoreView] = useState<"team" | "individual">("team");
   const [tournament, setTournament] = useState<TournamentDoc | null>(null);
+  const [recapLoaded, setRecapLoaded] = useState(false);
+  const [tournamentLoaded, setTournamentLoaded] = useState(false);
   const tournamentContext = useTournamentContextOptional();
 
   useEffect(() => {
-    if (!roundId) return;
+    if (!roundId) {
+      setRecapLoaded(true);
+      return;
+    }
+    
+    setRecapLoaded(false);
 
     const fetchRecap = async () => {
-      setLoading(true);
       setError(null);
       try {
         const recapSnap = await getDoc(doc(db, "roundRecaps", roundId));
@@ -42,7 +48,7 @@ export default function RoundRecap() {
         console.error("Failed to load recap:", err);
         setError("Failed to load recap");
       } finally {
-        setLoading(false);
+        setRecapLoaded(true);
       }
     };
 
@@ -53,13 +59,18 @@ export default function RoundRecap() {
     const tournamentId = recap?.tournamentId;
     if (!tournamentId) {
       setTournament(null);
+      setTournamentLoaded(true);
       return;
     }
+    
+    if (!recapLoaded) return;
+    
     const tournamentIdSafe = tournamentId;
 
     // Check if context has this tournament as the main tournament
     if (tournamentContext?.tournament?.id === tournamentIdSafe) {
       setTournament(tournamentContext.tournament);
+      setTournamentLoaded(true);
       return;
     }
 
@@ -67,10 +78,12 @@ export default function RoundRecap() {
     const cachedTournament = tournamentContext?.getTournamentById(tournamentIdSafe);
     if (cachedTournament) {
       setTournament(cachedTournament);
+      setTournamentLoaded(true);
       return;
     }
 
     // Not in cache - fetch it and add to cache
+    setTournamentLoaded(false);
     let cancelled = false;
     async function fetchTournament() {
       try {
@@ -84,8 +97,10 @@ export default function RoundRecap() {
             tournamentContext?.addTournament(tournament);
           }
         }
+        setTournamentLoaded(true);
       } catch (err) {
         console.error("Failed to load tournament:", err);
+        setTournamentLoaded(true);
       }
     }
     fetchTournament();
@@ -93,7 +108,13 @@ export default function RoundRecap() {
     return () => {
       cancelled = true;
     };
-  }, [recap?.tournamentId, tournamentContext?.tournament]);
+  }, [recap?.tournamentId, tournamentContext?.tournament, recapLoaded]);
+
+  // Coordinate all loading states
+  useEffect(() => {
+    const allLoaded = recapLoaded && tournamentLoaded;
+    setLoading(!allLoaded);
+  }, [recapLoaded, tournamentLoaded]);
 
   if (loading) {
     return (
