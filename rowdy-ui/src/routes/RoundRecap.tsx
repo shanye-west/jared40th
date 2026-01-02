@@ -83,17 +83,9 @@ export default function RoundRecap() {
 
   if (loading) {
     return (
-      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo} isLoading>
-        <div className="px-4 py-10">
-          <Card className="mx-auto max-w-sm border-slate-200/80 bg-white/90">
-            <CardContent className="flex items-center gap-3 py-6">
-              <div className="spinner" />
-              <div>
-                <div className="text-sm font-semibold text-slate-900">Loading recap</div>
-                <div className="text-xs text-muted-foreground">Pulling round summary data.</div>
-              </div>
-            </CardContent>
-          </Card>
+      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="spinner-lg"></div>
         </div>
       </Layout>
     );

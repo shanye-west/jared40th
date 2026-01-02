@@ -15,7 +15,6 @@ import Layout from "../components/Layout";
 import LastUpdated from "../components/LastUpdated";
 import { SaveStatusIndicator } from "../components/SaveStatusIndicator";
 import { ConnectionBanner } from "../components/ConnectionBanner";
-import { MatchPageSkeleton } from "../components/Skeleton";
 import { useAuth } from "../contexts/AuthContext";
 import { 
   MatchFlowGraph, 
@@ -683,8 +682,10 @@ export default function Match() {
   const teamBColor = tournament?.teamB?.color || "var(--team-b-default)";
 
   if (loading) return (
-    <Layout title="Loading..." showBack isLoading>
-      <MatchPageSkeleton />
+    <Layout title="Loading..." showBack>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="spinner-lg"></div>
+      </div>
     </Layout>
   );
   

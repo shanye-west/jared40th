@@ -54,17 +54,9 @@ function SkinsComponent() {
 
   if (loading) {
     return (
-      <Layout title="Loading..." showBack series={tSeries} tournamentLogo={tLogo} isLoading>
-        <div className="px-4 py-10">
-          <Card className="mx-auto max-w-sm border-slate-200/80 bg-white/90">
-            <CardContent className="flex items-center gap-3 py-6">
-              <div className="spinner" />
-              <div>
-                <div className="text-sm font-semibold text-slate-900">Loading skins</div>
-                <div className="text-xs text-muted-foreground">Preparing hole results.</div>
-              </div>
-            </CardContent>
-          </Card>
+      <Layout title="Loading..." showBack series={tSeries} tournamentLogo={tLogo}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="spinner-lg"></div>
         </div>
       </Layout>
     );
