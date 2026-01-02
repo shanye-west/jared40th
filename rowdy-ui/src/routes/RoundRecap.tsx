@@ -57,18 +57,32 @@ export default function RoundRecap() {
     }
     const tournamentIdSafe = tournamentId;
 
+    // Check if context has this tournament as the main tournament
     if (tournamentContext?.tournament?.id === tournamentIdSafe) {
       setTournament(tournamentContext.tournament);
       return;
     }
 
+    // Check if it's in the context cache
+    const cachedTournament = tournamentContext?.getTournamentById(tournamentIdSafe);
+    if (cachedTournament) {
+      setTournament(cachedTournament);
+      return;
+    }
+
+    // Not in cache - fetch it and add to cache
     let cancelled = false;
     async function fetchTournament() {
       try {
         const snap = await getDoc(doc(db, "tournaments", tournamentIdSafe));
         if (cancelled) return;
         if (snap.exists()) {
-          setTournament({ id: snap.id, ...snap.data() } as TournamentDoc);
+          const tournament = { id: snap.id, ...snap.data() } as TournamentDoc;
+          setTournament(tournament);
+          // Add to context cache for future use
+          if (tournament) {
+            tournamentContext?.addTournament(tournament);
+          }
         }
       } catch (err) {
         console.error("Failed to load tournament:", err);

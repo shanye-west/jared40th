@@ -76,25 +76,38 @@ export function useSkinsData(roundId: string | undefined, options: UseSkinsDataO
     return () => unsub();
   }, [roundId, prefetchedRound]);
 
-  // Get tournament from context or fetch once (not subscribe) if context doesn't have it
+  // Get tournament from context cache or fetch once
   useEffect(() => {
     if (!round?.tournamentId) return;
 
-    // Check if context has this tournament
-    if (tournamentContext?.tournament?.id === round.tournamentId) {
+    const tournamentId = round.tournamentId;
+
+    // Check if context has this tournament as the main tournament
+    if (tournamentContext?.tournament?.id === tournamentId) {
       setLocalTournament(tournamentContext.tournament);
       return;
     }
 
-    // Context doesn't have it - do a one-time fetch instead of subscribing
-    // Tournament data rarely changes during a session
+    // Check if it's in the context cache
+    const cachedTournament = tournamentContext?.getTournamentById(tournamentId);
+    if (cachedTournament) {
+      setLocalTournament(cachedTournament);
+      return;
+    }
+
+    // Not in cache - fetch it and add to cache
     let cancelled = false;
     async function fetchTournament() {
       try {
-        const snap = await getDoc(doc(db, "tournaments", round!.tournamentId));
+        const snap = await getDoc(doc(db, "tournaments", tournamentId));
         if (cancelled) return;
         if (snap.exists()) {
-          setLocalTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
+          const tournament = ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc);
+          setLocalTournament(tournament);
+          // Add to context cache for future use
+          if (tournament) {
+            tournamentContext?.addTournament(tournament);
+          }
         }
       } catch (err) {
         console.error("Error fetching tournament:", err);
