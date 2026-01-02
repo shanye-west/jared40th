@@ -52,7 +52,7 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     if (!matchId) return;
     setLoading(true);
     setError(null);
-    // Clear stale data from previous match to prevent flash of wrong content
+    // Clear stale data from previous match
     setMatch(null);
     setRound(null);
     setCourse(null);

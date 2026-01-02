@@ -35,10 +35,7 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
   // Try to get tournament from shared context
   const tournamentContext = useTournamentContextOptional();
   
-  // Initialize localTournament from context if available (to avoid flashing)
-  const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(
-    tournamentContext?.tournament || null
-  );
+  const [localTournament, setLocalTournament] = useState<TournamentDoc | null>(null);
   const [course, setCourse] = useState<CourseDoc | null>(null);
   const [matches, setMatches] = useState<MatchDoc[]>([]);
   const [players, setPlayers] = useState<Record<string, PlayerDoc>>({});
@@ -64,11 +61,10 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     setRoundLoaded(false);
     setTournamentLoaded(false);
     setMatchesLoaded(false);
-    // Clear stale data from previous round to prevent flash of wrong content
+    // Clear stale data from previous round
     setRound(null);
     setMatches([]);
     setCourse(null);
-    // Note: Don't clear localTournament here - let the tournament effect handle it
 
     const unsub = onSnapshot(
       doc(db, "rounds", roundId),
