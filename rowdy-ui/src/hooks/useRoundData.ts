@@ -48,6 +48,7 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
 
   // Track loading states for coordinated display
   const [roundLoaded, setRoundLoaded] = useState(false);
+  const [tournamentLoaded, setTournamentLoaded] = useState(false);
   const [matchesLoaded, setMatchesLoaded] = useState(false);
 
   // 1) Subscribe to round document
@@ -61,7 +62,13 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     setLoading(true);
     setError(null);
     setRoundLoaded(false);
+    setTournamentLoaded(false);
     setMatchesLoaded(false);
+    // Clear stale data from previous round to prevent flash of wrong content
+    setRound(null);
+    setMatches([]);
+    setCourse(null);
+    // Note: Don't clear localTournament here - let the tournament effect handle it
 
     const unsub = onSnapshot(
       doc(db, "rounds", roundId),
@@ -83,33 +90,52 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     return () => unsub();
   }, [roundId]);
 
-  // 2) Get tournament from context or fetch once (not subscribe)
+  // 2) Get tournament from context cache or fetch once
   useEffect(() => {
     if (!round?.tournamentId) {
       setLocalTournament(null);
+      setTournamentLoaded(true);
       return;
     }
 
-    // Check if context has this tournament - use it immediately
-    if (tournamentContext?.tournament?.id === round.tournamentId) {
+    const tournamentId = round.tournamentId;
+
+    // Check if context has this tournament as the main tournament
+    if (tournamentContext?.tournament?.id === tournamentId) {
       setLocalTournament(tournamentContext.tournament);
+      setTournamentLoaded(true);
       return;
     }
 
-    // Context doesn't have it - do a one-time fetch
+    // Check if it's in the context cache
+    const cachedTournament = tournamentContext?.getTournamentById(tournamentId);
+    if (cachedTournament) {
+      setLocalTournament(cachedTournament);
+      setTournamentLoaded(true);
+      return;
+    }
+
+    // Not in cache - fetch it and add to cache
     let cancelled = false;
     async function fetchTournament() {
       try {
-        const snap = await getDoc(doc(db, "tournaments", round!.tournamentId));
+        const snap = await getDoc(doc(db, "tournaments", tournamentId));
         if (cancelled) return;
         if (snap.exists()) {
-          setLocalTournament(ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc));
+          const tournament = ensureTournamentTeamColors({ id: snap.id, ...snap.data() } as TournamentDoc);
+          setLocalTournament(tournament);
+          // Add to context cache for future use
+          if (tournament) {
+            tournamentContext?.addTournament(tournament);
+          }
         } else {
           setLocalTournament(null);
         }
+        setTournamentLoaded(true);
       } catch (err) {
         console.error("Tournament fetch error:", err);
         setLocalTournament(null);
+        setTournamentLoaded(true);
       }
     }
     fetchTournament();
@@ -254,12 +280,12 @@ export function useRoundData(roundId: string | undefined): UseRoundDataResult {
     return () => {};
   }, [matches]);
 
-  // Coordinated loading state
+  // Coordinated loading state - wait for round, tournament, and matches
   useEffect(() => {
-    if (roundLoaded && matchesLoaded) {
+    if (roundLoaded && tournamentLoaded && matchesLoaded) {
       setLoading(false);
     }
-  }, [roundLoaded, matchesLoaded]);
+  }, [roundLoaded, tournamentLoaded, matchesLoaded]);
 
   // Compute round stats
   const stats = useMemo(() => {

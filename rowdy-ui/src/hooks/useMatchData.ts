@@ -52,6 +52,13 @@ export function useMatchData(matchId: string | undefined): UseMatchDataResult {
     if (!matchId) return;
     setLoading(true);
     setError(null);
+    // Clear stale data from previous match to prevent flash of wrong content
+    setMatch(null);
+    setRound(null);
+    setCourse(null);
+    setLocalTournament(null);
+    setPlayers({});
+    setMatchFacts([]);
 
     let unsub: (() => void) | undefined;
     

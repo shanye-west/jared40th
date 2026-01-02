@@ -29,6 +29,8 @@ interface TournamentContextValue {
   addCourse: (course: CourseDoc) => void;
   /** Get or subscribe to a specific tournament by ID (for non-active tournaments) */
   getTournamentById: (id: string) => TournamentDoc | null;
+  /** Add a tournament to the shared cache (for historical tournaments) */
+  addTournament: (tournament: TournamentDoc) => void;
 }
 
 const TournamentContext = createContext<TournamentContextValue | null>(null);
@@ -119,8 +121,18 @@ export function TournamentProvider({ children, tournamentId }: TournamentProvide
     return tournamentsById[id] || null;
   };
 
+  // Add tournament to cache (for components that fetch historical tournaments)
+  const addTournament = (tournament: TournamentDoc) => {
+    if (tournament.id) {
+      setTournamentsById(prev => {
+        if (prev[tournament.id]) return prev; // Already cached
+        return { ...prev, [tournament.id]: tournament };
+      });
+    }
+  };
+
   const value = useMemo(
-    () => ({ tournament, loading, error, courses, addCourse, getTournamentById }),
+    () => ({ tournament, loading, error, courses, addCourse, getTournamentById, addTournament }),
     [tournament, loading, error, courses, tournamentsById]
   );
 
