@@ -59,7 +59,7 @@ export default function App() {
     </div>
   );
 
-  const tName = tournament?.name || "Rowdy Cup";
+  const tName = tournament?.name || "Jared's 40th Birthday";
   const tSeries = tournament?.series; // "rowdyCup" or "christmasClassic"
   const tLogo = tournament?.tournamentLogo;
   const pointsToWin = totalPointsAvailable ? (totalPointsAvailable / 2 + 0.5) : null;

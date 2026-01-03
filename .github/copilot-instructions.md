@@ -1,7 +1,7 @@
-# Rowdy Cup PWA - Copilot Instructions
+# Jared's 40th Birthday Tournament - Copilot Instructions
 
 ## Project Overview
-A mobile-first PWA for a 12v12 Ryder Cup-style golf tournament. Players enter gross scores; Cloud Functions compute net scores, hole winners, and match status in real-time. Public read-only access; anonymous auth for score entry.
+A mobile-first PWA for Jared's 40th Birthday golf tournament, featuring 12v12 Ryder Cup-style match play. Players enter gross scores; Cloud Functions compute net scores, hole winners, and match status in real-time. Public read-only access; anonymous auth for score entry.
 
 ## Architecture
 

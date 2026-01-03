@@ -64,9 +64,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Jared\'s 40th',
+        name: 'Jared\'s 40th Birthday',
         short_name: 'Jared\'s 40th',
-        description: 'Live scoring for Jared\'s 40th birthday tourney',
+        description: 'Live scoring for Jared\'s 40th Birthday golf tournament',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone', // Hides browser UI
