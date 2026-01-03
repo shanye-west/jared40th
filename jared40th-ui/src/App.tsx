@@ -80,9 +80,6 @@ export default function App() {
               <div>
                 <div className="text-lg font-semibold text-slate-900">No active tournament</div>
               </div>
-              <Button asChild variant="outline" className="mx-auto">
-                <ViewTransitionLink to="/history">View tournament history</ViewTransitionLink>
-              </Button>
             </CardContent>
           </Card>
         </div>

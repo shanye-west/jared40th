@@ -6,7 +6,6 @@ import {
   X,
   Home,
   Users,
-  History,
   Shield,
   LogOut,
   LogIn,
@@ -201,12 +200,6 @@ export function LayoutShell({ children }: LayoutShellProps) {
                       <ViewTransitionLink to={teamLink} onClick={closeMenu}>
                         <Users className="h-4 w-4 text-slate-500" />
                         Team Rosters
-                      </ViewTransitionLink>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
-                      <ViewTransitionLink to="/history" onClick={closeMenu}>
-                        <History className="h-4 w-4 text-slate-500" />
-                        History
                       </ViewTransitionLink>
                     </Button>
 
