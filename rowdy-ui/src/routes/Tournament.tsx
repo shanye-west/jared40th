@@ -64,7 +64,7 @@ function TournamentComponent() {
       <div className="space-y-6 px-4 py-6">
         <section>
           <Card className="relative overflow-hidden border-white/40 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(191,32,60,0.14),_transparent_55%)]" />
+
             <CardContent className="relative space-y-6 pt-6">
               <div className="space-y-2">
                 <div className="text-center">
