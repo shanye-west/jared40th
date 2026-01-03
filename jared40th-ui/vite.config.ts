@@ -64,9 +64,9 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Rowdy Cup',
-        short_name: 'Rowdy Cup',
-        description: 'Live scoring for the Rowdy Cup tournament',
+        name: 'Jared\'s 40th',
+        short_name: 'Jared\'s 40th',
+        description: 'Live scoring for Jared\'s 40th birthday tourney',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone', // Hides browser UI

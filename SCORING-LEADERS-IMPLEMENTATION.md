@@ -65,11 +65,11 @@ Added to `computeRoundRecap` function (after birdie/eagle leaders):
 
 ### Frontend (UI)
 
-#### Type Definitions (`rowdy-ui/src/types.ts`)
+#### Type Definitions (`jared40th-ui/src/types.ts`)
 - Mirrored backend `ScoringLeader` interface
 - Updated `RoundRecapDoc` interface
 
-#### UI Component (`rowdy-ui/src/routes/RoundRecap.tsx`)
+#### UI Component (`jared40th-ui/src/routes/RoundRecap.tsx`)
 
 1. **New View Tab**
    - Added "Scoring Leaders" tab between "vs All" and "Scoring Summary"
@@ -128,7 +128,7 @@ Added to `computeRoundRecap` function (after birdie/eagle leaders):
 1. Build functions: `cd functions && npm run build`
 2. Deploy functions: `firebase deploy --only functions:computeRoundRecap`
 3. Rebuild existing recaps (if needed): Call `computeRoundRecap` for each round
-4. Build UI: `cd rowdy-ui && npm run build`
+4. Build UI: `cd jared40th-ui && npm run build`
 5. Deploy hosting: `firebase deploy --only hosting`
 
 ## Notes
