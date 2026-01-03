@@ -31,7 +31,11 @@ export default function RoundRecap() {
       return;
     }
     
+    // Reset loaded states when roundId changes to prevent stale "loaded" flags
+    // BUT preserve tournament during navigation to prevent flashing
     setRecapLoaded(false);
+    setTournamentLoaded(false);
+    // Don't clear tournament - let it persist until new one loads
 
     const fetchRecap = async () => {
       setError(null);
@@ -56,14 +60,16 @@ export default function RoundRecap() {
   }, [roundId]);
 
   useEffect(() => {
+    // Don't mark as loaded until recap is loaded
+    if (!recapLoaded) return;
+    
     const tournamentId = recap?.tournamentId;
     if (!tournamentId) {
+      // Recap loaded but has no tournament
       setTournament(null);
       setTournamentLoaded(true);
       return;
     }
-    
-    if (!recapLoaded) return;
     
     const tournamentIdSafe = tournamentId;
 
@@ -118,7 +124,7 @@ export default function RoundRecap() {
 
   if (loading) {
     return (
-      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
+      <Layout title="Loading..." showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="spinner-lg"></div>
         </div>
@@ -128,7 +134,7 @@ export default function RoundRecap() {
 
   if (error) {
     return (
-      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
+      <Layout title={tournament?.name || "Round Recap"} showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
         <div className="px-4 py-10">
           <Card className="mx-auto max-w-md border-red-200 bg-red-50/70 text-center">
             <CardContent className="py-6 text-sm font-semibold text-red-700">
@@ -142,7 +148,7 @@ export default function RoundRecap() {
 
   if (!recap) {
     return (
-      <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
+      <Layout title={tournament?.name || "Round Recap"} showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
         <div className="px-4 py-10">
           <Card className="mx-auto max-w-md border-slate-200/80 bg-white/90 text-center">
             <CardContent className="py-6 text-sm text-muted-foreground">
@@ -236,7 +242,7 @@ export default function RoundRecap() {
   const dayLine = recap.day ? `Day ${recap.day}` : "Round Recap";
 
   return (
-    <Layout title="Round Recap" showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
+    <Layout title={tournament?.name || "Round Recap"} showBack series={tournament?.series} tournamentLogo={tournament?.tournamentLogo}>
       <div className="space-y-6 px-4 py-6">
         <section>
           <Card className="relative overflow-hidden border-white/50 bg-white/85 shadow-xl">
