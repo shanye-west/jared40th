@@ -6,7 +6,7 @@ A mobile-first PWA for a 12v12 Ryder Cup-style golf tournament. Players enter gr
 ## Architecture
 
 ### Monorepo Structure
-- **`rowdy-ui/`** - React + Vite + TypeScript frontend (PWA)
+- **`jared40th-ui/`** - React + Vite + TypeScript frontend (PWA)
 - **`functions/`** - Firebase Cloud Functions (Gen-2, TypeScript)
 - **Root** - Firebase configuration (`firebase.json`, `firestore.rules`)
 
@@ -81,9 +81,9 @@ Aggregated when `playerMatchFacts` are written. Stored in `playerStats/{playerId
 ## Development Commands
 
 \`\`\`bash
-# Frontend (rowdy-ui/)
-cd rowdy-ui && npm run dev      # Vite dev server with PWA
-cd rowdy-ui && npm run build    # TypeScript check + Vite build
+# Frontend (jared40th-ui/)
+cd jared40th-ui && npm run dev      # Vite dev server with PWA
+cd jared40th-ui && npm run build    # TypeScript check + Vite build
 
 # Functions
 cd functions && npm run build   # Compile TypeScript
@@ -95,7 +95,7 @@ firebase deploy --only hosting
 
 ## Code Patterns
 
-### Types (\`rowdy-ui/src/types.ts\`)
+### Types (`jared40th-ui/src/types.ts`)
 All Firestore document types defined here. Use \`RoundFormat\` union type for format checks. Note: \`RoundDoc.format\` can be \`null\` until format is selected.
 
 ### Firebase Hooks Pattern (Frontend)
@@ -125,7 +125,7 @@ Match.tsx renders different input layouts based on format:
 
 ## Firebase Configuration
 
-### Environment Variables (rowdy-ui/.env)
+### Environment Variables (jared40th-ui/.env)
 \`\`\`
 VITE_API_KEY, VITE_AUTH_DOMAIN, VITE_PROJECT_ID, 
 VITE_STORAGE_BUCKET, VITE_MESSAGING_SENDER_ID, VITE_APP_ID

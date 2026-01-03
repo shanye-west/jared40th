@@ -32,7 +32,7 @@
     "singleProjectMode": true
   },
   "hosting": {
-    "public": "rowdy-ui/dist",
+    "public": "jared40th-ui/dist",
     "ignore": [
       "firebase.json",
       "**/.*",
