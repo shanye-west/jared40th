@@ -213,8 +213,8 @@ export function computeCumulative(
   }
 
   const players = Array.from(playerMap.values()).sort((a, b) => {
-    // Sort by total score ascending (lowest wins), then by holes completed descending
-    if (a.totalScore !== b.totalScore) return a.totalScore - b.totalScore;
+    // Sort by score to par ascending (lowest wins), then by holes completed descending
+    if (a.toPar !== b.toPar) return a.toPar - b.toPar;
     return b.holesCompleted - a.holesCompleted;
   });
 

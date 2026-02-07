@@ -7,8 +7,6 @@ type LeaderboardProps = {
 export function Leaderboard({ tournament }: LeaderboardProps) {
   const { teams, scoreboard } = tournament;
   const totals = scoreboard?.teamTotals || [0, 0, 0, 0];
-  const holesCompleted = scoreboard?.holesCompleted || 0;
-  const totalHoles = scoreboard?.totalHoles || 72;
 
   // Sort teams by points (descending)
   const ranked = teams

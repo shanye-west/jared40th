@@ -97,7 +97,6 @@ export default function Group() {
   }
 
   const title = `Group ${group.groupNumber}`;
-  const holesCompleted = scoring?.holesCompleted ?? group.computed?.holesCompleted ?? 0;
 
   return (
     <Layout title={title} showBack tournamentLogo={tournament?.tournamentLogo}>
