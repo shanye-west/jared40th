@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { ArrowRight, RefreshCw, X } from "lucide-react";
 import { useTournamentContext } from "./contexts/TournamentContext";
-import { useGroupListData } from "./hooks/useGroupListData";
+import { useRounds } from "./hooks/useRounds";
+import { useRoundGroups } from "./hooks/useRoundGroups";
 import Layout from "./components/Layout";
 import { Leaderboard } from "./components/Leaderboard";
+import { RoundTabs } from "./components/RoundTabs";
 import { ViewTransitionLink } from "./components/ViewTransitionLink";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
@@ -26,8 +28,12 @@ export default function App() {
     },
   });
 
+  const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
+
   const { tournament, loading, error } = useTournamentContext();
-  const { groups, loading: groupsLoading } = useGroupListData(tournament?.id);
+  const { rounds, loading: roundsLoading } = useRounds(tournament?.roundIds);
+  const activeRoundId = selectedRoundId ?? rounds[0]?.id;
+  const { groups, loading: groupsLoading } = useRoundGroups(activeRoundId);
 
   if (loading) {
     return (
@@ -82,6 +88,17 @@ export default function App() {
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">Leaderboard</h2>
         <Leaderboard tournament={tournament} />
       </section>
+
+      {/* Round Tabs */}
+      {!roundsLoading && rounds.length > 1 && (
+        <section className="mb-4">
+          <RoundTabs
+            rounds={rounds}
+            selectedRoundId={activeRoundId ?? ""}
+            onSelect={setSelectedRoundId}
+          />
+        </section>
+      )}
 
       {/* Groups List */}
       <section>

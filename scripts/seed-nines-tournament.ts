@@ -5,8 +5,8 @@
  *   - 1 course (Journey at Pechanga)
  *   - 16 players (4 per team)
  *   - 1 tournament
- *   - 1 round
- *   - 4 groups (1 player from each team per group)
+ *   - 3 rounds (Day 1, Day 2, Day 3)
+ *   - 4 groups per round (12 groups total, 1 player from each team per group)
  *
  * Run:  npx ts-node seed-nines-tournament.ts [--force]
  *
@@ -141,22 +141,44 @@ const TEAMS = [
 ];
 
 const TOURNAMENT_ID = "2026-jared40th";
-const ROUND_ID = `${TOURNAMENT_ID}-day1`;
-
-// Groups: each group takes one player from each team (indices into PLAYERS)
-// Group 1: players[0], players[4], players[8],  players[12]
-// Group 2: players[1], players[5], players[9],  players[13]
-// Group 3: players[2], players[6], players[10], players[14]
-// Group 4: players[3], players[7], players[11], players[15]
-const GROUP_ASSIGNMENTS = [
-  [0, 4, 8, 12],
-  [1, 5, 9, 13],
-  [2, 6, 10, 14],
-  [3, 7, 11, 15],
+const ROUND_IDS = [
+  `${TOURNAMENT_ID}-day1`,
+  `${TOURNAMENT_ID}-day2`,
+  `${TOURNAMENT_ID}-day3`,
 ];
 
-// Tee times starting at 8:00 AM, 10 minutes apart
-const BASE_TEE_TIME = new Date("2026-03-14T08:00:00-07:00"); // PST
+// Groups per round: each group takes one player from each team (indices into PLAYERS)
+// Players 0-3 = Team 1 (Blue), 4-7 = Team 2 (Red), 8-11 = Team 3 (Green), 12-15 = Team 4 (Gold)
+const GROUP_ASSIGNMENTS_BY_ROUND = [
+  // Day 1
+  [
+    [0, 4, 8, 12],
+    [1, 5, 9, 13],
+    [2, 6, 10, 14],
+    [3, 7, 11, 15],
+  ],
+  // Day 2 – reshuffled
+  [
+    [0, 5, 10, 15],
+    [1, 6, 11, 12],
+    [2, 7, 8, 13],
+    [3, 4, 9, 14],
+  ],
+  // Day 3 – reshuffled again
+  [
+    [0, 7, 9, 14],
+    [1, 4, 10, 15],
+    [2, 5, 11, 12],
+    [3, 6, 8, 13],
+  ],
+];
+
+// Tee times starting at 8:00 AM, 10 minutes apart — one base per day
+const BASE_TEE_TIMES = [
+  new Date("2026-03-14T08:00:00-07:00"), // Day 1
+  new Date("2026-03-15T08:00:00-07:00"), // Day 2
+  new Date("2026-03-16T08:00:00-07:00"), // Day 3
+];
 
 // ---------- Build group players ----------
 
@@ -235,89 +257,99 @@ async function main() {
       year: 2026,
       active: true,
       courseId: COURSE.id,
-      roundIds: [ROUND_ID],
+      roundIds: ROUND_IDS,
       tournamentLogo: "",
       teams: TEAMS,
       scoreboard: {
         teamTotals: [0, 0, 0, 0],
         holesCompleted: 0,
-        totalHoles: GROUP_ASSIGNMENTS.length * 18,
+        totalHoles: GROUP_ASSIGNMENTS_BY_ROUND.flat().length * 18,
         lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
       },
     });
     console.log(`  ${tournSnap.exists ? "Updated" : "Created"} tournament: ${TOURNAMENT_ID}`);
   }
 
-  // 4. Round
-  const roundRef = db.collection("rounds").doc(ROUND_ID);
-  const roundSnap = await roundRef.get();
-  if (roundSnap.exists && !force) {
-    console.log(`  Round '${ROUND_ID}' exists, skipping.`);
-  } else {
-    const groupIds = GROUP_ASSIGNMENTS.map(
-      (_, i) => `${ROUND_ID}-group${i + 1}`
-    );
-    await roundRef.set({
-      id: ROUND_ID,
-      tournamentId: TOURNAMENT_ID,
-      day: 1,
-      courseId: COURSE.id,
-      groupIds,
-    });
-    console.log(`  ${roundSnap.exists ? "Updated" : "Created"} round: ${ROUND_ID}`);
-  }
+  // 4. Rounds & Groups (3 rounds, 4 groups each)
+  for (let r = 0; r < ROUND_IDS.length; r++) {
+    const roundId = ROUND_IDS[r];
+    const assignments = GROUP_ASSIGNMENTS_BY_ROUND[r];
+    const baseTeeTime = BASE_TEE_TIMES[r];
+    const dayNum = r + 1;
 
-  // 5. Groups
-  for (let g = 0; g < GROUP_ASSIGNMENTS.length; g++) {
-    const groupId = `${ROUND_ID}-group${g + 1}`;
-    const groupRef = db.collection("groups").doc(groupId);
-    const groupSnap = await groupRef.get();
+    console.log(`\n  --- Day ${dayNum} ---`);
 
-    if (groupSnap.exists && !force) {
-      console.log(`  Group '${groupId}' exists, skipping.`);
-      continue;
+    // Create round
+    const roundRef = db.collection("rounds").doc(roundId);
+    const roundSnap = await roundRef.get();
+    if (roundSnap.exists && !force) {
+      console.log(`  Round '${roundId}' exists, skipping.`);
+    } else {
+      const groupIds = assignments.map(
+        (_, i) => `${roundId}-group${i + 1}`
+      );
+      await roundRef.set({
+        id: roundId,
+        tournamentId: TOURNAMENT_ID,
+        day: dayNum,
+        courseId: COURSE.id,
+        groupIds,
+      });
+      console.log(`  ${roundSnap.exists ? "Updated" : "Created"} round: ${roundId}`);
     }
 
-    const players = GROUP_ASSIGNMENTS[g].map((playerIdx, teamIdx) =>
-      buildGroupPlayer(playerIdx, teamIdx)
-    );
+    // Create groups for this round
+    for (let g = 0; g < assignments.length; g++) {
+      const groupId = `${roundId}-group${g + 1}`;
+      const groupRef = db.collection("groups").doc(groupId);
+      const groupSnap = await groupRef.get();
 
-    // Build empty holes structure
-    const holes: Record<string, any> = {};
-    for (let h = 1; h <= 18; h++) {
-      holes[String(h)] = {
-        gross: [null, null, null, null],
-      };
+      if (groupSnap.exists && !force) {
+        console.log(`  Group '${groupId}' exists, skipping.`);
+        continue;
+      }
+
+      const players = assignments[g].map((playerIdx, teamIdx) =>
+        buildGroupPlayer(playerIdx, teamIdx)
+      );
+
+      // Build empty holes structure
+      const holes: Record<string, any> = {};
+      for (let h = 1; h <= 18; h++) {
+        holes[String(h)] = {
+          gross: [null, null, null, null],
+        };
+      }
+
+      const teeTime = new Date(baseTeeTime.getTime() + g * 10 * 60 * 1000);
+
+      await groupRef.set({
+        id: groupId,
+        roundId,
+        tournamentId: TOURNAMENT_ID,
+        groupNumber: g + 1,
+        teeTime: admin.firestore.Timestamp.fromDate(teeTime),
+        players,
+        holes,
+        computed: {
+          playerPoints: [0, 0, 0, 0],
+          holesCompleted: 0,
+          completed: false,
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      });
+
+      const names = players.map((p) => p.displayName).join(", ");
+      console.log(
+        `  ${groupSnap.exists ? "Updated" : "Created"} group ${g + 1}: ${names}`
+      );
+      console.log(
+        `    Tee time: ${teeTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+      );
+      console.log(
+        `    Course HCPs: ${players.map((p) => p.courseHandicap).join(", ")}`
+      );
     }
-
-    const teeTime = new Date(BASE_TEE_TIME.getTime() + g * 10 * 60 * 1000);
-
-    await groupRef.set({
-      id: groupId,
-      roundId: ROUND_ID,
-      tournamentId: TOURNAMENT_ID,
-      groupNumber: g + 1,
-      teeTime: admin.firestore.Timestamp.fromDate(teeTime),
-      players,
-      holes,
-      computed: {
-        playerPoints: [0, 0, 0, 0],
-        holesCompleted: 0,
-        completed: false,
-        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
-      },
-    });
-
-    const names = players.map((p) => p.displayName).join(", ");
-    console.log(
-      `  ${groupSnap.exists ? "Updated" : "Created"} group ${g + 1}: ${names}`
-    );
-    console.log(
-      `    Tee time: ${teeTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
-    );
-    console.log(
-      `    Course HCPs: ${players.map((p) => p.courseHandicap).join(", ")}`
-    );
   }
 
   console.log("\nDone! Tournament seeded successfully.\n");

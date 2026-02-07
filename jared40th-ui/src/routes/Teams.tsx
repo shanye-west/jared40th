@@ -18,14 +18,12 @@ export default function Teams() {
     );
   }
 
-  // Build player points map from groups
+  // Build player points map from groups (accumulate across all rounds)
   const playerPointsMap: Record<string, number> = {};
-  const playerGroupMap: Record<string, number> = {}; // playerId -> groupNumber
   for (const g of groups) {
     for (let i = 0; i < g.players.length; i++) {
       const p = g.players[i];
-      playerPointsMap[p.playerId] = g.computed?.playerPoints?.[i] ?? 0;
-      playerGroupMap[p.playerId] = g.groupNumber;
+      playerPointsMap[p.playerId] = (playerPointsMap[p.playerId] ?? 0) + (g.computed?.playerPoints?.[i] ?? 0);
     }
   }
 
@@ -40,25 +38,26 @@ export default function Teams() {
     <Layout title="Teams" showBack tournamentLogo={tournament.tournamentLogo}>
       <div className="space-y-6">
         {rankedTeams.map(({ team, points }, rank) => {
-          // Find players for this team from groups
-          const teamPlayers: { playerId: string; displayName: string; points: number; groupNumber: number; courseHandicap: number }[] = [];
+          // Find players for this team from groups (deduplicate across rounds)
+          const teamIdx = tournament.teams.indexOf(team);
+          const playerAccum: Record<string, { playerId: string; displayName: string; points: number; courseHandicap: number }> = {};
           for (const g of groups) {
             for (let i = 0; i < g.players.length; i++) {
               const p = g.players[i];
-              if (p.teamIndex === tournament.teams.indexOf(team)) {
-                teamPlayers.push({
-                  playerId: p.playerId,
-                  displayName: p.displayName,
-                  points: g.computed?.playerPoints?.[i] ?? 0,
-                  groupNumber: g.groupNumber,
-                  courseHandicap: p.courseHandicap,
-                });
+              if (p.teamIndex === teamIdx) {
+                if (!playerAccum[p.playerId]) {
+                  playerAccum[p.playerId] = {
+                    playerId: p.playerId,
+                    displayName: p.displayName,
+                    points: 0,
+                    courseHandicap: p.courseHandicap,
+                  };
+                }
+                playerAccum[p.playerId].points += g.computed?.playerPoints?.[i] ?? 0;
               }
             }
           }
-
-          // Sort by points descending
-          teamPlayers.sort((a, b) => b.points - a.points);
+          const teamPlayers = Object.values(playerAccum).sort((a, b) => b.points - a.points);
 
           return (
             <div key={team.id} className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm">
@@ -94,7 +93,7 @@ export default function Teams() {
                     <div>
                       <div className="text-sm font-medium text-slate-700">{p.displayName}</div>
                       <div className="text-xs text-slate-400">
-                        Group {p.groupNumber} &middot; Hcp {p.courseHandicap}
+                        Hcp {p.courseHandicap}
                       </div>
                     </div>
                     <div
