@@ -52,6 +52,16 @@ export type Scoreboard = {
   lastUpdated: any;
 };
 
+export type SideGameConfig = {
+  id: string;
+  name: string;
+  type: "skins" | "cumulative";
+  scoreType: "gross" | "net";
+  pot: number;
+  perRound: boolean;
+  playerIds: string[];
+};
+
 export type TournamentDoc = {
   id: string;
   name: string;
@@ -62,6 +72,7 @@ export type TournamentDoc = {
   tournamentLogo?: string;
   teams: [TeamDef, TeamDef, TeamDef, TeamDef];
   scoreboard: Scoreboard;
+  sideGames?: SideGameConfig[];
 };
 
 // ============================================================================

@@ -6,6 +6,7 @@ import {
   X,
   Home,
   Users,
+  Trophy,
   Wifi,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
@@ -143,6 +144,12 @@ export function LayoutShell({ children }: LayoutShellProps) {
                     <ViewTransitionLink to="/teams" onClick={closeMenu}>
                       <Users className="h-4 w-4 text-slate-500" />
                       Teams
+                    </ViewTransitionLink>
+                  </Button>
+                  <Button asChild variant="ghost" className="w-full justify-start gap-2 text-slate-700 hover:bg-slate-100">
+                    <ViewTransitionLink to="/games" onClick={closeMenu}>
+                      <Trophy className="h-4 w-4 text-slate-500" />
+                      Games
                     </ViewTransitionLink>
                   </Button>
                 </div>

@@ -180,6 +180,50 @@ const BASE_TEE_TIMES = [
   new Date("2026-03-16T08:00:00-07:00"), // Day 3
 ];
 
+// Side games — opt-in subsets of players
+// For dummy data, 12 of 16 players opted into skins, all 16 into cumulative
+const SKINS_PLAYER_IDS = PLAYERS.slice(0, 12).map((p) => p.id);
+const CUMULATIVE_PLAYER_IDS = PLAYERS.map((p) => p.id);
+
+const SIDE_GAMES = [
+  {
+    id: "grossSkins",
+    name: "Gross Skins",
+    type: "skins",
+    scoreType: "gross",
+    pot: 120,
+    perRound: true,
+    playerIds: SKINS_PLAYER_IDS,
+  },
+  {
+    id: "netSkins",
+    name: "Net Skins",
+    type: "skins",
+    scoreType: "net",
+    pot: 120,
+    perRound: true,
+    playerIds: SKINS_PLAYER_IDS,
+  },
+  {
+    id: "grossCumulative",
+    name: "Gross Cumulative",
+    type: "cumulative",
+    scoreType: "gross",
+    pot: 200,
+    perRound: false,
+    playerIds: CUMULATIVE_PLAYER_IDS,
+  },
+  {
+    id: "netCumulative",
+    name: "Net Cumulative",
+    type: "cumulative",
+    scoreType: "net",
+    pot: 200,
+    perRound: false,
+    playerIds: CUMULATIVE_PLAYER_IDS,
+  },
+];
+
 // ---------- Build group players ----------
 
 function buildGroupPlayer(
@@ -260,6 +304,7 @@ async function main() {
       roundIds: ROUND_IDS,
       tournamentLogo: "",
       teams: TEAMS,
+      sideGames: SIDE_GAMES,
       scoreboard: {
         teamTotals: [0, 0, 0, 0],
         holesCompleted: 0,

@@ -11,6 +11,7 @@ import { LayoutShell } from "./components/Layout";
 
 const Group = lazy(() => import("./routes/Group"));
 const Teams = lazy(() => import("./routes/Teams"));
+const Games = lazy(() => import("./routes/Games"));
 
 const router = createBrowserRouter(
   [
@@ -26,6 +27,7 @@ const router = createBrowserRouter(
         { index: true, element: <App /> },
         { path: "group/:groupId", element: <Group /> },
         { path: "teams", element: <Teams /> },
+        { path: "games", element: <Games /> },
         { path: "*", element: <NotFound /> },
       ],
     },
