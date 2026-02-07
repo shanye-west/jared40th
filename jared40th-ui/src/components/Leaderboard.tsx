@@ -19,12 +19,6 @@ export function Leaderboard({ tournament }: LeaderboardProps) {
 
   return (
     <div className="space-y-3">
-      {/* Progress */}
-      <div className="flex items-center justify-between text-xs text-slate-500 px-1">
-        <span>{holesCompleted} of {totalHoles} holes completed</span>
-        <span>{Math.round((holesCompleted / totalHoles) * 100)}%</span>
-      </div>
-
       {/* Team Cards */}
       {ranked.map(({ team, points }, rank) => (
         <div

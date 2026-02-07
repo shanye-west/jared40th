@@ -98,7 +98,7 @@ export function computeSkins(
     const minScore = Math.min(...scores.map((s) => s.score));
     const winners = scores.filter((s) => s.score === minScore);
 
-    if (winners.length === 1 && allCompleted) {
+    if (winners.length === 1) {
       const winner = winners[0];
       holes.push({
         holeNumber: h,

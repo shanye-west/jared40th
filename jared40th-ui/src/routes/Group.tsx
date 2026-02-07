@@ -112,9 +112,6 @@ export default function Group() {
             </p>
           </div>
           <div className="text-right">
-            <div className="text-sm font-semibold text-slate-600">
-              {holesCompleted} / 18 holes
-            </div>
             <SaveStatusIndicator status={saveStatus} />
           </div>
         </div>
