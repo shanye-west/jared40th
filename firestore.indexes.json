@@ -1,62 +1,19 @@
 {
   "indexes": [
     {
-      "collectionGroup": "playerMatchFacts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "playerId", "order": "ASCENDING" },
-        { "fieldPath": "playerHandicap", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "playerMatchFacts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "playerId", "order": "ASCENDING" },
-        { "fieldPath": "outcome", "order": "ASCENDING" },
-        { "fieldPath": "playerHandicap", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "playerMatchFacts",
+      "collectionGroup": "groups",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "tournamentId", "order": "ASCENDING" },
-        { "fieldPath": "playerHandicap", "order": "ASCENDING" }
+        { "fieldPath": "groupNumber", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "playerMatchFacts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "tournamentId", "order": "ASCENDING" },
-        { "fieldPath": "outcome", "order": "ASCENDING" },
-        { "fieldPath": "playerHandicap", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "playerMatchFacts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "playerId", "order": "ASCENDING" },
-        { "fieldPath": "tournamentId", "order": "ASCENDING" },
-        { "fieldPath": "outcome", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "playerMatchFacts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "playerId", "order": "ASCENDING" },
-        { "fieldPath": "tournamentSeries", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "matches",
+      "collectionGroup": "groups",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "roundId", "order": "ASCENDING" },
-        { "fieldPath": "matchNumber", "order": "ASCENDING" }
+        { "fieldPath": "groupNumber", "order": "ASCENDING" }
       ]
     },
     {

@@ -1,5 +1,5 @@
 /**
- * Shared constants for the Rowdy Cup PWA
+ * Shared constants for the Nines Tournament PWA
  */
 
 // =============================================================================
@@ -15,9 +15,6 @@ export const SCORECARD_LABEL_WIDTH = 120;
 /** Width of OUT/IN/TOT summary columns in pixels */
 export const SCORECARD_TOTAL_COL_WIDTH = 48;
 
-/** Width of match-end divider column in pixels */
-export const SCORECARD_DIVIDER_WIDTH = 28;
-
 // =============================================================================
 // GOLF SCORING
 // =============================================================================
@@ -25,31 +22,8 @@ export const SCORECARD_DIVIDER_WIDTH = 28;
 /** Default course par when not specified */
 export const DEFAULT_COURSE_PAR = 72;
 
-/** Minimum drives required per player in scramble/shamble per 9 holes */
-export const MIN_DRIVES_PER_NINE = 3;
+/** Total points distributed per hole among 4 players */
+export const POINTS_PER_HOLE = 10;
 
-/** Total drives required per player per round (6 = 3 per 9) */
-export const MIN_DRIVES_PER_ROUND = 6;
-
-// =============================================================================
-// STAT BADGES & THRESHOLDS
-// =============================================================================
-
-/** 
- * Jekyll & Hyde threshold: If worst ball total - best ball total >= this value,
- * the team earns the Jekyll & Hyde badge (indicating wildly inconsistent play)
- */
-export const JEKYLL_AND_HYDE_THRESHOLD = 24;
-
-/**
- * Comeback/Blown Lead threshold: Number of holes a team must be down/up
- * on the back 9 to qualify for comeback win or blown lead badges
- */
-export const COMEBACK_THRESHOLD = 3;
-
-// =============================================================================
-// FIRESTORE LIMITS
-// =============================================================================
-
-/** Maximum IDs allowed in a Firestore 'in' query */
-export const FIRESTORE_IN_QUERY_LIMIT = 30;
+/** Number of players per group */
+export const PLAYERS_PER_GROUP = 4;
