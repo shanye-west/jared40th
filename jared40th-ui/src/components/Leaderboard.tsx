@@ -4,6 +4,13 @@ type LeaderboardProps = {
   tournament: TournamentDoc;
 };
 
+/** Derive a first name from a player ID like "pJaredLardeur" → "Jared" */
+function firstName(playerId: string): string {
+  const stripped = playerId.startsWith("p") ? playerId.slice(1) : playerId;
+  const match = stripped.match(/^[A-Z][a-z]*/);
+  return match ? match[0] : stripped;
+}
+
 export function Leaderboard({ tournament }: LeaderboardProps) {
   const { teams, scoreboard } = tournament;
   const totals = scoreboard?.teamTotals || [0, 0, 0, 0];
@@ -40,7 +47,7 @@ export function Leaderboard({ tournament }: LeaderboardProps) {
               </div>
               <div>
                 <div className="text-sm font-bold text-slate-800">{team.name}</div>
-                <div className="text-xs text-slate-400">{team.playerIds.length} players</div>
+                <div className="text-xs text-slate-400">{team.playerIds.map(firstName).join(", ")}</div>
               </div>
             </div>
 

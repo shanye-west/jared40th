@@ -125,7 +125,7 @@ export default function App() {
                         <div>
                           <div className="text-sm font-semibold text-slate-800">Group {g.groupNumber}</div>
                           <div className="text-xs text-slate-400 mt-0.5">
-                            {completed}/18 holes
+                            {completed === 18 ? "Final" : `Thru ${completed}`}
                           </div>
                         </div>
 
