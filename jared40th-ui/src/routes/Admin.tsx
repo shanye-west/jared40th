@@ -1,16 +1,17 @@
 import { useState, useLayoutEffect } from "react";
 import { useLayout } from "../contexts/LayoutContext";
 import { useTournamentContext } from "../contexts/TournamentContext";
+import TournamentPanel from "./admin/TournamentPanel";
 import CoursesPanel from "./admin/CoursesPanel";
 import RoundsPanel from "./admin/RoundsPanel";
 import GroupsPanel from "./admin/GroupsPanel";
 import GamesPanel from "./admin/GamesPanel";
 
-const tabs = ["Courses", "Rounds", "Groups", "Games"] as const;
+const tabs = ["Tournament", "Courses", "Rounds", "Groups", "Games"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState<Tab>("Courses");
+  const [activeTab, setActiveTab] = useState<Tab>("Tournament");
   const { setConfig } = useLayout();
   const { tournament, loading } = useTournamentContext();
 
@@ -26,6 +27,8 @@ export default function Admin() {
     );
   }
 
+  const needsTournament = activeTab !== "Tournament" && activeTab !== "Courses";
+
   return (
     <div className="px-4 pt-4">
       {/* Tab bar */}
@@ -34,7 +37,7 @@ export default function Admin() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+            className={`flex-1 rounded-lg px-2 py-2 text-xs font-semibold transition-colors ${
               activeTab === tab
                 ? "bg-white text-slate-900 shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
@@ -45,7 +48,7 @@ export default function Admin() {
         ))}
       </div>
 
-      {!tournament && activeTab !== "Courses" && (
+      {!tournament && needsTournament && (
         <div className="empty-state">
           <div className="empty-state-icon">--</div>
           <div className="empty-state-text">No active tournament found</div>
@@ -53,6 +56,7 @@ export default function Admin() {
       )}
 
       {/* Panel content */}
+      {activeTab === "Tournament" && <TournamentPanel tournament={tournament} />}
       {activeTab === "Courses" && <CoursesPanel />}
       {activeTab === "Rounds" && tournament && (
         <RoundsPanel tournament={tournament} />

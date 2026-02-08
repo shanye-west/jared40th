@@ -1,10 +1,11 @@
 /**
  * useGroupData - Real-time subscription to a single group document.
  * Also fetches the course for scorecard display.
+ * Resolves course from round.courseId first, then falls back to tournament.courseId.
  */
 
 import { useEffect, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useTournamentContext } from "../contexts/TournamentContext";
 import type { GroupDoc, CourseDoc } from "../types";
@@ -47,13 +48,33 @@ export function useGroupData(groupId: string | undefined) {
     return () => unsub();
   }, [groupId]);
 
-  // Fetch course when tournament is available
+  // Fetch course: check round.courseId first, then tournament.courseId
   useEffect(() => {
-    if (!tournament?.courseId) return;
-    getCourse(tournament.courseId).then((c) => {
-      if (c) setCourse(c);
-    });
-  }, [tournament?.courseId, getCourse]);
+    if (!group) return;
+
+    const resolveCourse = async () => {
+      // Try to get course from the round
+      if (group.roundId) {
+        const roundSnap = await getDoc(doc(db, "rounds", group.roundId));
+        const roundCourseId = roundSnap.data()?.courseId;
+        if (roundCourseId) {
+          const c = await getCourse(roundCourseId);
+          if (c) {
+            setCourse(c);
+            return;
+          }
+        }
+      }
+
+      // Fall back to tournament courseId
+      if (tournament?.courseId) {
+        const c = await getCourse(tournament.courseId);
+        if (c) setCourse(c);
+      }
+    };
+
+    resolveCourse();
+  }, [group?.roundId, tournament?.courseId, getCourse]);
 
   return { group, course, tournament, loading, error };
 }

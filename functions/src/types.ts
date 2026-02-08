@@ -57,7 +57,7 @@ export type TournamentDoc = {
   name: string;
   year: number;
   active: boolean;
-  courseId: string;
+  courseId?: string;
   roundIds?: string[];
   tournamentLogo?: string;
   teams: [TeamDef, TeamDef, TeamDef, TeamDef];
