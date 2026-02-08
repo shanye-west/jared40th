@@ -141,7 +141,7 @@ export default function Group() {
       </div>
 
       {/* Scrollable Scorecard */}
-      <div className="overflow-x-auto -mx-4 px-0">
+      <div className="overflow-x-auto -mx-4 px-4">
         <table className="border-collapse text-center text-sm" style={{ minWidth: "max-content" }}>
           <ScorecardTableHeader holes={holeData} totals={parTotals} courseTees={course?.tees} />
           <tbody>
