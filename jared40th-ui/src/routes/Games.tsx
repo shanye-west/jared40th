@@ -2,7 +2,7 @@
  * Games page - Shows optional side games: Gross/Net Skins and Gross/Net Cumulative.
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Trophy, DollarSign } from "lucide-react";
 import { useTournamentContext } from "../contexts/TournamentContext";
 import { useGroupListData } from "../hooks/useGroupListData";
@@ -14,9 +14,31 @@ import { computeSkins, computeCumulative } from "../utils/sideGames";
 import type { SideGameConfig } from "../types";
 
 export default function Games() {
-  const { tournament, loading } = useTournamentContext();
+  const { tournament, loading, getCourse } = useTournamentContext();
   const { groups: allGroups, loading: groupsLoading } = useGroupListData(tournament?.id);
   const { rounds } = useRounds(tournament?.roundIds);
+
+  // Build hole pars map: roundId → 18-element array of par values per hole
+  const [holeParsByRound, setHoleParsByRound] = useState<Record<string, number[]>>({});
+
+  useEffect(() => {
+    if (!rounds.length) return;
+
+    const fetchPars = async () => {
+      const result: Record<string, number[]> = {};
+      for (const round of rounds) {
+        const courseId = round.courseId || tournament?.courseId;
+        if (!courseId) continue;
+        const course = await getCourse(courseId);
+        if (course?.holes?.length === 18) {
+          result[round.id] = course.holes.map((h) => h.par);
+        }
+      }
+      setHoleParsByRound(result);
+    };
+
+    fetchPars();
+  }, [rounds, tournament?.courseId, getCourse]);
 
   const sideGames = tournament?.sideGames ?? [];
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
@@ -69,13 +91,12 @@ export default function Games() {
             game={selectedGame}
             allGroups={allGroups}
             rounds={rounds}
-            coursePar={72}
           />
         ) : (
           <CumulativeView
             game={selectedGame}
             allGroups={allGroups}
-            coursePar={72}
+            holeParsByRound={holeParsByRound}
           />
         )
       )}
@@ -98,12 +119,10 @@ function SkinsView({
   game,
   allGroups,
   rounds,
-  coursePar: _coursePar,
 }: {
   game: SideGameConfig;
   allGroups: GroupDoc[];
   rounds: RoundDoc[];
-  coursePar: number;
 }) {
   const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
   const activeRoundId = selectedRoundId ?? rounds[0]?.id;
@@ -234,15 +253,15 @@ function SkinsView({
 function CumulativeView({
   game,
   allGroups,
-  coursePar,
+  holeParsByRound,
 }: {
   game: SideGameConfig;
   allGroups: GroupDoc[];
-  coursePar: number;
+  holeParsByRound: Record<string, number[]>;
 }) {
   const result = useMemo(
-    () => computeCumulative(allGroups, game.playerIds, game.scoreType, coursePar),
-    [allGroups, game.playerIds, game.scoreType, coursePar]
+    () => computeCumulative(allGroups, game.playerIds, game.scoreType, holeParsByRound),
+    [allGroups, game.playerIds, game.scoreType, holeParsByRound]
   );
 
   return (

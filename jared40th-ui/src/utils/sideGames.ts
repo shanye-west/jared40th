@@ -157,18 +157,24 @@ export type CumulativeResult = {
 
 /**
  * Compute cumulative totals across all groups (all rounds).
- * Sums gross or net scores for each opted-in player across all 54 holes.
+ * Sums gross or net scores for each opted-in player across all holes.
+ *
+ * @param holeParsByRound - Map of roundId → 18-element array of par values per hole.
+ *   Used to compute accurate to-par based on actual hole pars.
+ *   Falls back to par 4 per hole if a round's pars are not provided.
  */
 export function computeCumulative(
   allGroups: GroupDoc[],
   optedInPlayerIds: string[],
   scoreType: "gross" | "net",
-  coursePar: number
+  holeParsByRound: Record<string, number[]>
 ): CumulativeResult {
   const optedInSet = new Set(optedInPlayerIds);
-  const playerMap = new Map<string, PlayerCumulativeResult>();
+  const playerMap = new Map<string, PlayerCumulativeResult & { parSum: number }>();
 
   for (const g of allGroups) {
+    const holePars = holeParsByRound[g.roundId];
+
     for (let i = 0; i < g.players.length; i++) {
       const p = g.players[i];
       if (!optedInSet.has(p.playerId)) continue;
@@ -180,6 +186,7 @@ export function computeCumulative(
           totalScore: 0,
           holesCompleted: 0,
           toPar: 0,
+          parSum: 0,
         });
       }
 
@@ -197,26 +204,31 @@ export function computeCumulative(
         if (rawScore != null) {
           entry.totalScore += rawScore;
           entry.holesCompleted++;
+          // Use actual hole par, fallback to 4
+          entry.parSum += holePars?.[h - 1] ?? 4;
         }
       }
     }
   }
 
-  // Count how many rounds of par to use based on groups
-  const roundCount = new Set(allGroups.map((g) => g.roundId)).size;
-  const totalPar = coursePar * roundCount;
-
-  for (const entry of playerMap.values()) {
-    // Calculate to-par based on holes actually completed
-    const expectedPar = (entry.holesCompleted / 18) * coursePar;
-    entry.toPar = entry.totalScore - Math.round(expectedPar);
+  // Compute totalPar from all rounds
+  let totalPar = 0;
+  const roundIds = new Set(allGroups.map((g) => g.roundId));
+  for (const rid of roundIds) {
+    const pars = holeParsByRound[rid];
+    totalPar += pars ? pars.reduce((a, b) => a + b, 0) : 72;
   }
 
-  const players = Array.from(playerMap.values()).sort((a, b) => {
-    // Sort by score to par ascending (lowest wins), then by holes completed descending
-    if (a.toPar !== b.toPar) return a.toPar - b.toPar;
-    return b.holesCompleted - a.holesCompleted;
-  });
+  for (const entry of playerMap.values()) {
+    entry.toPar = entry.totalScore - entry.parSum;
+  }
+
+  const players: PlayerCumulativeResult[] = Array.from(playerMap.values())
+    .map(({ parSum: _, ...rest }) => rest)
+    .sort((a, b) => {
+      if (a.toPar !== b.toPar) return a.toPar - b.toPar;
+      return b.holesCompleted - a.holesCompleted;
+    });
 
   return { players, totalPar };
 }
