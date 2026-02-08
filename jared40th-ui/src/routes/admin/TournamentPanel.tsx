@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   collection,
   addDoc,
@@ -10,10 +10,10 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../../firebase";
-import type { TournamentDoc } from "../../types";
+import type { TournamentDoc, PlayerDoc, TeamDef } from "../../types";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
-import { Plus, RotateCcw, Save, X } from "lucide-react";
+import { Plus, RotateCcw, Save, X, UserPlus, UserMinus } from "lucide-react";
 
 const RESET_PASSCODE = "2026";
 
@@ -47,6 +47,19 @@ export default function TournamentPanel({ tournament }: Props) {
   const [passcode, setPasscode] = useState("");
   const [passcodeError, setPasscodeError] = useState(false);
 
+  // Player management
+  const [allPlayers, setAllPlayers] = useState<PlayerDoc[]>([]);
+  const [expandedTeam, setExpandedTeam] = useState<number | null>(null);
+
+  useEffect(() => {
+    getDocs(collection(db, "players")).then((snap) => {
+      const list = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as PlayerDoc)
+        .sort((a, b) => (a.displayName ?? "").localeCompare(b.displayName ?? ""));
+      setAllPlayers(list);
+    });
+  }, []);
+
   const handleReset = async () => {
     if (passcode !== RESET_PASSCODE) {
       setPasscodeError(true);
@@ -56,21 +69,16 @@ export default function TournamentPanel({ tournament }: Props) {
 
     setResetting(true);
 
-    // Delete all groups for this tournament
     const groupsSnap = await getDocs(
       query(collection(db, "groups"), where("tournamentId", "==", tournament.id))
     );
-    const groupDeletes = groupsSnap.docs.map((d) => deleteDoc(d.ref));
-    await Promise.all(groupDeletes);
+    await Promise.all(groupsSnap.docs.map((d) => deleteDoc(d.ref)));
 
-    // Delete all rounds for this tournament
     const roundsSnap = await getDocs(
       query(collection(db, "rounds"), where("tournamentId", "==", tournament.id))
     );
-    const roundDeletes = roundsSnap.docs.map((d) => deleteDoc(d.ref));
-    await Promise.all(roundDeletes);
+    await Promise.all(roundsSnap.docs.map((d) => deleteDoc(d.ref)));
 
-    // Deactivate the tournament
     await updateDoc(doc(db, "tournaments", tournament.id), { active: false });
 
     setResetting(false);
@@ -113,6 +121,41 @@ export default function TournamentPanel({ tournament }: Props) {
     const next = form.teams.map((t, i) => (i === index ? { ...t, [field]: value } : t));
     setForm({ ...form, teams: next });
   };
+
+  /** Add a player to a team */
+  const addPlayerToTeam = async (teamIndex: number, playerId: string) => {
+    if (!tournament) return;
+    const teams = tournament.teams.map((t, i) => {
+      if (i !== teamIndex) return t;
+      if (t.playerIds.includes(playerId)) return t;
+      return { ...t, playerIds: [...t.playerIds, playerId] };
+    });
+    await updateDoc(doc(db, "tournaments", tournament.id), { teams });
+  };
+
+  /** Remove a player from a team */
+  const removePlayerFromTeam = async (teamIndex: number, playerId: string) => {
+    if (!tournament) return;
+    const teams = tournament.teams.map((t, i) => {
+      if (i !== teamIndex) return t;
+      return { ...t, playerIds: t.playerIds.filter((pid) => pid !== playerId) };
+    });
+    await updateDoc(doc(db, "tournaments", tournament.id), { teams });
+  };
+
+  /** Get IDs of all players already assigned to any team */
+  const assignedPlayerIds = tournament
+    ? tournament.teams.flatMap((t) => t.playerIds)
+    : [];
+
+  /** Get unassigned players */
+  const unassignedPlayers = allPlayers.filter((p) => !assignedPlayerIds.includes(p.id));
+
+  const playerName = (pid: string) =>
+    allPlayers.find((p) => p.id === pid)?.displayName ?? pid;
+
+  const playerHcp = (pid: string) =>
+    allPlayers.find((p) => p.id === pid)?.handicapIndex;
 
   // No active tournament — show create form
   if (!tournament) {
@@ -188,7 +231,7 @@ export default function TournamentPanel({ tournament }: Props) {
     );
   }
 
-  // Active tournament — show info + reset
+  // Active tournament — show info + team management + reset
   return (
     <div className="space-y-3">
       <Card className="p-4">
@@ -199,23 +242,6 @@ export default function TournamentPanel({ tournament }: Props) {
           </div>
           <div className="text-xs text-slate-500">Year: {tournament.year}</div>
           <div className="text-[0.65rem] text-slate-400 font-mono">ID: {tournament.id}</div>
-
-          {/* Teams summary */}
-          <div className="space-y-1 pt-2 border-t border-slate-100">
-            <div className="text-xs font-semibold text-slate-500">Teams</div>
-            {tournament.teams.map((team, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs text-slate-600">
-                <span
-                  className="inline-block h-3 w-3 rounded-full"
-                  style={{ backgroundColor: team.color }}
-                />
-                <span className="font-medium">{team.name}</span>
-                <span className="text-slate-400">
-                  ({team.playerIds.length} players)
-                </span>
-              </div>
-            ))}
-          </div>
 
           {/* Scoreboard summary */}
           <div className="pt-2 border-t border-slate-100">
@@ -236,12 +262,29 @@ export default function TournamentPanel({ tournament }: Props) {
             </div>
           </div>
 
-          {/* Rounds / Games count */}
           <div className="pt-2 border-t border-slate-100 text-xs text-slate-500">
             Rounds: {tournament.roundIds?.length ?? 0} / Side Games: {tournament.sideGames?.length ?? 0}
           </div>
         </div>
       </Card>
+
+      {/* Teams with player assignment */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold text-slate-700">Teams & Players</h3>
+        {tournament.teams.map((team, ti) => (
+          <TeamCard
+            key={ti}
+            team={team}
+            expanded={expandedTeam === ti}
+            onToggle={() => setExpandedTeam(expandedTeam === ti ? null : ti)}
+            unassignedPlayers={unassignedPlayers}
+            playerName={playerName}
+            playerHcp={playerHcp}
+            onAddPlayer={(pid) => addPlayerToTeam(ti, pid)}
+            onRemovePlayer={(pid) => removePlayerFromTeam(ti, pid)}
+          />
+        ))}
+      </div>
 
       {/* Reset section */}
       {showPasscode ? (
@@ -307,5 +350,106 @@ export default function TournamentPanel({ tournament }: Props) {
         </Button>
       )}
     </div>
+  );
+}
+
+/** Expandable team card with player add/remove */
+function TeamCard({
+  team,
+  expanded,
+  onToggle,
+  unassignedPlayers,
+  playerName,
+  playerHcp,
+  onAddPlayer,
+  onRemovePlayer,
+}: {
+  team: TeamDef;
+  expanded: boolean;
+  onToggle: () => void;
+  unassignedPlayers: PlayerDoc[];
+  playerName: (pid: string) => string;
+  playerHcp: (pid: string) => number | undefined;
+  onAddPlayer: (pid: string) => Promise<void>;
+  onRemovePlayer: (pid: string) => Promise<void>;
+}) {
+  const [addingId, setAddingId] = useState("");
+
+  const handleAdd = async () => {
+    if (!addingId) return;
+    await onAddPlayer(addingId);
+    setAddingId("");
+  };
+
+  return (
+    <Card className="p-3">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between text-left"
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-block h-4 w-4 rounded-full"
+            style={{ backgroundColor: team.color }}
+          />
+          <span className="text-sm font-semibold text-slate-800">{team.name}</span>
+          <span className="text-xs text-slate-400">({team.playerIds.length} players)</span>
+        </div>
+        <span className="text-xs text-slate-400">{expanded ? "▲" : "▼"}</span>
+      </button>
+
+      {expanded && (
+        <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+          {/* Current players */}
+          {team.playerIds.length === 0 && (
+            <div className="text-xs text-slate-400 italic">No players assigned</div>
+          )}
+          {team.playerIds.map((pid) => (
+            <div key={pid} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5">
+              <div>
+                <span className="text-sm font-medium text-slate-700">{playerName(pid)}</span>
+                <span className="ml-2 text-xs text-slate-400">
+                  HCP {playerHcp(pid) ?? "—"}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => onRemovePlayer(pid)}
+              >
+                <UserMinus className="h-3.5 w-3.5 text-red-500" />
+              </Button>
+            </div>
+          ))}
+
+          {/* Add player */}
+          {unassignedPlayers.length > 0 && (
+            <div className="flex items-center gap-2 pt-1">
+              <select
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                value={addingId}
+                onChange={(e) => setAddingId(e.target.value)}
+              >
+                <option value="">Add a player...</option>
+                {unassignedPlayers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.displayName ?? p.id} (HCP {p.handicapIndex ?? "—"})
+                  </option>
+                ))}
+              </select>
+              <Button size="sm" disabled={!addingId} onClick={handleAdd} className="h-8">
+                <UserPlus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
+          {unassignedPlayers.length === 0 && team.playerIds.length > 0 && (
+            <div className="text-xs text-slate-400 italic">All players assigned</div>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

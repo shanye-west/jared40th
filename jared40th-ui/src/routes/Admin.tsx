@@ -6,8 +6,9 @@ import CoursesPanel from "./admin/CoursesPanel";
 import RoundsPanel from "./admin/RoundsPanel";
 import GroupsPanel from "./admin/GroupsPanel";
 import GamesPanel from "./admin/GamesPanel";
+import PlayersPanel from "./admin/PlayersPanel";
 
-const tabs = ["Tournament", "Courses", "Rounds", "Groups", "Games"] as const;
+const tabs = ["Tournament", "Players", "Courses", "Rounds", "Groups", "Games"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function Admin() {
@@ -27,7 +28,7 @@ export default function Admin() {
     );
   }
 
-  const needsTournament = activeTab !== "Tournament" && activeTab !== "Courses";
+  const needsTournament = activeTab !== "Tournament" && activeTab !== "Courses" && activeTab !== "Players";
 
   return (
     <div className="px-4 pt-4">
@@ -57,6 +58,7 @@ export default function Admin() {
 
       {/* Panel content */}
       {activeTab === "Tournament" && <TournamentPanel tournament={tournament} />}
+      {activeTab === "Players" && <PlayersPanel />}
       {activeTab === "Courses" && <CoursesPanel />}
       {activeTab === "Rounds" && tournament && (
         <RoundsPanel tournament={tournament} />
