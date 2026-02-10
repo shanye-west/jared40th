@@ -172,7 +172,7 @@ function SkinsView({
       <section className="mb-6">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Leaderboard</h3>
         <div className="space-y-1.5">
-          {result.players.map((p, rank) => (
+          {result.players.filter((p) => p.skinsWon > 0).map((p, rank) => (
             <Card key={p.playerId}>
               <CardContent className="py-2.5 px-4">
                 <div className="flex items-center justify-between">
@@ -199,8 +199,8 @@ function SkinsView({
               </CardContent>
             </Card>
           ))}
-          {result.players.length === 0 && (
-            <div className="text-center py-6 text-slate-400 text-sm">No players in this game</div>
+          {result.players.every((p) => p.skinsWon === 0) && (
+            <div className="text-center py-6 text-slate-400 text-sm">No skins won yet</div>
           )}
         </div>
       </section>
@@ -220,22 +220,35 @@ function SkinsView({
                 </div>
                 <div>
                   {h.winnerId ? (
-                    <div className="text-sm font-semibold text-slate-800">
-                      <Trophy className="inline h-3.5 w-3.5 text-amber-500 mr-1" />
-                      {h.winnerName}
-                    </div>
+                    <>
+                      <div className="text-sm font-semibold text-slate-800">
+                        <Trophy className="inline h-3.5 w-3.5 text-amber-500 mr-1" />
+                        {h.winnerName}
+                      </div>
+                    </>
                   ) : h.allCompleted ? (
                     <div className="text-sm text-slate-400">
                       No skin ({h.tiedCount} tied)
                     </div>
+                  ) : h.playersCompleted > 0 ? (
+                    <>
+                      <div className="text-sm font-semibold text-slate-600">
+                        {h.leadingName
+                          ? h.leadingName
+                          : `${h.tiedCount} players tied`}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {h.playersCompleted} of {h.totalPlayers} complete
+                      </div>
+                    </>
                   ) : (
-                    <div className="text-sm text-slate-300">In progress</div>
+                    <div className="text-sm text-slate-300">Waiting for scores</div>
                   )}
                 </div>
               </div>
-              {h.winnerScore != null && h.winnerId && (
+              {h.leadingScore != null && h.playersCompleted > 0 && (
                 <div className="text-xs font-semibold text-slate-500">
-                  {h.winnerScore}
+                  {h.leadingScore}
                 </div>
               )}
             </div>

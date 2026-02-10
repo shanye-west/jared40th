@@ -7,7 +7,7 @@ type LeaderboardProps = {
 /** Derive a first name from a player ID like "pJaredLardeur" → "Jared" */
 function firstName(playerId: string): string {
   const stripped = playerId.startsWith("p") ? playerId.slice(1) : playerId;
-  const match = stripped.match(/^[A-Z][a-z]*/);
+  const match = stripped.match(/^[A-Z]+(?=[A-Z][a-z])|^[A-Z][a-z]*/);
   return match ? match[0] : stripped;
 }
 

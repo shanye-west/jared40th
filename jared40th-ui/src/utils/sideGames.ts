@@ -16,6 +16,12 @@ export type HoleSkinResult = {
   winnerScore: number | null;
   tiedCount: number;
   allCompleted: boolean;
+  playersCompleted: number;
+  totalPlayers: number;
+  /** Name of the current leader when hole is still in progress */
+  leadingName: string | null;
+  /** Best score so far (set even when in progress) */
+  leadingScore: number | null;
 };
 
 export type PlayerSkinsResult = {
@@ -62,6 +68,8 @@ export function computeSkins(
     }
   }
 
+  const totalPlayers = optedInPlayerIds.length;
+
   for (let h = 1; h <= 18; h++) {
     const key = String(h);
     const scores: { playerId: string; displayName: string; score: number }[] = [];
@@ -90,16 +98,18 @@ export function computeSkins(
       }
     }
 
+    const playersCompleted = scores.length;
+
     if (scores.length === 0) {
-      holes.push({ holeNumber: h, winnerId: null, winnerName: null, winnerScore: null, tiedCount: 0, allCompleted: false });
+      holes.push({ holeNumber: h, winnerId: null, winnerName: null, winnerScore: null, tiedCount: 0, allCompleted: false, playersCompleted: 0, totalPlayers, leadingName: null, leadingScore: null });
       continue;
     }
 
     const minScore = Math.min(...scores.map((s) => s.score));
-    const winners = scores.filter((s) => s.score === minScore);
+    const leaders = scores.filter((s) => s.score === minScore);
 
-    if (winners.length === 1) {
-      const winner = winners[0];
+    if (leaders.length === 1) {
+      const winner = leaders[0];
       holes.push({
         holeNumber: h,
         winnerId: winner.playerId,
@@ -107,6 +117,10 @@ export function computeSkins(
         winnerScore: winner.score,
         tiedCount: 0,
         allCompleted,
+        playersCompleted,
+        totalPlayers,
+        leadingName: winner.displayName,
+        leadingScore: winner.score,
       });
       const entry = playerMap.get(winner.playerId);
       if (entry) {
@@ -119,8 +133,12 @@ export function computeSkins(
         winnerId: null,
         winnerName: null,
         winnerScore: minScore,
-        tiedCount: winners.length,
+        tiedCount: leaders.length,
         allCompleted,
+        playersCompleted,
+        totalPlayers,
+        leadingName: null,
+        leadingScore: minScore,
       });
     }
   }
