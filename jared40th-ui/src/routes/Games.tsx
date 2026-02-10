@@ -220,29 +220,25 @@ function SkinsView({
                 </div>
                 <div>
                   {h.winnerId ? (
-                    <>
-                      <div className="text-sm font-semibold text-slate-800">
-                        <Trophy className="inline h-3.5 w-3.5 text-amber-500 mr-1" />
-                        {h.winnerName}
-                      </div>
-                    </>
-                  ) : h.allCompleted ? (
-                    <div className="text-sm text-slate-400">
-                      No skin ({h.tiedCount} tied)
+                    <div className="text-sm font-semibold text-slate-800">
+                      <Trophy className="inline h-3.5 w-3.5 text-amber-500 mr-1" />
+                      {h.winnerName}
                     </div>
                   ) : h.playersCompleted > 0 ? (
-                    <>
-                      <div className="text-sm font-semibold text-slate-600">
-                        {h.leadingName
-                          ? h.leadingName
-                          : `${h.tiedCount} players tied`}
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        {h.playersCompleted} of {h.totalPlayers} complete
-                      </div>
-                    </>
+                    <div className="text-sm text-slate-600">
+                      {h.tiedCount > 1
+                        ? `${h.tiedCount} players tied`
+                        : h.leadingName ?? "No skin"}
+                    </div>
                   ) : (
                     <div className="text-sm text-slate-300">Waiting for scores</div>
+                  )}
+                  {h.playersCompleted > 0 && (
+                    <div className="text-xs text-slate-400">
+                      {h.allCompleted
+                        ? "All players complete"
+                        : `${h.playersCompleted} of ${h.totalPlayers} complete`}
+                    </div>
                   )}
                 </div>
               </div>
