@@ -13,6 +13,13 @@ export type HoleInfo = {
   yards?: number;
 };
 
+export type TeeSet = {
+  name: string;       // e.g., "Blue", "White", "Red"
+  rating: number;     // USGA course rating
+  slope: number;      // USGA slope rating
+  yards?: number[];   // 18-element array of per-hole yardages
+};
+
 export type CourseDoc = {
   id: string;
   name: string;
@@ -21,6 +28,7 @@ export type CourseDoc = {
   rating?: number;
   slope?: number;
   holes: HoleInfo[];
+  teesets?: TeeSet[];
 };
 
 // ============================================================================
@@ -98,6 +106,7 @@ export type GroupPlayer = {
   handicapIndex: number;
   courseHandicap: number;
   strokesReceived: number[];
+  teeSetName?: string;
 };
 
 export type HoleScores = {

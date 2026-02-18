@@ -129,7 +129,11 @@ export default function Group() {
                 <div className="w-2 h-8 rounded-full" style={{ backgroundColor: color }} />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-slate-700 truncate">{p.displayName}</div>
-                  <div className="text-[0.6rem] text-slate-400">{name}</div>
+                  <div className="text-[0.6rem] text-slate-400">
+                    {name}
+                    {p.teeSetName ? ` · ${p.teeSetName}` : ""}
+                    {` (${p.courseHandicap})`}
+                  </div>
                 </div>
                 <div className="text-lg font-bold" style={{ color }}>
                   {pts % 1 === 0 ? pts : pts.toFixed(1)}

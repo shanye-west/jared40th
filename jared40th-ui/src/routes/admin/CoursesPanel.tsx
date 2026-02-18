@@ -8,7 +8,7 @@ import {
   doc,
 } from "firebase/firestore";
 import { db } from "../../firebase";
-import type { CourseDoc, HoleInfo } from "../../types";
+import type { CourseDoc, HoleInfo, TeeSet } from "../../types";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Pencil, Trash2, Plus, ChevronDown, ChevronUp, Save, X } from "lucide-react";
@@ -217,12 +217,108 @@ export default function CoursesPanel() {
             </div>
           </div>
 
-          {/* Expanded hole editor */}
+          {/* Tee sets summary */}
+          {course.teesets && course.teesets.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {course.teesets.map((ts, i) => (
+                <span key={i} className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] text-slate-600">
+                  {ts.name} ({ts.rating}/{ts.slope})
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Expanded editors */}
           {expandedId === course.id && (
-            <HoleEditor course={course} onSave={fetchCourses} />
+            <>
+              <TeeSetEditor course={course} onSave={fetchCourses} />
+              <HoleEditor course={course} onSave={fetchCourses} />
+            </>
           )}
         </Card>
       ))}
+    </div>
+  );
+}
+
+/** Inline editor for tee sets of a course */
+function TeeSetEditor({ course, onSave }: { course: CourseDoc; onSave: () => Promise<void> }) {
+  const [teesets, setTeesets] = useState<TeeSet[]>(course.teesets ?? []);
+  const [saving, setSaving] = useState(false);
+
+  const addTeeSet = () => {
+    setTeesets([...teesets, { name: "", rating: 72, slope: 113 }]);
+  };
+
+  const removeTeeSet = (idx: number) => {
+    setTeesets(teesets.filter((_, i) => i !== idx));
+  };
+
+  const updateTeeSet = (idx: number, field: keyof TeeSet, value: string) => {
+    const next = [...teesets];
+    if (field === "name") {
+      next[idx] = { ...next[idx], name: value };
+    } else if (field === "rating" || field === "slope") {
+      next[idx] = { ...next[idx], [field]: value === "" ? 0 : Number(value) };
+    }
+    setTeesets(next);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    await updateDoc(doc(db, "courses", course.id), { teesets });
+    setSaving(false);
+    await onSave();
+  };
+
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-3">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-bold text-slate-600">Tee Sets</h4>
+        <Button onClick={addTeeSet} variant="ghost" size="sm" className="h-6 text-xs">
+          <Plus className="h-3 w-3" />
+          Add Tee Set
+        </Button>
+      </div>
+      {teesets.length === 0 && (
+        <p className="text-xs text-slate-400">No tee sets. Add one to enable per-player tee selection.</p>
+      )}
+      <div className="space-y-2">
+        {teesets.map((ts, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              className="w-20 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              value={ts.name}
+              onChange={(e) => updateTeeSet(i, "name", e.target.value)}
+              placeholder="Name"
+            />
+            <input
+              type="number"
+              step="0.1"
+              className="w-16 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              value={ts.rating || ""}
+              onChange={(e) => updateTeeSet(i, "rating", e.target.value)}
+              placeholder="Rating"
+            />
+            <input
+              type="number"
+              className="w-16 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              value={ts.slope || ""}
+              onChange={(e) => updateTeeSet(i, "slope", e.target.value)}
+              placeholder="Slope"
+            />
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeTeeSet(i)}>
+              <Trash2 className="h-3 w-3 text-red-500" />
+            </Button>
+          </div>
+        ))}
+      </div>
+      {teesets.length > 0 && (
+        <Button onClick={save} disabled={saving} size="sm" className="mt-2">
+          <Save className="h-4 w-4" />
+          {saving ? "Saving..." : "Save Tee Sets"}
+        </Button>
+      )}
     </div>
   );
 }
