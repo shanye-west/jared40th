@@ -245,13 +245,15 @@ export default function CoursesPanel() {
 function TeeSetEditor({ course, onSave }: { course: CourseDoc; onSave: () => Promise<void> }) {
   const [teesets, setTeesets] = useState<TeeSet[]>(course.teesets ?? []);
   const [saving, setSaving] = useState(false);
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
   const addTeeSet = () => {
-    setTeesets([...teesets, { name: "", rating: 72, slope: 113 }]);
+    setTeesets([...teesets, { name: "", rating: 72, slope: 113, yards: new Array(18).fill(0) }]);
   };
 
   const removeTeeSet = (idx: number) => {
     setTeesets(teesets.filter((_, i) => i !== idx));
+    if (expandedIdx === idx) setExpandedIdx(null);
   };
 
   const updateTeeSet = (idx: number, field: keyof TeeSet, value: string) => {
@@ -261,6 +263,14 @@ function TeeSetEditor({ course, onSave }: { course: CourseDoc; onSave: () => Pro
     } else if (field === "rating" || field === "slope") {
       next[idx] = { ...next[idx], [field]: value === "" ? 0 : Number(value) };
     }
+    setTeesets(next);
+  };
+
+  const updateYardage = (teeIdx: number, holeIdx: number, value: string) => {
+    const next = [...teesets];
+    const yards = [...(next[teeIdx].yards || new Array(18).fill(0))];
+    yards[holeIdx] = value === "" ? 0 : Number(value);
+    next[teeIdx] = { ...next[teeIdx], yards };
     setTeesets(next);
   };
 
@@ -285,31 +295,74 @@ function TeeSetEditor({ course, onSave }: { course: CourseDoc; onSave: () => Pro
       )}
       <div className="space-y-2">
         {teesets.map((ts, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <input
-              className="w-20 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              value={ts.name}
-              onChange={(e) => updateTeeSet(i, "name", e.target.value)}
-              placeholder="Name"
-            />
-            <input
-              type="number"
-              step="0.1"
-              className="w-16 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              value={ts.rating || ""}
-              onChange={(e) => updateTeeSet(i, "rating", e.target.value)}
-              placeholder="Rating"
-            />
-            <input
-              type="number"
-              className="w-16 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              value={ts.slope || ""}
-              onChange={(e) => updateTeeSet(i, "slope", e.target.value)}
-              placeholder="Slope"
-            />
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeTeeSet(i)}>
-              <Trash2 className="h-3 w-3 text-red-500" />
-            </Button>
+          <div key={i} className="rounded-lg border border-slate-100 p-2">
+            <div className="flex items-center gap-2">
+              <input
+                className="w-20 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                value={ts.name}
+                onChange={(e) => updateTeeSet(i, "name", e.target.value)}
+                placeholder="Name"
+              />
+              <input
+                type="number"
+                step="0.1"
+                className="w-16 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                value={ts.rating || ""}
+                onChange={(e) => updateTeeSet(i, "rating", e.target.value)}
+                placeholder="Rating"
+              />
+              <input
+                type="number"
+                className="w-16 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                value={ts.slope || ""}
+                onChange={(e) => updateTeeSet(i, "slope", e.target.value)}
+                placeholder="Slope"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setExpandedIdx(expandedIdx === i ? null : i)}
+              >
+                {expandedIdx === i ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeTeeSet(i)}>
+                <Trash2 className="h-3 w-3 text-red-500" />
+              </Button>
+            </div>
+
+            {/* Per-hole yardages */}
+            {expandedIdx === i && (
+              <div className="mt-2 overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-slate-500">
+                      <th className="px-1 py-1 text-left">Hole</th>
+                      <th className="px-1 py-1">Yards</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 18 }, (_, h) => (
+                      <tr key={h} className="border-t border-slate-50">
+                        <td className="px-1 py-1 font-semibold text-slate-600">{h + 1}</td>
+                        <td className="px-1 py-1">
+                          <input
+                            type="number"
+                            className="w-16 rounded border border-slate-200 px-1 py-0.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                            value={ts.yards?.[h] || ""}
+                            onChange={(e) => updateYardage(i, h, e.target.value)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -357,7 +410,6 @@ function HoleEditor({ course, onSave }: { course: CourseDoc; onSave: () => Promi
               <th className="px-1 py-1 text-left">Hole</th>
               <th className="px-1 py-1">Par</th>
               <th className="px-1 py-1">HCP</th>
-              <th className="px-1 py-1">Yards</th>
             </tr>
           </thead>
           <tbody>
@@ -378,14 +430,6 @@ function HoleEditor({ course, onSave }: { course: CourseDoc; onSave: () => Promi
                     className="w-14 rounded border border-slate-200 px-1 py-0.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                     value={h.hcpIndex}
                     onChange={(e) => update(i, "hcpIndex", e.target.value)}
-                  />
-                </td>
-                <td className="px-1 py-1">
-                  <input
-                    type="number"
-                    className="w-16 rounded border border-slate-200 px-1 py-0.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                    value={h.yards ?? ""}
-                    onChange={(e) => update(i, "yards", e.target.value)}
                   />
                 </td>
               </tr>
