@@ -11,10 +11,9 @@ type HoleData = {
 type ScorecardTableHeaderProps = {
   holes: HoleData[];
   totals: { parOut: number; parIn: number; parTotal: number };
-  courseTees?: string;
 };
 
-export function ScorecardTableHeader({ holes, totals, courseTees }: ScorecardTableHeaderProps) {
+export function ScorecardTableHeader({ holes, totals }: ScorecardTableHeaderProps) {
   const cellWidth = SCORECARD_CELL_WIDTH;
   const labelWidth = SCORECARD_LABEL_WIDTH;
   const totalColWidth = SCORECARD_TOTAL_COL_WIDTH;
@@ -84,7 +83,7 @@ export function ScorecardTableHeader({ holes, totals, courseTees }: ScorecardTab
 
       {/* Yardage Row */}
       <tr className="bg-slate-50 text-slate-900 text-xs border-b border-slate-200">
-        <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1 capitalize">{courseTees || "Yards"}</td>
+        <td className="sticky left-0 z-10 bg-slate-50 text-left px-3 py-1">Yards</td>
         {holes.slice(0, 9).map((h) => (
           <td key={h.k} className="py-1">{h.yards || ""}</td>
         ))}

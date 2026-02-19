@@ -42,27 +42,10 @@ const emptyForm: GroupForm = {
   teeSelections: ["", "", "", ""],
 };
 
-/** Get all tee set options for a course (combines legacy fields + teesets array) */
+/** Get all tee set options for a course */
 function getCourseTeeOptions(course: CourseDoc | null): TeeSet[] {
-  if (!course) return [];
-  const options: TeeSet[] = [];
-  // Legacy top-level tee fields as a tee set option
-  if (course.rating && course.slope) {
-    options.push({
-      name: course.tees || "Default",
-      rating: course.rating,
-      slope: course.slope,
-    });
-  }
-  // Additional tee sets
-  if (course.teesets) {
-    for (const ts of course.teesets) {
-      // Avoid duplicating if same name as legacy
-      if (options.length > 0 && ts.name === options[0].name) continue;
-      options.push(ts);
-    }
-  }
-  return options;
+  if (!course?.teesets) return [];
+  return course.teesets;
 }
 
 /** Compute course handicap from index, slope, rating, par */
@@ -183,12 +166,12 @@ export default function GroupsPanel({ tournament }: Props) {
       const selectedTeeName = form.teeSelections[teamIndex];
       const selectedTee = teeOptions.find((t) => t.name === selectedTeeName);
 
-      // Use selected tee's rating/slope, or fall back to course-level values
-      const slope = selectedTee?.slope ?? course?.slope ?? 113;
-      const rating = selectedTee?.rating ?? course?.rating ?? 72;
-      const par = course?.par ?? 72;
+      // Use selected tee's rating/slope/par
+      const slope = selectedTee?.slope ?? 113;
+      const rating = selectedTee?.rating ?? 72;
+      const par = selectedTee?.par ?? 72;
 
-      const courseHcp = course
+      const courseHcp = selectedTee
         ? computeCourseHandicap(hcpIndex, slope, rating, par)
         : Math.min(Math.max(Math.round(hcpIndex), 0), 18);
       const strokes = course?.holes?.length === 18

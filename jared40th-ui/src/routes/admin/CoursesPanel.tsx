@@ -15,13 +15,9 @@ import { Pencil, Trash2, Plus, ChevronDown, ChevronUp, Save, X } from "lucide-re
 
 type CourseForm = {
   name: string;
-  tees: string;
-  par: string;
-  rating: string;
-  slope: string;
 };
 
-const emptyCourseForm: CourseForm = { name: "", tees: "", par: "72", rating: "", slope: "" };
+const emptyCourseForm: CourseForm = { name: "" };
 
 export default function CoursesPanel() {
   const [courses, setCourses] = useState<CourseDoc[]>([]);
@@ -45,15 +41,7 @@ export default function CoursesPanel() {
   const handleSave = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
-    const data: any = {
-      name: form.name.trim(),
-      tees: form.tees.trim() || undefined,
-      par: form.par ? Number(form.par) : undefined,
-      rating: form.rating ? Number(form.rating) : undefined,
-      slope: form.slope ? Number(form.slope) : undefined,
-    };
-    // Clean undefined values
-    Object.keys(data).forEach((k) => data[k] === undefined && delete data[k]);
+    const data = { name: form.name.trim() };
 
     if (editingId) {
       await updateDoc(doc(db, "courses", editingId), data);
@@ -68,13 +56,7 @@ export default function CoursesPanel() {
   };
 
   const handleEdit = (course: CourseDoc) => {
-    setForm({
-      name: course.name,
-      tees: course.tees || "",
-      par: course.par?.toString() || "",
-      rating: course.rating?.toString() || "",
-      slope: course.slope?.toString() || "",
-    });
+    setForm({ name: course.name });
     setEditingId(course.id);
     setShowForm(true);
   };
@@ -107,53 +89,14 @@ export default function CoursesPanel() {
           <h3 className="text-sm font-bold text-slate-700">
             {editingId ? "Edit Course" : "New Course"}
           </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <label className="text-xs font-semibold text-slate-500">Name</label>
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Course name"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500">Tees</label>
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                value={form.tees}
-                onChange={(e) => setForm({ ...form, tees: e.target.value })}
-                placeholder="e.g. Blue"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500">Par</label>
-              <input
-                type="number"
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                value={form.par}
-                onChange={(e) => setForm({ ...form, par: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500">Rating</label>
-              <input
-                type="number"
-                step="0.1"
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                value={form.rating}
-                onChange={(e) => setForm({ ...form, rating: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500">Slope</label>
-              <input
-                type="number"
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                value={form.slope}
-                onChange={(e) => setForm({ ...form, slope: e.target.value })}
-              />
-            </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Name</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Course name"
+            />
           </div>
           <div className="flex gap-2 pt-1">
             <Button onClick={handleSave} disabled={saving || !form.name.trim()} size="sm">
@@ -185,16 +128,6 @@ export default function CoursesPanel() {
           <div className="flex items-center justify-between">
             <div>
               <div className="font-semibold text-slate-800">{course.name}</div>
-              <div className="text-xs text-slate-500">
-                {[
-                  course.tees && `Tees: ${course.tees}`,
-                  course.par && `Par ${course.par}`,
-                  course.rating && `Rating ${course.rating}`,
-                  course.slope && `Slope ${course.slope}`,
-                ]
-                  .filter(Boolean)
-                  .join(" / ")}
-              </div>
             </div>
             <div className="flex items-center gap-1">
               <Button
@@ -222,7 +155,7 @@ export default function CoursesPanel() {
             <div className="mt-1 flex flex-wrap gap-1">
               {course.teesets.map((ts, i) => (
                 <span key={i} className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] text-slate-600">
-                  {ts.name} ({ts.rating}/{ts.slope})
+                  {ts.name} (Par {ts.par} / {ts.rating} / {ts.slope})
                 </span>
               ))}
             </div>
@@ -248,7 +181,7 @@ function TeeSetEditor({ course, onSave }: { course: CourseDoc; onSave: () => Pro
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
   const addTeeSet = () => {
-    setTeesets([...teesets, { name: "", rating: 72, slope: 113, yards: new Array(18).fill(0) }]);
+    setTeesets([...teesets, { name: "", par: 72, rating: 72, slope: 113, yards: new Array(18).fill(0) }]);
   };
 
   const removeTeeSet = (idx: number) => {
@@ -260,7 +193,7 @@ function TeeSetEditor({ course, onSave }: { course: CourseDoc; onSave: () => Pro
     const next = [...teesets];
     if (field === "name") {
       next[idx] = { ...next[idx], name: value };
-    } else if (field === "rating" || field === "slope") {
+    } else if (field === "par" || field === "rating" || field === "slope") {
       next[idx] = { ...next[idx], [field]: value === "" ? 0 : Number(value) };
     }
     setTeesets(next);
@@ -302,6 +235,13 @@ function TeeSetEditor({ course, onSave }: { course: CourseDoc; onSave: () => Pro
                 value={ts.name}
                 onChange={(e) => updateTeeSet(i, "name", e.target.value)}
                 placeholder="Name"
+              />
+              <input
+                type="number"
+                className="w-12 rounded border border-slate-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                value={ts.par || ""}
+                onChange={(e) => updateTeeSet(i, "par", e.target.value)}
+                placeholder="Par"
               />
               <input
                 type="number"

@@ -17,16 +17,13 @@ export type TeeSet = {
   name: string;       // e.g., "Blue", "White", "Red"
   rating: number;     // USGA course rating
   slope: number;      // USGA slope rating
+  par: number;        // Total par for this tee set (usually 72)
   yards?: number[];   // 18-element array of per-hole yardages
 };
 
 export type CourseDoc = {
   id: string;
   name: string;
-  tees?: string;
-  par?: number;
-  rating?: number;
-  slope?: number;
   holes: HoleInfo[];
   teesets?: TeeSet[];
 };

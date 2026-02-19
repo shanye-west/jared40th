@@ -107,7 +107,6 @@ export default function Group() {
             <h2 className="text-lg font-bold text-slate-800">Group {group.groupNumber}</h2>
             <p className="text-xs text-slate-500">
               {course?.name || ""}
-              {course?.tees ? ` - ${course.tees}` : ""}
             </p>
           </div>
           <div className="text-right">
@@ -147,7 +146,7 @@ export default function Group() {
       {/* Scrollable Scorecard */}
       <div className="overflow-x-auto -mx-4 px-4">
         <table className="border-collapse text-center text-sm" style={{ minWidth: "max-content" }}>
-          <ScorecardTableHeader holes={holeData} totals={parTotals} courseTees={course?.tees} />
+          <ScorecardTableHeader holes={holeData} totals={parTotals} />
           <tbody>
             {group.players.map((player, i) => {
               const { color, name } = getTeamForPlayer(player.teamIndex);
