@@ -95,7 +95,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
               src={tournamentLogo}
               alt="Tournament Logo"
               fallbackIcon="⛳"
-              fallbackSrc="/images/rowdycup-logo.svg"
+              fallbackSrc="/jaredlogo.jpg"
               style={{ height: 40, width: 40, objectFit: "contain" }}
             />
           </ViewTransitionLink>

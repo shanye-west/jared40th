@@ -83,6 +83,16 @@ export default function App() {
         </div>
       )}
 
+      {/* Hero Logo */}
+      <div className="flex justify-center mb-5">
+        <img
+          src="/jaredlogo.jpg"
+          alt="Jared's 40th"
+          className="rounded-xl shadow-md"
+          style={{ width: 160, height: 160, objectFit: "cover" }}
+        />
+      </div>
+
       {/* Leaderboard */}
       <section className="mb-6">
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">Leaderboard</h2>

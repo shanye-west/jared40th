@@ -1,4 +1,4 @@
-import React, { lazy } from "react";
+import React, { lazy, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
@@ -8,6 +8,7 @@ import { LayoutProvider } from "./contexts/LayoutContext";
 import App from "./App";
 import ErrorBoundary, { NotFound } from "./components/ErrorBoundary";
 import { LayoutShell } from "./components/Layout";
+import SplashScreen from "./components/SplashScreen";
 
 const Group = lazy(() => import("./routes/Group"));
 const Teams = lazy(() => import("./routes/Teams"));
@@ -41,12 +42,23 @@ const router = createBrowserRouter(
   }
 );
 
+function Root() {
+  const [splashDone, setSplashDone] = useState(false);
+
+  return (
+    <>
+      {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
+      <TournamentProvider>
+        <LayoutProvider>
+          <RouterProvider router={router} />
+        </LayoutProvider>
+      </TournamentProvider>
+    </>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <TournamentProvider>
-      <LayoutProvider>
-        <RouterProvider router={router} />
-      </LayoutProvider>
-    </TournamentProvider>
+    <Root />
   </React.StrictMode>
 );

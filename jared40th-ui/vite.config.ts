@@ -14,6 +14,8 @@ export default defineConfig({
         "images/rowdycup-logo-christmas.svg",
         "images/rowdycup-logo.svg",
         "images/stocking-stuffers.svg",
+        "jaredlogo.jpg",
+        "jaredgif.mov",
       ],
       registerType: 'prompt',
       devOptions: {
@@ -74,20 +76,20 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: '/jaredlogo.jpg',
             sizes: '192x192',
-            type: 'image/png',
+            type: 'image/jpeg',
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/jaredlogo.jpg',
             sizes: '512x512',
-            type: 'image/png',
+            type: 'image/jpeg',
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/jaredlogo.jpg',
             sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable', // Required for "Adaptive Icons" on Android
+            type: 'image/jpeg',
+            purpose: 'any maskable',
           },
         ],
       },
