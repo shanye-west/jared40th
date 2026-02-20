@@ -10,7 +10,6 @@ import {
   Wifi,
 } from "lucide-react";
 import PullToRefresh from "./PullToRefresh";
-import OfflineImage from "./OfflineImage";
 import { ViewTransitionLink } from "./ViewTransitionLink";
 import { useOnlineStatusWithHistory } from "../hooks/useOnlineStatus";
 import { useLayout } from "../contexts/LayoutContext";
@@ -35,7 +34,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { isOnline, wasOffline } = useOnlineStatusWithHistory();
   const { config } = useLayout();
-  const { title, showBack, tournamentLogo } = config;
+  const { title, showBack } = config;
   const location = useLocation();
 
   useViewTransitionDirection();
@@ -90,15 +89,6 @@ export function LayoutShell({ children }: LayoutShellProps) {
               <ChevronLeft className="h-5 w-5" />
             </Button>
           )}
-          <ViewTransitionLink to="/" aria-label="Home" className="flex items-center">
-            <OfflineImage
-              src={tournamentLogo}
-              alt="Tournament Logo"
-              fallbackIcon="⛳"
-              fallbackSrc="/jaredlogo.jpg"
-              style={{ height: 40, width: 40, objectFit: "contain" }}
-            />
-          </ViewTransitionLink>
         </div>
 
         <div className="flex flex-1 flex-col items-center text-center leading-tight">

@@ -13,6 +13,7 @@ import { Card, CardContent } from "./components/ui/card";
 
 export default function App() {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
+  const [logoModalOpen, setLogoModalOpen] = useState(false);
 
   // PWA update handler
   const { updateServiceWorker } = useRegisterSW({
@@ -88,10 +89,34 @@ export default function App() {
         <img
           src="/jaredlogo.jpg"
           alt="Jared's 40th"
-          className="rounded-xl shadow-md"
+          className="rounded-xl shadow-md cursor-pointer active:scale-95 transition-transform"
           style={{ width: 160, height: 160, objectFit: "cover" }}
+          onClick={() => setLogoModalOpen(true)}
         />
       </div>
+
+      {/* Logo Modal */}
+      {logoModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-6"
+          onClick={() => setLogoModalOpen(false)}
+        >
+          <img
+            src="/jaredlogo.jpg"
+            alt="Jared's 40th"
+            className="rounded-2xl shadow-2xl max-w-full max-h-full"
+            style={{ maxWidth: "90vw", maxHeight: "85vh", objectFit: "contain" }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 text-white/80 hover:text-white"
+            onClick={() => setLogoModalOpen(false)}
+            aria-label="Close"
+          >
+            <X className="h-7 w-7" />
+          </button>
+        </div>
+      )}
 
       {/* Leaderboard */}
       <section className="mb-6">
