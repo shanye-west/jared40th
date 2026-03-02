@@ -86,7 +86,7 @@ export const GroupScoreRow = memo(function GroupScoreRow({
               holeNum={h.number}
               value={grossScores[String(h.number)] ?? ""}
               par={h.par}
-              hasStroke={player.strokesReceived[h.number - 1] === 1}
+              hasStroke={player.strokesReceived?.[h.number - 1] === 1}
               teamColor={teamColor}
               onChange={handleChange}
             />
@@ -113,7 +113,7 @@ export const GroupScoreRow = memo(function GroupScoreRow({
               holeNum={h.number}
               value={grossScores[String(h.number)] ?? ""}
               par={h.par}
-              hasStroke={player.strokesReceived[h.number - 1] === 1}
+              hasStroke={player.strokesReceived?.[h.number - 1] === 1}
               teamColor={teamColor}
               onChange={handleChange}
             />

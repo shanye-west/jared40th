@@ -37,7 +37,7 @@ export default function Group() {
       if (!group) return;
 
       // Build updated gross array
-      const currentHole = group.holes[holeKey] || { gross: [null, null, null, null] };
+      const currentHole = group.holes?.[holeKey] || { gross: [null, null, null, null] };
       const newGross = [...currentHole.gross] as [number | null, number | null, number | null, number | null];
       newGross[playerIndex] = value;
 
@@ -158,7 +158,7 @@ export default function Group() {
 
               for (let h = 1; h <= 18; h++) {
                 const key = String(h);
-                const holeScores = group.holes[key];
+                const holeScores = group.holes?.[key];
                 grossScores[key] = holeScores?.gross?.[i] ?? null;
                 netScores[key] = scoring?.holeNet[key]?.[i] ?? holeScores?.net?.[i] ?? null;
                 ninesPoints[key] = scoring?.holePoints[key]?.[i] ?? holeScores?.points?.[i] ?? 0;

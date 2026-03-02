@@ -80,7 +80,7 @@ export function computeSkins(
         const p = g.players[i];
         if (!optedInSet.has(p.playerId)) continue;
 
-        const holeData = g.holes[key];
+        const holeData = g.holes?.[key];
         if (!holeData) {
           allCompleted = false;
           continue;
@@ -110,10 +110,12 @@ export function computeSkins(
 
     if (leaders.length === 1) {
       const winner = leaders[0];
+      // Only award skin when all players have completed the hole
+      const skinWon = allCompleted;
       holes.push({
         holeNumber: h,
-        winnerId: winner.playerId,
-        winnerName: winner.displayName,
+        winnerId: skinWon ? winner.playerId : null,
+        winnerName: skinWon ? winner.displayName : null,
         winnerScore: winner.score,
         tiedCount: 0,
         allCompleted,
@@ -122,10 +124,12 @@ export function computeSkins(
         leadingName: winner.displayName,
         leadingScore: winner.score,
       });
-      const entry = playerMap.get(winner.playerId);
-      if (entry) {
-        entry.skinsWon++;
-        entry.holesWon.push(h);
+      if (skinWon) {
+        const entry = playerMap.get(winner.playerId);
+        if (entry) {
+          entry.skinsWon++;
+          entry.holesWon.push(h);
+        }
       }
     } else {
       holes.push({
@@ -137,7 +141,7 @@ export function computeSkins(
         allCompleted,
         playersCompleted,
         totalPlayers,
-        leadingName: null,
+        leadingName: allCompleted ? null : leaders[0].displayName,
         leadingScore: minScore,
       });
     }
@@ -212,7 +216,7 @@ export function computeCumulative(
 
       for (let h = 1; h <= 18; h++) {
         const key = String(h);
-        const holeData = g.holes[key];
+        const holeData = g.holes?.[key];
         if (!holeData) continue;
 
         const rawScore = scoreType === "gross"

@@ -224,11 +224,15 @@ function SkinsView({
                       <Trophy className="inline h-3.5 w-3.5 text-amber-500 mr-1" />
                       {h.winnerName}
                     </div>
+                  ) : h.allCompleted && h.tiedCount > 1 ? (
+                    <div className="text-sm text-slate-600">
+                      {h.tiedCount} tied &mdash; no skin
+                    </div>
                   ) : h.playersCompleted > 0 ? (
                     <div className="text-sm text-slate-600">
                       {h.tiedCount > 1
-                        ? `${h.tiedCount} players tied`
-                        : h.leadingName ?? "No skin"}
+                        ? `${h.tiedCount} tied`
+                        : h.leadingName ? `${h.leadingName} leads` : "In progress"}
                     </div>
                   ) : (
                     <div className="text-sm text-slate-300">Waiting for scores</div>

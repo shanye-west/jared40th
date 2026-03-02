@@ -67,7 +67,7 @@ export function computeNetScores(
  * Returns per-hole net scores and points, plus running player totals.
  */
 export function computeGroupScoring(
-  holes: Record<string, { gross: (number | null)[] }>,
+  holes: Record<string, { gross: (number | null)[] }> | undefined,
   players: { strokesReceived: number[] }[]
 ): {
   holeNet: Record<string, [number | null, number | null, number | null, number | null]>;
@@ -82,7 +82,7 @@ export function computeGroupScoring(
 
   for (let h = 1; h <= 18; h++) {
     const key = String(h);
-    const holeData = holes[key];
+    const holeData = holes?.[key];
     if (!holeData) {
       holeNet[key] = [null, null, null, null];
       holePoints[key] = [0, 0, 0, 0];
