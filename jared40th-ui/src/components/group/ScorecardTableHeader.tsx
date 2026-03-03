@@ -95,7 +95,7 @@ export function ScorecardTableHeader({ holes, totals, yardageRows }: ScorecardTa
             <td key={i} className="py-1">{y || ""}</td>
           ))}
           <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
-            {row.yards.slice(0, 9).reduce((sum, y) => sum + (y || 0), 0) || ""}
+            {row.yards.slice(0, 9).reduce<number>((sum, y) => sum + (y || 0), 0) || ""}
           </td>
           {row.yards.slice(9, 18).map((y, i) => (
             <td key={i + 9} className={`py-1 ${i === 0 ? "border-l-2 border-slate-200" : ""}`}>
@@ -103,9 +103,9 @@ export function ScorecardTableHeader({ holes, totals, yardageRows }: ScorecardTa
             </td>
           ))}
           <td className="py-1 bg-slate-100 border-l-2 border-slate-200">
-            {row.yards.slice(9, 18).reduce((sum, y) => sum + (y || 0), 0) || ""}
+            {row.yards.slice(9, 18).reduce<number>((sum, y) => sum + (y || 0), 0) || ""}
           </td>
-          <td className="py-1 bg-slate-200">{row.yards.reduce((sum, y) => sum + (y || 0), 0) || ""}</td>
+          <td className="py-1 bg-slate-200">{row.yards.reduce<number>((sum, y) => sum + (y || 0), 0) || ""}</td>
         </tr>
       ))}
 
