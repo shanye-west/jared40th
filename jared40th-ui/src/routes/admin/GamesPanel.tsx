@@ -10,10 +10,13 @@ type Props = { tournament: TournamentDoc };
 
 type GameForm = {
   name: string;
-  type: "skins" | "cumulative";
+  type: "skins" | "cumulative" | "head-to-head";
   scoreType: "gross" | "net";
   pot: string;
   perRound: boolean;
+  betFront: string;
+  betBack: string;
+  betTotal: string;
 };
 
 const emptyForm: GameForm = {
@@ -22,6 +25,9 @@ const emptyForm: GameForm = {
   scoreType: "net",
   pot: "0",
   perRound: false,
+  betFront: "0",
+  betBack: "0",
+  betTotal: "0",
 };
 
 export default function GamesPanel({ tournament }: Props) {
@@ -36,6 +42,8 @@ export default function GamesPanel({ tournament }: Props) {
     t.playerIds.map((pid) => ({ pid, teamIndex: ti, teamName: t.name, teamColor: t.color }))
   );
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [h2hPlayer1, setH2hPlayer1] = useState("");
+  const [h2hPlayer2, setH2hPlayer2] = useState("");
 
   const saveGames = async (next: SideGameConfig[]) => {
     await updateDoc(doc(db, "tournaments", tournament.id), {
@@ -45,16 +53,24 @@ export default function GamesPanel({ tournament }: Props) {
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
+    if (form.type === "head-to-head" && (!h2hPlayer1 || !h2hPlayer2 || h2hPlayer1 === h2hPlayer2)) return;
     setSaving(true);
+
+    const isH2H = form.type === "head-to-head";
 
     const entry: SideGameConfig = {
       id: editingId ?? crypto.randomUUID(),
       name: form.name.trim(),
       type: form.type,
       scoreType: form.scoreType,
-      pot: Number(form.pot) || 0,
+      pot: isH2H ? 0 : Number(form.pot) || 0,
       perRound: form.perRound,
-      playerIds: selectedPlayerIds,
+      playerIds: isH2H ? [h2hPlayer1, h2hPlayer2] : selectedPlayerIds,
+      ...(isH2H && {
+        betFront: Number(form.betFront) || 0,
+        betBack: Number(form.betBack) || 0,
+        betTotal: Number(form.betTotal) || 0,
+      }),
     };
 
     let next: SideGameConfig[];
@@ -69,6 +85,8 @@ export default function GamesPanel({ tournament }: Props) {
     setShowForm(false);
     setEditingId(null);
     setSelectedPlayerIds([]);
+    setH2hPlayer1("");
+    setH2hPlayer2("");
     setSaving(false);
   };
 
@@ -79,8 +97,16 @@ export default function GamesPanel({ tournament }: Props) {
       scoreType: game.scoreType,
       pot: game.pot.toString(),
       perRound: game.perRound,
+      betFront: (game.betFront ?? 0).toString(),
+      betBack: (game.betBack ?? 0).toString(),
+      betTotal: (game.betTotal ?? 0).toString(),
     });
-    setSelectedPlayerIds(game.playerIds ?? []);
+    if (game.type === "head-to-head") {
+      setH2hPlayer1(game.playerIds?.[0] ?? "");
+      setH2hPlayer2(game.playerIds?.[1] ?? "");
+    } else {
+      setSelectedPlayerIds(game.playerIds ?? []);
+    }
     setEditingId(game.id);
     setShowForm(true);
   };
@@ -95,6 +121,8 @@ export default function GamesPanel({ tournament }: Props) {
     setShowForm(false);
     setEditingId(null);
     setSelectedPlayerIds([]);
+    setH2hPlayer1("");
+    setH2hPlayer2("");
   };
 
   const togglePlayer = (pid: string) => {
@@ -130,10 +158,11 @@ export default function GamesPanel({ tournament }: Props) {
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as "skins" | "cumulative" })}
+                onChange={(e) => setForm({ ...form, type: e.target.value as "skins" | "cumulative" | "head-to-head" })}
               >
                 <option value="skins">Skins</option>
                 <option value="cumulative">Cumulative</option>
+                <option value="head-to-head">Head-to-Head</option>
               </select>
             </div>
             <div>
@@ -147,15 +176,17 @@ export default function GamesPanel({ tournament }: Props) {
                 <option value="gross">Gross</option>
               </select>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500">Pot ($)</label>
-              <input
-                type="number"
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                value={form.pot}
-                onChange={(e) => setForm({ ...form, pot: e.target.value })}
-              />
-            </div>
+            {form.type !== "head-to-head" && (
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Pot ($)</label>
+                <input
+                  type="number"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={form.pot}
+                  onChange={(e) => setForm({ ...form, pot: e.target.value })}
+                />
+              </div>
+            )}
             <div className="flex items-end pb-1">
               <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
                 <input
@@ -169,48 +200,113 @@ export default function GamesPanel({ tournament }: Props) {
             </div>
           </div>
 
-          {/* Player selection */}
-          <div>
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-500">
-                Players ({selectedPlayerIds.length})
-              </label>
-              <button
-                type="button"
-                onClick={selectAll}
-                className="text-xs text-blue-600 hover:underline"
-              >
-                Select All
-              </button>
-            </div>
-            <div className="mt-1 grid grid-cols-2 gap-1">
-              {allPlayers.map(({ pid, teamColor }) => (
-                <label
-                  key={pid}
-                  className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs cursor-pointer transition-colors ${
-                    selectedPlayerIds.includes(pid)
-                      ? "border-blue-300 bg-blue-50"
-                      : "border-slate-200 bg-white"
-                  }`}
-                >
+          {form.type === "head-to-head" ? (
+            <>
+              {/* Head-to-head: Player 1 & Player 2 dropdowns */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-500">Player 1</label>
+                  <select
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={h2hPlayer1}
+                    onChange={(e) => setH2hPlayer1(e.target.value)}
+                  >
+                    <option value="">Select...</option>
+                    {allPlayers.filter((p) => p.pid !== h2hPlayer2).map(({ pid }) => (
+                      <option key={pid} value={pid}>{pid}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-500">Player 2</label>
+                  <select
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={h2hPlayer2}
+                    onChange={(e) => setH2hPlayer2(e.target.value)}
+                  >
+                    <option value="">Select...</option>
+                    {allPlayers.filter((p) => p.pid !== h2hPlayer1).map(({ pid }) => (
+                      <option key={pid} value={pid}>{pid}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Bet amounts */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-500">Front 9 ($)</label>
                   <input
-                    type="checkbox"
-                    checked={selectedPlayerIds.includes(pid)}
-                    onChange={() => togglePlayer(pid)}
-                    className="rounded border-slate-300"
+                    type="number"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={form.betFront}
+                    onChange={(e) => setForm({ ...form, betFront: e.target.value })}
                   />
-                  <span
-                    className="inline-block h-2 w-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: teamColor }}
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-500">Back 9 ($)</label>
+                  <input
+                    type="number"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={form.betBack}
+                    onChange={(e) => setForm({ ...form, betBack: e.target.value })}
                   />
-                  <span className="truncate">{pid}</span>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-500">Total ($)</label>
+                  <input
+                    type="number"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={form.betTotal}
+                    onChange={(e) => setForm({ ...form, betTotal: e.target.value })}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Player multi-select for skins/cumulative */
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-500">
+                  Players ({selectedPlayerIds.length})
                 </label>
-              ))}
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Select All
+                </button>
+              </div>
+              <div className="mt-1 grid grid-cols-2 gap-1">
+                {allPlayers.map(({ pid, teamColor }) => (
+                  <label
+                    key={pid}
+                    className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs cursor-pointer transition-colors ${
+                      selectedPlayerIds.includes(pid)
+                        ? "border-blue-300 bg-blue-50"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedPlayerIds.includes(pid)}
+                      onChange={() => togglePlayer(pid)}
+                      className="rounded border-slate-300"
+                    />
+                    <span
+                      className="inline-block h-2 w-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: teamColor }}
+                    />
+                    <span className="truncate">{pid}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex gap-2 pt-1">
-            <Button onClick={handleSave} disabled={saving || !form.name.trim()} size="sm">
+            <Button onClick={handleSave} disabled={saving || !form.name.trim() || (form.type === "head-to-head" && (!h2hPlayer1 || !h2hPlayer2 || h2hPlayer1 === h2hPlayer2))} size="sm">
               <Save className="h-4 w-4" />
               {saving ? "Saving..." : "Save"}
             </Button>
@@ -239,11 +335,16 @@ export default function GamesPanel({ tournament }: Props) {
             <div>
               <div className="font-semibold text-slate-800">{game.name}</div>
               <div className="text-xs text-slate-500">
-                {game.type === "skins" ? "Skins" : "Cumulative"} / {game.scoreType} / ${game.pot}
+                {game.type === "skins" ? "Skins" : game.type === "cumulative" ? "Cumulative" : "Head-to-Head"} / {game.scoreType}
+                {game.type === "head-to-head"
+                  ? ` / $${game.betFront ?? 0}/$${game.betBack ?? 0}/$${game.betTotal ?? 0} (F/B/T)`
+                  : ` / $${game.pot}`}
                 {game.perRound ? " per round" : ""}
               </div>
               <div className="text-xs text-slate-400">
-                {game.playerIds?.length ?? 0} players
+                {game.type === "head-to-head"
+                  ? `${game.playerIds?.[0] ?? "?"} vs ${game.playerIds?.[1] ?? "?"}`
+                  : `${game.playerIds?.length ?? 0} players`}
               </div>
             </div>
             <div className="flex items-center gap-1">

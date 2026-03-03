@@ -10,7 +10,7 @@ import { useRounds } from "../hooks/useRounds";
 import { RoundTabs } from "../components/RoundTabs";
 import Layout from "../components/Layout";
 import { Card, CardContent } from "../components/ui/card";
-import { computeSkins, computeCumulative } from "../utils/sideGames";
+import { computeSkins, computeCumulative, computeHeadToHead } from "../utils/sideGames";
 import type { SideGameConfig } from "../types";
 
 export default function Games() {
@@ -92,11 +92,17 @@ export default function Games() {
             allGroups={allGroups}
             rounds={rounds}
           />
-        ) : (
+        ) : selectedGame.type === "cumulative" ? (
           <CumulativeView
             game={selectedGame}
             allGroups={allGroups}
             holeParsByRound={holeParsByRound}
+          />
+        ) : (
+          <HeadToHeadView
+            game={selectedGame}
+            allGroups={allGroups}
+            rounds={rounds}
           />
         )
       )}
@@ -113,7 +119,7 @@ export default function Games() {
 // ============================================================================
 
 import type { GroupDoc, RoundDoc } from "../types";
-import type { SkinsResult } from "../utils/sideGames";
+import type { SkinsResult, HeadToHeadResult } from "../utils/sideGames";
 
 function SkinsView({
   game,
@@ -331,6 +337,153 @@ function CumulativeView({
             <div className="text-center py-6 text-slate-400 text-sm">No players in this game</div>
           )}
         </div>
+      </section>
+    </div>
+  );
+}
+
+// ============================================================================
+// HEAD-TO-HEAD VIEW
+// ============================================================================
+
+function HeadToHeadView({
+  game,
+  allGroups,
+  rounds,
+}: {
+  game: SideGameConfig;
+  allGroups: GroupDoc[];
+  rounds: RoundDoc[];
+}) {
+  const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
+  const activeRoundId = selectedRoundId ?? rounds[0]?.id;
+
+  // If perRound, filter groups to selected round; otherwise use all
+  const groups = useMemo(
+    () => game.perRound
+      ? allGroups.filter((g) => g.roundId === activeRoundId)
+      : allGroups,
+    [allGroups, activeRoundId, game.perRound]
+  );
+
+  const result: HeadToHeadResult = useMemo(
+    () => computeHeadToHead(
+      groups,
+      game.playerIds as [string, string],
+      game.scoreType,
+      game.betFront ?? 0,
+      game.betBack ?? 0,
+      game.betTotal ?? 0
+    ),
+    [groups, game.playerIds, game.scoreType, game.betFront, game.betBack, game.betTotal]
+  );
+
+  const totalBet = (game.betFront ?? 0) + (game.betBack ?? 0) + (game.betTotal ?? 0);
+
+  return (
+    <div>
+      {/* Round selector */}
+      {game.perRound && rounds.length > 1 && (
+        <div className="mb-4">
+          <RoundTabs
+            rounds={rounds}
+            selectedRoundId={activeRoundId ?? ""}
+            onSelect={setSelectedRoundId}
+          />
+        </div>
+      )}
+
+      {/* Matchup header */}
+      <div className="flex items-center justify-between rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 mb-4">
+        <div className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4 text-emerald-600" />
+          <div>
+            <div className="text-sm font-bold text-emerald-800">
+              {result.player1.displayName} vs {result.player2.displayName}
+            </div>
+            <div className="text-xs text-emerald-600">
+              {game.scoreType} / ${totalBet} total
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Segment results */}
+      <section className="space-y-2 mb-6">
+        {result.segments.map((seg) => (
+          <Card key={seg.segment}>
+            <CardContent className="py-3 px-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  {seg.label}
+                </span>
+                <span className="text-xs text-slate-400">${seg.bet} bet</span>
+              </div>
+              <div className="flex items-center justify-between">
+                {/* Player 1 */}
+                <div className="text-center flex-1">
+                  <div className="text-xs text-slate-400 mb-0.5 truncate">{result.player1.displayName}</div>
+                  <div className={`text-xl font-bold ${seg.complete && seg.winnerId === result.player1.playerId ? "text-emerald-600" : "text-slate-800"}`}>
+                    {seg.player1Completed > 0 ? seg.player1Score : "\u2014"}
+                  </div>
+                  <div className="text-[0.65rem] text-slate-400">
+                    {seg.player1Completed}/{seg.holesInSegment} holes
+                  </div>
+                </div>
+
+                {/* Result */}
+                <div className="text-center px-3">
+                  {seg.complete ? (
+                    seg.tied ? (
+                      <span className="text-xs font-bold text-slate-400 bg-slate-100 rounded-full px-2.5 py-1">PUSH</span>
+                    ) : (
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 rounded-full px-2.5 py-1">
+                        {seg.winnerName?.split(" ")[0]} wins
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-xs text-slate-300">vs</span>
+                  )}
+                </div>
+
+                {/* Player 2 */}
+                <div className="text-center flex-1">
+                  <div className="text-xs text-slate-400 mb-0.5 truncate">{result.player2.displayName}</div>
+                  <div className={`text-xl font-bold ${seg.complete && seg.winnerId === result.player2.playerId ? "text-emerald-600" : "text-slate-800"}`}>
+                    {seg.player2Completed > 0 ? seg.player2Score : "\u2014"}
+                  </div>
+                  <div className="text-[0.65rem] text-slate-400">
+                    {seg.player2Completed}/{seg.holesInSegment} holes
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
+      {/* Settlement */}
+      <section>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Settlement</h3>
+        <Card>
+          <CardContent className="py-3 px-4 space-y-1.5">
+            {[result.player1, result.player2].map((p) => (
+              <div key={p.playerId} className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-semibold text-slate-800">{p.displayName}</span>
+                  <span className="text-xs text-slate-400 ml-2">
+                    {p.segmentsWon}W {p.segmentsLost}L {p.segmentsTied}T
+                  </span>
+                </div>
+                <span className={`text-sm font-bold ${
+                  p.totalEarnings > 0 ? "text-emerald-600" : p.totalEarnings < 0 ? "text-red-500" : "text-slate-400"
+                }`}>
+                  {p.totalEarnings > 0 ? `+$${p.totalEarnings}` : p.totalEarnings < 0 ? `-$${Math.abs(p.totalEarnings)}` : "$0"}
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </section>
     </div>
   );

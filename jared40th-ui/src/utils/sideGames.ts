@@ -254,3 +254,183 @@ export function computeCumulative(
 
   return { players, totalPar };
 }
+
+// ============================================================================
+// HEAD-TO-HEAD
+// ============================================================================
+
+export type H2HSegmentResult = {
+  segment: "front" | "back" | "total";
+  label: string;
+  bet: number;
+  player1Score: number | null;
+  player2Score: number | null;
+  player1Completed: number;
+  player2Completed: number;
+  holesInSegment: number;
+  winnerId: string | null;
+  winnerName: string | null;
+  tied: boolean;
+  complete: boolean;
+};
+
+export type H2HPlayerSummary = {
+  playerId: string;
+  displayName: string;
+  segmentsWon: number;
+  segmentsLost: number;
+  segmentsTied: number;
+  totalEarnings: number;
+};
+
+export type HeadToHeadResult = {
+  player1: H2HPlayerSummary;
+  player2: H2HPlayerSummary;
+  segments: H2HSegmentResult[];
+};
+
+/**
+ * Compute head-to-head results for a 1v1 matchup.
+ * Compares front 9, back 9, and total scores. Ties are a push.
+ */
+export function computeHeadToHead(
+  allGroups: GroupDoc[],
+  playerIds: [string, string],
+  scoreType: "gross" | "net",
+  betFront: number,
+  betBack: number,
+  betTotal: number
+): HeadToHeadResult {
+  // Accumulate scores per player: front (1-9), back (10-18)
+  const acc = {
+    [playerIds[0]]: { name: "", front: 0, back: 0, frontCount: 0, backCount: 0 },
+    [playerIds[1]]: { name: "", front: 0, back: 0, frontCount: 0, backCount: 0 },
+  };
+
+  for (const g of allGroups) {
+    for (let i = 0; i < g.players.length; i++) {
+      const p = g.players[i];
+      if (p.playerId !== playerIds[0] && p.playerId !== playerIds[1]) continue;
+
+      const entry = acc[p.playerId];
+      if (!entry.name) entry.name = p.displayName;
+
+      for (let h = 1; h <= 18; h++) {
+        const holeData = g.holes?.[String(h)];
+        if (!holeData) continue;
+
+        const rawScore = scoreType === "gross"
+          ? holeData.gross?.[i]
+          : holeData.net?.[i] ?? null;
+
+        if (rawScore == null) continue;
+
+        if (h <= 9) {
+          entry.front += rawScore;
+          entry.frontCount++;
+        } else {
+          entry.back += rawScore;
+          entry.backCount++;
+        }
+      }
+    }
+  }
+
+  const p1 = acc[playerIds[0]];
+  const p2 = acc[playerIds[1]];
+
+  function buildSegment(
+    segment: "front" | "back" | "total",
+    label: string,
+    bet: number,
+    s1: number,
+    s2: number,
+    c1: number,
+    c2: number,
+    holesInSegment: number
+  ): H2HSegmentResult {
+    const complete = c1 === holesInSegment && c2 === holesInSegment;
+    const hasScores = c1 > 0 || c2 > 0;
+    let winnerId: string | null = null;
+    let winnerName: string | null = null;
+    let tied = false;
+
+    if (complete) {
+      if (s1 < s2) {
+        winnerId = playerIds[0];
+        winnerName = p1.name;
+      } else if (s2 < s1) {
+        winnerId = playerIds[1];
+        winnerName = p2.name;
+      } else {
+        tied = true;
+      }
+    }
+
+    return {
+      segment,
+      label,
+      bet,
+      player1Score: hasScores || c1 > 0 ? s1 : null,
+      player2Score: hasScores || c2 > 0 ? s2 : null,
+      player1Completed: c1,
+      player2Completed: c2,
+      holesInSegment,
+      winnerId,
+      winnerName,
+      tied,
+      complete,
+    };
+  }
+
+  const segments: H2HSegmentResult[] = [
+    buildSegment("front", "Front 9", betFront, p1.front, p2.front, p1.frontCount, p2.frontCount, 9),
+    buildSegment("back", "Back 9", betBack, p1.back, p2.back, p1.backCount, p2.backCount, 9),
+    buildSegment("total", "Total", betTotal,
+      p1.front + p1.back, p2.front + p2.back,
+      p1.frontCount + p1.backCount, p2.frontCount + p2.backCount, 18),
+  ];
+
+  // Compute earnings
+  let p1Earnings = 0;
+  let p2Earnings = 0;
+  let p1Won = 0, p1Lost = 0, p1Tied = 0;
+  let p2Won = 0, p2Lost = 0, p2Tied = 0;
+
+  for (const seg of segments) {
+    if (seg.tied) {
+      p1Tied++;
+      p2Tied++;
+    } else if (seg.winnerId === playerIds[0]) {
+      p1Won++;
+      p2Lost++;
+      p1Earnings += seg.bet;
+      p2Earnings -= seg.bet;
+    } else if (seg.winnerId === playerIds[1]) {
+      p2Won++;
+      p1Lost++;
+      p2Earnings += seg.bet;
+      p1Earnings -= seg.bet;
+    }
+  }
+
+  return {
+    player1: {
+      playerId: playerIds[0],
+      displayName: p1.name || playerIds[0],
+      segmentsWon: p1Won,
+      segmentsLost: p1Lost,
+      segmentsTied: p1Tied,
+      totalEarnings: p1Earnings,
+    },
+    player2: {
+      playerId: playerIds[1],
+      displayName: p2.name || playerIds[1],
+      segmentsWon: p2Won,
+      segmentsLost: p2Lost,
+      segmentsTied: p2Tied,
+      totalEarnings: p2Earnings,
+    },
+    segments,
+  };
+}

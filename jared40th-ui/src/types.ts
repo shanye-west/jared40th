@@ -60,11 +60,15 @@ export type Scoreboard = {
 export type SideGameConfig = {
   id: string;
   name: string;
-  type: "skins" | "cumulative";
+  type: "skins" | "cumulative" | "head-to-head";
   scoreType: "gross" | "net";
   pot: number;
   perRound: boolean;
   playerIds: string[];
+  // Head-to-head specific (only present when type === "head-to-head")
+  betFront?: number;
+  betBack?: number;
+  betTotal?: number;
 };
 
 export type TournamentDoc = {
