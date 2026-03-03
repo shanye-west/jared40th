@@ -66,6 +66,37 @@ export default function Group() {
     }));
   }, [course]);
 
+  // Build yardage rows: one per unique tee set if players differ, otherwise single row
+  const yardageRows = useMemo(() => {
+    if (!group || !course) return undefined;
+
+    const uniqueTees = new Map<string, number[]>();
+    for (const p of group.players) {
+      const teeName = p.teeSetName || "";
+      if (teeName && !uniqueTees.has(teeName)) {
+        const teeSet = course.teesets?.find((t) => t.name === teeName);
+        if (teeSet?.yards) {
+          uniqueTees.set(teeName, teeSet.yards);
+        }
+      }
+    }
+
+    // If all players on the same tee (or no tee data), show a single "Yards" row
+    if (uniqueTees.size <= 1) {
+      const [entry] = uniqueTees.entries();
+      if (entry) {
+        return [{ label: "Yards", yards: entry[1].map((y) => y || undefined) }];
+      }
+      return undefined; // fall back to default hole yards
+    }
+
+    // Multiple tees: show one row per tee, labeled with tee name
+    return Array.from(uniqueTees.entries()).map(([name, yards]) => ({
+      label: name,
+      yards: yards.map((y) => y || undefined),
+    }));
+  }, [group, course]);
+
   const parTotals = useMemo(() => {
     if (!holeData.length) return { parOut: 0, parIn: 0, parTotal: 0 };
     const parOut = holeData.slice(0, 9).reduce((s, h) => s + h.par, 0);
@@ -146,7 +177,7 @@ export default function Group() {
       {/* Scrollable Scorecard */}
       <div className="overflow-x-auto -mx-4 px-4">
         <table className="border-collapse text-center text-sm" style={{ minWidth: "max-content" }}>
-          <ScorecardTableHeader holes={holeData} totals={parTotals} />
+          <ScorecardTableHeader holes={holeData} totals={parTotals} yardageRows={yardageRows} />
           <tbody>
             {group.players.map((player, i) => {
               const { color, name } = getTeamForPlayer(player.teamIndex);
