@@ -11,7 +11,10 @@ import { RoundTabs } from "../components/RoundTabs";
 import Layout from "../components/Layout";
 import { Card, CardContent } from "../components/ui/card";
 import { computeSkins, computeCumulative, computeHeadToHead } from "../utils/sideGames";
-import type { SideGameConfig } from "../types";
+import { ScorecardTableHeader } from "../components/group/ScorecardTableHeader";
+import { ScoreDisplayCell } from "../components/group/ScoreDisplayCell";
+import { SCORECARD_CELL_WIDTH, SCORECARD_LABEL_WIDTH, SCORECARD_TOTAL_COL_WIDTH } from "../constants";
+import type { SideGameConfig, CourseDoc } from "../types";
 
 export default function Games() {
   const { tournament, loading, getCourse } = useTournamentContext();
@@ -355,6 +358,7 @@ function HeadToHeadView({
   allGroups: GroupDoc[];
   rounds: RoundDoc[];
 }) {
+  const { tournament, getCourse } = useTournamentContext();
   const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
   const activeRoundId = selectedRoundId ?? rounds[0]?.id;
 
@@ -379,6 +383,89 @@ function HeadToHeadView({
   );
 
   const totalBet = (game.betFront ?? 0) + (game.betBack ?? 0) + (game.betTotal ?? 0);
+
+  // Fetch course data for scorecard header
+  const [course, setCourse] = useState<CourseDoc | null>(null);
+  useEffect(() => {
+    const activeRound = rounds.find((r) => r.id === activeRoundId);
+    const courseId = activeRound?.courseId || tournament?.courseId;
+    if (!courseId) return;
+    getCourse(courseId).then(setCourse);
+  }, [activeRoundId, rounds, tournament?.courseId, getCourse]);
+
+  // Build hole data for scorecard header
+  const holeData = useMemo(() => {
+    if (!course?.holes) return [];
+    return course.holes.map((h) => ({
+      k: String(h.number),
+      num: h.number,
+      par: h.par,
+      hcpIndex: h.hcpIndex,
+      yards: h.yards,
+    }));
+  }, [course]);
+
+  const parTotals = useMemo(() => {
+    if (!holeData.length) return { parOut: 0, parIn: 0, parTotal: 0 };
+    const parOut = holeData.slice(0, 9).reduce((s, h) => s + h.par, 0);
+    const parIn = holeData.slice(9, 18).reduce((s, h) => s + h.par, 0);
+    return { parOut, parIn, parTotal: parOut + parIn };
+  }, [holeData]);
+
+  // Extract per-hole scores for each player from group data
+  const playerScoreData = useMemo(() => {
+    const playerIds = game.playerIds as [string, string];
+    const data: { playerId: string; displayName: string; grossScores: Record<string, number | null>; strokesReceived: number[]; courseHandicap: number; teeSetName?: string }[] = [];
+
+    for (const pid of playerIds) {
+      const scores: Record<string, number | null> = {};
+      let name = pid;
+      let strokes: number[] = [];
+      let courseHcap = 0;
+      let teeName: string | undefined;
+
+      for (const g of groups) {
+        for (let i = 0; i < g.players.length; i++) {
+          const p = g.players[i];
+          if (p.playerId !== pid) continue;
+          name = p.displayName;
+          strokes = p.strokesReceived || [];
+          courseHcap = p.courseHandicap;
+          teeName = p.teeSetName;
+
+          for (let h = 1; h <= 18; h++) {
+            const key = String(h);
+            const holeData = g.holes?.[key];
+            if (!holeData) continue;
+            const rawScore = holeData.gross?.[i] ?? null;
+            if (rawScore != null) scores[key] = rawScore;
+          }
+        }
+      }
+
+      data.push({ playerId: pid, displayName: name, grossScores: scores, strokesReceived: strokes, courseHandicap: courseHcap, teeSetName: teeName });
+    }
+
+    return data;
+  }, [groups, game.playerIds]);
+
+  // Get team info for coloring
+  const getTeamColor = (playerId: string): string => {
+    if (!tournament) return "#64748b";
+    for (const g of groups) {
+      for (const p of g.players) {
+        if (p.playerId === playerId) {
+          const team = tournament.teams[p.teamIndex];
+          return team?.color || "#64748b";
+        }
+      }
+    }
+    return "#64748b";
+  };
+
+  const cellWidth = SCORECARD_CELL_WIDTH;
+  const labelWidth = SCORECARD_LABEL_WIDTH;
+  const totalColWidth = SCORECARD_TOTAL_COL_WIDTH;
 
   return (
     <div>
@@ -407,6 +494,102 @@ function HeadToHeadView({
           </div>
         </div>
       </div>
+
+      {/* Scorecard */}
+      {holeData.length > 0 && (
+        <div className="overflow-x-auto -mx-4 px-4 mb-6">
+          <table className="border-collapse text-center text-sm" style={{ minWidth: "max-content" }}>
+            <ScorecardTableHeader holes={holeData} totals={parTotals} />
+            <tbody>
+              {playerScoreData.map((pData) => {
+                const teamColor = getTeamColor(pData.playerId);
+                const firstName = pData.displayName.split(" ")[0];
+                const holes = course?.holes || [];
+
+                const front9 = holes.slice(0, 9).reduce((sum, h) => {
+                  const v = pData.grossScores[String(h.number)];
+                  return v != null ? sum + v : sum;
+                }, 0);
+                const back9 = holes.slice(9, 18).reduce((sum, h) => {
+                  const v = pData.grossScores[String(h.number)];
+                  return v != null ? sum + v : sum;
+                }, 0);
+                const total = front9 + back9;
+
+                return (
+                  <tr key={pData.playerId} className="border-b border-slate-200">
+                    <td
+                      className="sticky left-0 z-10 px-2 py-1.5"
+                      style={{ width: labelWidth, minWidth: labelWidth, backgroundColor: "white" }}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: teamColor }} />
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-xs font-semibold text-slate-800 truncate" style={{ maxWidth: labelWidth - 36 }}>
+                            {firstName}
+                          </span>
+                          <span className="text-[0.6rem] text-slate-400">
+                            ({pData.courseHandicap})
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Front 9 */}
+                    {holes.slice(0, 9).map((h) => (
+                      <td key={h.number} className="text-center" style={{ width: cellWidth, minWidth: cellWidth }}>
+                        <ScoreDisplayCell
+                          value={pData.grossScores[String(h.number)] ?? null}
+                          par={h.par}
+                          hasStroke={pData.strokesReceived?.[h.number - 1] === 1}
+                          teamColor={teamColor}
+                        />
+                      </td>
+                    ))}
+
+                    <td
+                      className="text-center text-xs font-bold text-slate-600 bg-slate-50 border-l-2 border-slate-200"
+                      style={{ width: totalColWidth, minWidth: totalColWidth }}
+                    >
+                      {front9 || ""}
+                    </td>
+
+                    {/* Back 9 */}
+                    {holes.slice(9, 18).map((h, i) => (
+                      <td
+                        key={h.number}
+                        className={`text-center ${i === 0 ? "border-l-2 border-slate-200" : ""}`}
+                        style={{ width: cellWidth, minWidth: cellWidth }}
+                      >
+                        <ScoreDisplayCell
+                          value={pData.grossScores[String(h.number)] ?? null}
+                          par={h.par}
+                          hasStroke={pData.strokesReceived?.[h.number - 1] === 1}
+                          teamColor={teamColor}
+                        />
+                      </td>
+                    ))}
+
+                    <td
+                      className="text-center text-xs font-bold text-slate-600 bg-slate-50 border-l-2 border-slate-200"
+                      style={{ width: totalColWidth, minWidth: totalColWidth }}
+                    >
+                      {back9 || ""}
+                    </td>
+
+                    <td
+                      className="text-center text-xs font-bold text-slate-800 bg-slate-100"
+                      style={{ width: totalColWidth, minWidth: totalColWidth }}
+                    >
+                      {total || ""}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Segment results */}
       <section className="space-y-2 mb-6">
