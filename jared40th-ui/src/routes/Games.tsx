@@ -44,10 +44,29 @@ export default function Games() {
   }, [rounds, tournament?.courseId, getCourse]);
 
   const sideGames = tournament?.sideGames ?? [];
-  const [activeGameId, setActiveGameId] = useState<string | null>(null);
 
-  // Default to first game
-  const selectedGame = sideGames.find((g) => g.id === activeGameId) ?? sideGames[0] ?? null;
+  // Split into individual games (skins/cumulative) and head-to-head games
+  const individualGames = sideGames.filter((g) => g.type !== "head-to-head");
+  const h2hGames = sideGames.filter((g) => g.type === "head-to-head");
+
+  // Top-level tabs: each individual game gets its own tab, plus one "Head-to-Head" tab if any h2h games exist
+  type TabEntry = { id: string; label: string; kind: "game" | "h2h" };
+  const tabs: TabEntry[] = [
+    ...individualGames.map((g) => ({ id: g.id, label: g.name, kind: "game" as const })),
+    ...(h2hGames.length > 0 ? [{ id: "__h2h__", label: "Head-to-Head", kind: "h2h" as const }] : []),
+  ];
+
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const selectedTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0] ?? null;
+
+  // Sub-tab for head-to-head matchups
+  const [activeH2hId, setActiveH2hId] = useState<string | null>(null);
+  const selectedH2h = h2hGames.find((g) => g.id === activeH2hId) ?? h2hGames[0] ?? null;
+
+  // Find the selected individual game
+  const selectedGame = selectedTab?.kind === "game"
+    ? sideGames.find((g) => g.id === selectedTab.id) ?? null
+    : null;
 
   if (loading || !tournament) {
     return (
@@ -67,47 +86,75 @@ export default function Games() {
 
   return (
     <Layout title="Games" showBack tournamentLogo={tournament.tournamentLogo}>
-      {/* Game selector tabs */}
+      {/* Top-level tabs */}
       <div className="flex gap-1 rounded-lg bg-slate-100 p-1 mb-4 overflow-x-auto">
-        {sideGames.map((game) => {
-          const isActive = game.id === (selectedGame?.id ?? "");
+        {tabs.map((tab) => {
+          const isActive = tab.id === (selectedTab?.id ?? "");
           return (
             <button
-              key={game.id}
-              onClick={() => setActiveGameId(game.id)}
+              key={tab.id}
+              onClick={() => setActiveTabId(tab.id)}
               className={`flex-1 min-w-0 rounded-md py-2 px-2 text-xs font-semibold transition-all whitespace-nowrap ${
                 isActive
                   ? "bg-white text-slate-800 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {game.name}
+              {tab.label}
             </button>
           );
         })}
       </div>
 
       {/* Game content */}
-      {selectedGame && !groupsLoading && (
-        selectedGame.type === "skins" ? (
-          <SkinsView
-            game={selectedGame}
-            allGroups={allGroups}
-            rounds={rounds}
-          />
-        ) : selectedGame.type === "cumulative" ? (
-          <CumulativeView
-            game={selectedGame}
-            allGroups={allGroups}
-            holeParsByRound={holeParsByRound}
-          />
-        ) : (
-          <HeadToHeadView
-            game={selectedGame}
-            allGroups={allGroups}
-            rounds={rounds}
-          />
-        )
+      {!groupsLoading && selectedTab && (
+        selectedTab.kind === "game" && selectedGame ? (
+          selectedGame.type === "skins" ? (
+            <SkinsView
+              game={selectedGame}
+              allGroups={allGroups}
+              rounds={rounds}
+            />
+          ) : (
+            <CumulativeView
+              game={selectedGame}
+              allGroups={allGroups}
+              holeParsByRound={holeParsByRound}
+            />
+          )
+        ) : selectedTab.kind === "h2h" ? (
+          <div>
+            {/* H2H sub-tabs */}
+            {h2hGames.length > 1 && (
+              <div className="flex gap-1 rounded-lg bg-slate-50 border border-slate-200 p-1 mb-4 overflow-x-auto">
+                {h2hGames.map((g) => {
+                  const isActive = g.id === (selectedH2h?.id ?? "");
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => setActiveH2hId(g.id)}
+                      className={`flex-1 min-w-0 rounded-md py-1.5 px-2 text-xs font-medium transition-all whitespace-nowrap ${
+                        isActive
+                          ? "bg-white text-slate-800 shadow-sm"
+                          : "text-slate-400 hover:text-slate-600"
+                      }`}
+                    >
+                      {g.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {selectedH2h && (
+              <HeadToHeadView
+                game={selectedH2h}
+                allGroups={allGroups}
+                rounds={rounds}
+              />
+            )}
+          </div>
+        ) : null
       )}
 
       {groupsLoading && (
