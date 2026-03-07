@@ -435,7 +435,7 @@ function TeamCard({
                 <option value="">Add a player...</option>
                 {unassignedPlayers.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.displayName ?? p.id} (HCP {p.handicapIndex ?? "—"})
+                    {p.displayName ?? p.id} (HCP {p.handicapIndex != null ? p.handicapIndex.toFixed(1) : "—"})
                   </option>
                 ))}
               </select>

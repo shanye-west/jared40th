@@ -154,7 +154,7 @@ export default function PlayersPanel() {
               {player.displayName ?? player.id}
             </div>
             <div className="text-xs text-slate-500">
-              HCP: {player.handicapIndex ?? "—"}
+              HCP: {player.handicapIndex != null ? player.handicapIndex.toFixed(1) : "—"}
             </div>
             <div className="text-[0.65rem] text-slate-400 font-mono">{player.id}</div>
           </div>

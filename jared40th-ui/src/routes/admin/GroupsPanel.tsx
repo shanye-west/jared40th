@@ -55,7 +55,7 @@ function computeCourseHandicap(
   rating: number,
   par: number
 ): number {
-  const raw = Math.round(handicapIndex * (slope / 113) - (rating - par));
+  const raw = Math.round(handicapIndex * (slope / 113) + (rating - par));
   return Math.min(Math.max(raw, 0), 18);
 }
 
@@ -308,7 +308,7 @@ export default function GroupsPanel({ tournament }: Props) {
                     <option value="">-- Select --</option>
                     {teamPlayers(ti).map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.displayName ?? p.id} (HCP {p.handicapIndex ?? 0})
+                        {p.displayName ?? p.id} (HCP {(p.handicapIndex ?? 0).toFixed(1)})
                       </option>
                     ))}
                   </select>
