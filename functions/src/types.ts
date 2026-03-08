@@ -91,13 +91,16 @@ export type GroupPlayer = {
   displayName: string;       // Denormalized for display
   handicapIndex: number;     // Raw handicap index
   courseHandicap: number;    // Computed course handicap
-  strokesReceived: number[]; // 18-element array of 0 or 1
+  strokesReceived: number[]; // 18-element array of 0 or 1 (full course handicap, for side games)
+  teamStrokesReceived?: number[]; // 18-element array spun off lowest in group (for nines team game)
+  playingHandicap?: number;  // Course handicap minus lowest in group
   teeSetName?: string;       // Which tee set this player plays from
 };
 
 export type HoleScores = {
   gross: [number | null, number | null, number | null, number | null];
-  net?: [number | null, number | null, number | null, number | null];
+  net?: [number | null, number | null, number | null, number | null];   // Side-game net (full strokes)
+  teamNet?: [number | null, number | null, number | null, number | null]; // Team game net (spun-off strokes)
   points?: [number, number, number, number];
 };
 

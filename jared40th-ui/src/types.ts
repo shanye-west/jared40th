@@ -106,13 +106,16 @@ export type GroupPlayer = {
   displayName: string;
   handicapIndex: number;
   courseHandicap: number;
-  strokesReceived: number[];
+  strokesReceived: number[];          // Full course handicap strokes (for side games)
+  teamStrokesReceived?: number[];     // Spun-off strokes (for nines team game)
+  playingHandicap?: number;           // Course handicap minus lowest in group
   teeSetName?: string;
 };
 
 export type HoleScores = {
   gross: [number | null, number | null, number | null, number | null];
   net?: [number | null, number | null, number | null, number | null];
+  teamNet?: [number | null, number | null, number | null, number | null];
   points?: [number, number, number, number];
 };
 

@@ -72,7 +72,7 @@ export const GroupScoreRow = memo(function GroupScoreRow({
                 {firstName}
               </span>
               <span className="text-[0.6rem] text-slate-400">
-                {teamName} ({player.courseHandicap})
+                {teamName} ({player.playingHandicap ?? player.courseHandicap})
               </span>
             </div>
           </div>
@@ -86,7 +86,7 @@ export const GroupScoreRow = memo(function GroupScoreRow({
               holeNum={h.number}
               value={grossScores[String(h.number)] ?? ""}
               par={h.par}
-              hasStroke={player.strokesReceived?.[h.number - 1] === 1}
+              hasStroke={(player.teamStrokesReceived || player.strokesReceived)?.[h.number - 1] === 1}
               teamColor={teamColor}
               onChange={handleChange}
             />
@@ -113,7 +113,7 @@ export const GroupScoreRow = memo(function GroupScoreRow({
               holeNum={h.number}
               value={grossScores[String(h.number)] ?? ""}
               par={h.par}
-              hasStroke={player.strokesReceived?.[h.number - 1] === 1}
+              hasStroke={(player.teamStrokesReceived || player.strokesReceived)?.[h.number - 1] === 1}
               teamColor={teamColor}
               onChange={handleChange}
             />

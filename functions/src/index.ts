@@ -120,22 +120,31 @@ export const computeGroupOnWrite = onDocumentWritten("groups/{groupId}", async (
 
     const gross = holeData.gross || [null, null, null, null];
 
-    // Get strokes received for this hole from each player
+    // Full strokes for side-game net scores
     const strokesForHole = players.map((p: any) => {
       const sr = p.strokesReceived;
       return sr && sr.length > h - 1 ? sr[h - 1] : 0;
     });
 
-    // Compute net scores
+    // Spun-off strokes for team game net scores (falls back to full strokes)
+    const teamStrokesForHole = players.map((p: any) => {
+      const sr = p.teamStrokesReceived || p.strokesReceived;
+      return sr && sr.length > h - 1 ? sr[h - 1] : 0;
+    });
+
+    // Side-game net (full course handicap strokes)
     const net = computeNetScores(gross, strokesForHole);
 
-    // Compute nines points (only if all 4 scores present)
+    // Team game net (spun-off strokes for nines points)
+    const teamNet = computeNetScores(gross, teamStrokesForHole);
+
+    // Compute nines points from team net (only if all 4 scores present)
     const allScored = gross.every((g: number | null) => g !== null && g !== undefined);
     let points: [number, number, number, number] = [0, 0, 0, 0];
 
     if (allScored) {
       holesCompleted++;
-      points = computeNinesPoints(net);
+      points = computeNinesPoints(teamNet);
       for (let p = 0; p < 4; p++) {
         playerPointTotals[p] += points[p];
       }
@@ -144,6 +153,7 @@ export const computeGroupOnWrite = onDocumentWritten("groups/{groupId}", async (
     updatedHoles[key] = {
       gross,
       net,
+      teamNet,
       points,
     };
   }

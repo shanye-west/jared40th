@@ -226,34 +226,41 @@ const SIDE_GAMES = [
 
 // ---------- Build group players ----------
 
-function buildGroupPlayer(
-  playerIndex: number,
-  teamIndex: number
-): {
-  playerId: string;
-  teamIndex: number;
-  displayName: string;
-  handicapIndex: number;
-  courseHandicap: number;
-  strokesReceived: number[];
-} {
-  const p = PLAYERS[playerIndex];
-  const courseHandicap = calculateCourseHandicap(
-    p.handicapIndex,
-    COURSE.slope,
-    COURSE.rating,
-    COURSE.par
-  );
-  const strokesReceived = calculateStrokesReceived(courseHandicap, COURSE.holes);
+function buildGroupPlayers(
+  playerIndices: number[],
+  teamIndices: number[]
+) {
+  // First pass: compute course handicaps
+  const data = playerIndices.map((playerIndex, i) => {
+    const p = PLAYERS[playerIndex];
+    const courseHandicap = calculateCourseHandicap(
+      p.handicapIndex,
+      COURSE.slope,
+      COURSE.rating,
+      COURSE.par
+    );
+    return { p, teamIndex: teamIndices[i], courseHandicap };
+  });
 
-  return {
-    playerId: p.id,
-    teamIndex,
-    displayName: p.displayName,
-    handicapIndex: p.handicapIndex,
-    courseHandicap,
-    strokesReceived,
-  };
+  // Spin off lowest course handicap for team game
+  const lowestCourseHcp = Math.min(...data.map((d) => d.courseHandicap));
+
+  return data.map((d) => {
+    const playingHandicap = d.courseHandicap - lowestCourseHcp;
+    const strokesReceived = calculateStrokesReceived(d.courseHandicap, COURSE.holes);
+    const teamStrokesReceived = calculateStrokesReceived(playingHandicap, COURSE.holes);
+
+    return {
+      playerId: d.p.id,
+      teamIndex: d.teamIndex,
+      displayName: d.p.displayName,
+      handicapIndex: d.p.handicapIndex,
+      courseHandicap: d.courseHandicap,
+      strokesReceived,
+      teamStrokesReceived,
+      playingHandicap,
+    };
+  });
 }
 
 // ---------- Main ----------
@@ -354,9 +361,8 @@ async function main() {
         continue;
       }
 
-      const players = assignments[g].map((playerIdx, teamIdx) =>
-        buildGroupPlayer(playerIdx, teamIdx)
-      );
+      const teamIndices = assignments[g].map((_, teamIdx) => teamIdx);
+      const players = buildGroupPlayers(assignments[g], teamIndices);
 
       // Build empty holes structure
       const holes: Record<string, any> = {};

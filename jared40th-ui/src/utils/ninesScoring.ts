@@ -68,7 +68,7 @@ export function computeNetScores(
  */
 export function computeGroupScoring(
   holes: Record<string, { gross: (number | null)[] }> | undefined,
-  players: { strokesReceived: number[] }[]
+  players: { strokesReceived: number[]; teamStrokesReceived?: number[] }[]
 ): {
   holeNet: Record<string, [number | null, number | null, number | null, number | null]>;
   holePoints: Record<string, [number, number, number, number]>;
@@ -90,18 +90,20 @@ export function computeGroupScoring(
     }
 
     const gross = holeData.gross || [null, null, null, null];
-    const strokesForHole = players.map((p) => {
-      const sr = p.strokesReceived;
+
+    // Use spun-off team strokes for nines (falls back to full strokes)
+    const teamStrokesForHole = players.map((p) => {
+      const sr = p.teamStrokesReceived || p.strokesReceived;
       return sr && sr.length > h - 1 ? sr[h - 1] : 0;
     });
 
-    const net = computeNetScores(gross, strokesForHole);
-    holeNet[key] = net;
+    const teamNet = computeNetScores(gross, teamStrokesForHole);
+    holeNet[key] = teamNet;
 
     const allScored = gross.every((g) => g != null);
     if (allScored) {
       holesCompleted++;
-      const points = computeNinesPoints(net);
+      const points = computeNinesPoints(teamNet);
       holePoints[key] = points;
       for (let p = 0; p < 4; p++) {
         playerTotals[p] += points[p];

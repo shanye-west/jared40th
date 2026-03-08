@@ -162,7 +162,7 @@ export default function Group() {
                   <div className="text-[0.6rem] text-slate-400">
                     {name}
                     {p.teeSetName ? ` · ${p.teeSetName}` : ""}
-                    {` (${p.courseHandicap})`}
+                    {` (${p.playingHandicap ?? p.courseHandicap})`}
                   </div>
                 </div>
                 <div className="text-lg font-bold" style={{ color }}>

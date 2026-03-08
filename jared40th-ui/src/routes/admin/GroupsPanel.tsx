@@ -158,15 +158,14 @@ export default function GroupsPanel({ tournament }: Props) {
 
     const teeOptions = getCourseTeeOptions(course);
 
-    const groupPlayers: GroupPlayer[] = form.playerSelections.map((playerId, teamIndex) => {
+    // First pass: compute course handicaps for all players
+    const playerData = form.playerSelections.map((playerId, teamIndex) => {
       const player = players.find((p) => p.id === playerId);
       const hcpIndex = player?.handicapIndex ?? 0;
 
-      // Find the selected tee set for this player
       const selectedTeeName = form.teeSelections[teamIndex];
       const selectedTee = teeOptions.find((t) => t.name === selectedTeeName);
 
-      // Use selected tee's rating/slope/par
       const slope = selectedTee?.slope ?? 113;
       const rating = selectedTee?.rating ?? 72;
       const par = selectedTee?.par ?? 72;
@@ -174,18 +173,36 @@ export default function GroupsPanel({ tournament }: Props) {
       const courseHcp = selectedTee
         ? computeCourseHandicap(hcpIndex, slope, rating, par)
         : Math.min(Math.max(Math.round(hcpIndex), 0), 18);
+
+      return { playerId, teamIndex, player, hcpIndex, courseHcp, selectedTee };
+    });
+
+    // Spin off lowest course handicap for team game playing handicaps
+    const lowestCourseHcp = Math.min(...playerData.map((d) => d.courseHcp));
+
+    const groupPlayers: GroupPlayer[] = playerData.map((d) => {
+      const playingHcp = d.courseHcp - lowestCourseHcp;
+
+      // Full strokes for side games (capped at 18)
       const strokes = course?.holes?.length === 18
-        ? buildStrokesReceived(courseHcp, course.holes)
+        ? buildStrokesReceived(d.courseHcp, course.holes)
+        : new Array(18).fill(0);
+
+      // Spun-off strokes for team game
+      const teamStrokes = course?.holes?.length === 18
+        ? buildStrokesReceived(playingHcp, course.holes)
         : new Array(18).fill(0);
 
       return {
-        playerId: playerId || `team${teamIndex}-unknown`,
-        teamIndex,
-        displayName: player?.displayName ?? `Player ${teamIndex + 1}`,
-        handicapIndex: hcpIndex,
-        courseHandicap: courseHcp,
+        playerId: d.playerId || `team${d.teamIndex}-unknown`,
+        teamIndex: d.teamIndex,
+        displayName: d.player?.displayName ?? `Player ${d.teamIndex + 1}`,
+        handicapIndex: d.hcpIndex,
+        courseHandicap: d.courseHcp,
         strokesReceived: strokes,
-        teeSetName: selectedTee?.name,
+        teamStrokesReceived: teamStrokes,
+        playingHandicap: playingHcp,
+        teeSetName: d.selectedTee?.name,
       };
     });
 
