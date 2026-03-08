@@ -24,7 +24,7 @@ import type {
 } from "../../types";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
-import { Plus, Trash2, Save, X } from "lucide-react";
+import { Plus, Trash2, Save, X, RefreshCw } from "lucide-react";
 
 type Props = { tournament: TournamentDoc };
 
@@ -79,6 +79,7 @@ export default function GroupsPanel({ tournament }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<GroupForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const [roundCourse, setRoundCourse] = useState<CourseDoc | null>(null);
 
   const fetchRounds = async () => {
@@ -217,6 +218,70 @@ export default function GroupsPanel({ tournament }: Props) {
     setShowForm(false);
     setSaving(false);
     await fetchGroups();
+  };
+
+  const handleRecalculate = async () => {
+    if (!selectedRoundId || groups.length === 0) return;
+    setRecalculating(true);
+
+    try {
+      // Fetch latest player data (handicap indexes may have changed)
+      const playerSnap = await getDocs(collection(db, "players"));
+      const latestPlayers: PlayerDoc[] = playerSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as PlayerDoc);
+
+      // Get course for the selected round
+      const round = rounds.find((r) => r.id === selectedRoundId);
+      const courseId = round?.courseId || tournament.courseId;
+      let course: CourseDoc | null = null;
+      if (courseId) {
+        const snap = await getDoc(doc(db, "courses", courseId));
+        if (snap.exists()) course = { id: snap.id, ...snap.data() } as CourseDoc;
+      }
+      const teeOptions = getCourseTeeOptions(course);
+
+      for (const group of groups) {
+        // First pass: compute course handicaps for all players in this group
+        const playerData = group.players.map((gp) => {
+          const latestPlayer = latestPlayers.find((p) => p.id === gp.playerId);
+          const hcpIndex = latestPlayer?.handicapIndex ?? gp.handicapIndex;
+          const selectedTee = teeOptions.find((t) => t.name === gp.teeSetName);
+          const slope = selectedTee?.slope ?? 113;
+          const rating = selectedTee?.rating ?? 72;
+          const par = selectedTee?.par ?? 72;
+          const courseHcp = selectedTee
+            ? computeCourseHandicap(hcpIndex, slope, rating, par)
+            : Math.min(Math.max(Math.round(hcpIndex), 0), 18);
+          return { gp, hcpIndex, courseHcp, selectedTee };
+        });
+
+        // Spin off lowest course handicap
+        const lowestCourseHcp = Math.min(...playerData.map((d) => d.courseHcp));
+
+        const updatedPlayers: GroupPlayer[] = playerData.map((d) => {
+          const playingHcp = d.courseHcp - lowestCourseHcp;
+          const strokes = course?.holes?.length === 18
+            ? buildStrokesReceived(d.courseHcp, course.holes)
+            : new Array(18).fill(0);
+          const teamStrokes = course?.holes?.length === 18
+            ? buildStrokesReceived(playingHcp, course.holes)
+            : new Array(18).fill(0);
+          return {
+            ...d.gp,
+            handicapIndex: d.hcpIndex,
+            courseHandicap: d.courseHcp,
+            strokesReceived: strokes,
+            teamStrokesReceived: teamStrokes,
+            playingHandicap: playingHcp,
+          };
+        });
+
+        await updateDoc(doc(db, "groups", group.id), { players: updatedPlayers });
+      }
+
+      await fetchGroups();
+    } finally {
+      setRecalculating(false);
+    }
   };
 
   const handleDelete = async (group: GroupDoc) => {
@@ -376,17 +441,30 @@ export default function GroupsPanel({ tournament }: Props) {
         </Card>
       ) : (
         selectedRoundId && (
-          <Button
-            onClick={() => {
-              setForm({ ...emptyForm, roundId: selectedRoundId });
-              setShowForm(true);
-            }}
-            size="sm"
-            className="w-full"
-          >
-            <Plus className="h-4 w-4" />
-            Add Group
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                setForm({ ...emptyForm, roundId: selectedRoundId });
+                setShowForm(true);
+              }}
+              size="sm"
+              className="flex-1"
+            >
+              <Plus className="h-4 w-4" />
+              Add Group
+            </Button>
+            {groups.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRecalculate}
+                disabled={recalculating}
+              >
+                <RefreshCw className={`h-4 w-4 ${recalculating ? "animate-spin" : ""}`} />
+                {recalculating ? "Recalculating..." : "Recalc Handicaps"}
+              </Button>
+            )}
+          </div>
         )
       )}
 
@@ -411,7 +489,7 @@ export default function GroupsPanel({ tournament }: Props) {
                         className="inline-block h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: team?.color ?? "#999" }}
                       />
-                      {p.displayName} (HCP {p.courseHandicap})
+                      {p.displayName} (HCP {p.courseHandicap}{p.playingHandicap != null ? ` → ${p.playingHandicap}` : ""})
                       {p.teeSetName && (
                         <span className="text-[0.6rem] text-slate-400">- {p.teeSetName}</span>
                       )}
