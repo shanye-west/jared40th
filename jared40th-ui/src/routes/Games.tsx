@@ -54,6 +54,7 @@ export default function Games() {
   const hasCum = cumGames.length > 0;
 
   const [activeTab, setActiveTab] = useState<MainTab>("skins");
+  const [activeCumScoreType, setActiveCumScoreType] = useState<"gross" | "net">("gross");
   const [activeRoundId, setActiveRoundId] = useState<string | null>(null);
   const effectiveRoundId = activeRoundId ?? rounds[0]?.id ?? null;
 
@@ -97,6 +98,29 @@ export default function Games() {
         ))}
       </div>
 
+      {/* Gross/Net sub-tabs for Cumulative */}
+      {activeTab === "cum" && cumGames.length > 1 && (
+        <div className="flex gap-1 rounded-lg bg-slate-50 border border-slate-200 p-1 mb-4">
+          {(["gross", "net"] as const).map((st) => {
+            const game = cumGames.find((g) => g.scoreType === st);
+            if (!game) return null;
+            return (
+              <button
+                key={st}
+                onClick={() => setActiveCumScoreType(st)}
+                className={`flex-1 rounded-md py-1.5 px-3 text-xs font-semibold transition-all capitalize ${
+                  activeCumScoreType === st
+                    ? "bg-white text-slate-800 shadow-sm"
+                    : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                {st}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Round selector */}
       {rounds.length > 1 && (
         <div className="mb-4">
@@ -126,6 +150,7 @@ export default function Games() {
           games={cumGames}
           allGroups={allGroups}
           holeParsByRound={holeParsByRound}
+          activeScoreType={activeCumScoreType}
         />
       )}
     </Layout>
@@ -167,30 +192,28 @@ function SkinsTabView({
   );
 }
 
-/** Shows all cumulative games (gross + net) stacked — cumulative is across all rounds */
+/** Shows the selected cumulative game (gross or net) */
 function CumTabView({
   games,
   allGroups,
   holeParsByRound,
+  activeScoreType,
 }: {
   games: SideGameConfig[];
   allGroups: GroupDoc[];
   holeParsByRound: Record<string, number[]>;
+  activeScoreType: "gross" | "net";
 }) {
-  if (games.length === 0) {
+  // If only one game, show it; otherwise pick by score type
+  const game = games.length === 1
+    ? games[0]
+    : games.find((g) => g.scoreType === activeScoreType) ?? games[0];
+
+  if (!game) {
     return <div className="text-center py-10 text-slate-400 text-sm">No cumulative games configured</div>;
   }
 
-  return (
-    <div className="space-y-8">
-      {games.map((game) => (
-        <div key={game.id}>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">{game.name}</h2>
-          <CumulativeView game={game} allGroups={allGroups} holeParsByRound={holeParsByRound} />
-        </div>
-      ))}
-    </div>
-  );
+  return <CumulativeView game={game} allGroups={allGroups} holeParsByRound={holeParsByRound} />;
 }
 
 // ============================================================================
