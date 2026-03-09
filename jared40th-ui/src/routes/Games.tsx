@@ -16,6 +16,8 @@ import { ScoreDisplayCell } from "../components/group/ScoreDisplayCell";
 import { SCORECARD_CELL_WIDTH, SCORECARD_LABEL_WIDTH, SCORECARD_TOTAL_COL_WIDTH } from "../constants";
 import type { SideGameConfig, CourseDoc } from "../types";
 
+type MainTab = "skins" | "cum";
+
 export default function Games() {
   const { tournament, loading, getCourse } = useTournamentContext();
   const { groups: allGroups, loading: groupsLoading } = useGroupListData(tournament?.id);
@@ -45,28 +47,15 @@ export default function Games() {
 
   const sideGames = tournament?.sideGames ?? [];
 
-  // Split into individual games (skins/cumulative) and head-to-head games
-  const individualGames = sideGames.filter((g) => g.type !== "head-to-head");
-  const h2hGames = sideGames.filter((g) => g.type === "head-to-head");
+  const skinsGames = sideGames.filter((g) => g.type === "skins");
+  const cumGames = sideGames.filter((g) => g.type === "cumulative");
 
-  // Top-level tabs: each individual game gets its own tab, plus one "Head-to-Head" tab if any h2h games exist
-  type TabEntry = { id: string; label: string; kind: "game" | "h2h" };
-  const tabs: TabEntry[] = [
-    ...individualGames.map((g) => ({ id: g.id, label: g.name, kind: "game" as const })),
-    ...(h2hGames.length > 0 ? [{ id: "__h2h__", label: "Head-to-Head", kind: "h2h" as const }] : []),
-  ];
+  const hasSkins = skinsGames.length > 0;
+  const hasCum = cumGames.length > 0;
 
-  const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const selectedTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0] ?? null;
-
-  // Sub-tab for head-to-head matchups
-  const [activeH2hId, setActiveH2hId] = useState<string | null>(null);
-  const selectedH2h = h2hGames.find((g) => g.id === activeH2hId) ?? h2hGames[0] ?? null;
-
-  // Find the selected individual game
-  const selectedGame = selectedTab?.kind === "game"
-    ? sideGames.find((g) => g.id === selectedTab.id) ?? null
-    : null;
+  const [activeTab, setActiveTab] = useState<MainTab>("skins");
+  const [activeRoundId, setActiveRoundId] = useState<string | null>(null);
+  const effectiveRoundId = activeRoundId ?? rounds[0]?.id ?? null;
 
   if (loading || !tournament) {
     return (
@@ -84,83 +73,123 @@ export default function Games() {
     );
   }
 
+  const mainTabs: { id: MainTab; label: string }[] = [
+    ...(hasSkins ? [{ id: "skins" as MainTab, label: "Skins" }] : []),
+    ...(hasCum ? [{ id: "cum" as MainTab, label: "Cum." }] : []),
+  ];
+
   return (
     <Layout title="Games" showBack tournamentLogo={tournament.tournamentLogo}>
-      {/* Top-level tabs */}
-      <div className="flex gap-1 rounded-lg bg-slate-100 p-1 mb-4 overflow-x-auto">
-        {tabs.map((tab) => {
-          const isActive = tab.id === (selectedTab?.id ?? "");
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTabId(tab.id)}
-              className={`flex-1 min-w-0 rounded-md py-2 px-2 text-xs font-semibold transition-all whitespace-nowrap ${
-                isActive
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
+      {/* 2 top-level tabs */}
+      <div className="flex gap-1 rounded-lg bg-slate-100 p-1 mb-4">
+        {mainTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 rounded-md py-2 px-3 text-sm font-semibold transition-all ${
+              activeTab === tab.id
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Game content */}
-      {!groupsLoading && selectedTab && (
-        selectedTab.kind === "game" && selectedGame ? (
-          selectedGame.type === "skins" ? (
-            <SkinsView
-              game={selectedGame}
-              allGroups={allGroups}
-              rounds={rounds}
-            />
-          ) : (
-            <CumulativeView
-              game={selectedGame}
-              allGroups={allGroups}
-              holeParsByRound={holeParsByRound}
-            />
-          )
-        ) : selectedTab.kind === "h2h" ? (
-          <div>
-            {/* H2H sub-tabs */}
-            {h2hGames.length > 1 && (
-              <div className="flex gap-1 rounded-lg bg-slate-50 border border-slate-200 p-1 mb-4 overflow-x-auto">
-                {h2hGames.map((g) => {
-                  const isActive = g.id === (selectedH2h?.id ?? "");
-                  return (
-                    <button
-                      key={g.id}
-                      onClick={() => setActiveH2hId(g.id)}
-                      className={`flex-1 min-w-0 rounded-md py-1.5 px-2 text-xs font-medium transition-all whitespace-nowrap ${
-                        isActive
-                          ? "bg-white text-slate-800 shadow-sm"
-                          : "text-slate-400 hover:text-slate-600"
-                      }`}
-                    >
-                      {g.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {selectedH2h && (
-              <HeadToHeadView
-                game={selectedH2h}
-                allGroups={allGroups}
-                rounds={rounds}
-              />
-            )}
-          </div>
-        ) : null
+      {/* Round selector */}
+      {rounds.length > 1 && (
+        <div className="mb-4">
+          <RoundTabs
+            rounds={rounds}
+            selectedRoundId={effectiveRoundId ?? ""}
+            onSelect={setActiveRoundId}
+          />
+        </div>
       )}
 
       {groupsLoading && (
         <div className="flex items-center justify-center py-12 text-slate-400 text-sm">Loading scores...</div>
       )}
+
+      {!groupsLoading && activeTab === "skins" && (
+        <SkinsTabView
+          games={skinsGames}
+          allGroups={allGroups}
+          rounds={rounds}
+          activeRoundId={effectiveRoundId}
+        />
+      )}
+
+      {!groupsLoading && activeTab === "cum" && (
+        <CumTabView
+          games={cumGames}
+          allGroups={allGroups}
+          holeParsByRound={holeParsByRound}
+        />
+      )}
     </Layout>
+  );
+}
+
+// ============================================================================
+// TAB WRAPPERS
+// ============================================================================
+
+import type { GroupDoc, RoundDoc } from "../types";
+import type { SkinsResult, HeadToHeadResult } from "../utils/sideGames";
+
+/** Shows all skins games (gross + net) for the selected round, stacked */
+function SkinsTabView({
+  games,
+  allGroups,
+  rounds,
+  activeRoundId,
+}: {
+  games: SideGameConfig[];
+  allGroups: GroupDoc[];
+  rounds: RoundDoc[];
+  activeRoundId: string | null;
+}) {
+  if (games.length === 0) {
+    return <div className="text-center py-10 text-slate-400 text-sm">No skins games configured</div>;
+  }
+
+  return (
+    <div className="space-y-8">
+      {games.map((game) => (
+        <div key={game.id}>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">{game.name}</h2>
+          <SkinsView game={game} allGroups={allGroups} rounds={rounds} externalRoundId={activeRoundId} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Shows all cumulative games (gross + net) stacked — cumulative is across all rounds */
+function CumTabView({
+  games,
+  allGroups,
+  holeParsByRound,
+}: {
+  games: SideGameConfig[];
+  allGroups: GroupDoc[];
+  holeParsByRound: Record<string, number[]>;
+}) {
+  if (games.length === 0) {
+    return <div className="text-center py-10 text-slate-400 text-sm">No cumulative games configured</div>;
+  }
+
+  return (
+    <div className="space-y-8">
+      {games.map((game) => (
+        <div key={game.id}>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">{game.name}</h2>
+          <CumulativeView game={game} allGroups={allGroups} holeParsByRound={holeParsByRound} />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -168,20 +197,18 @@ export default function Games() {
 // SKINS VIEW
 // ============================================================================
 
-import type { GroupDoc, RoundDoc } from "../types";
-import type { SkinsResult, HeadToHeadResult } from "../utils/sideGames";
-
 function SkinsView({
   game,
   allGroups,
   rounds,
+  externalRoundId,
 }: {
   game: SideGameConfig;
   allGroups: GroupDoc[];
   rounds: RoundDoc[];
+  externalRoundId?: string | null;
 }) {
-  const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
-  const activeRoundId = selectedRoundId ?? rounds[0]?.id;
+  const activeRoundId = externalRoundId ?? rounds[0]?.id;
 
   // Filter groups for selected round
   const roundGroups = useMemo(
@@ -196,17 +223,6 @@ function SkinsView({
 
   return (
     <div>
-      {/* Round selector */}
-      {rounds.length > 1 && (
-        <div className="mb-4">
-          <RoundTabs
-            rounds={rounds}
-            selectedRoundId={activeRoundId ?? ""}
-            onSelect={setSelectedRoundId}
-          />
-        </div>
-      )}
-
       {/* Pot info header */}
       <div className="flex items-center justify-between rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 mb-4">
         <div className="flex items-center gap-2">
@@ -396,7 +412,7 @@ function CumulativeView({
 // HEAD-TO-HEAD VIEW
 // ============================================================================
 
-function HeadToHeadView({
+export function HeadToHeadView({
   game,
   allGroups,
   rounds,
