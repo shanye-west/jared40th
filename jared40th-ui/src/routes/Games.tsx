@@ -54,6 +54,7 @@ export default function Games() {
   const hasCum = cumGames.length > 0;
 
   const [activeTab, setActiveTab] = useState<MainTab>("skins");
+  const [activeSkinsScoreType, setActiveSkinsScoreType] = useState<"gross" | "net">("gross");
   const [activeCumScoreType, setActiveCumScoreType] = useState<"gross" | "net">("gross");
   const [activeRoundId, setActiveRoundId] = useState<string | null>(null);
   const effectiveRoundId = activeRoundId ?? rounds[0]?.id ?? null;
@@ -98,6 +99,29 @@ export default function Games() {
         ))}
       </div>
 
+      {/* Gross/Net sub-tabs for Skins */}
+      {activeTab === "skins" && skinsGames.length > 1 && (
+        <div className="flex gap-1 rounded-lg bg-slate-50 border border-slate-200 p-1 mb-4">
+          {(["gross", "net"] as const).map((st) => {
+            const game = skinsGames.find((g) => g.scoreType === st);
+            if (!game) return null;
+            return (
+              <button
+                key={st}
+                onClick={() => setActiveSkinsScoreType(st)}
+                className={`flex-1 rounded-md py-1.5 px-3 text-xs font-semibold transition-all capitalize ${
+                  activeSkinsScoreType === st
+                    ? "bg-white text-slate-800 shadow-sm"
+                    : "text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                {st}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Gross/Net sub-tabs for Cumulative */}
       {activeTab === "cum" && cumGames.length > 1 && (
         <div className="flex gap-1 rounded-lg bg-slate-50 border border-slate-200 p-1 mb-4">
@@ -121,8 +145,8 @@ export default function Games() {
         </div>
       )}
 
-      {/* Round selector */}
-      {rounds.length > 1 && (
+      {/* Round selector (skins only — cumulative manages its own day tabs) */}
+      {activeTab === "skins" && rounds.length > 1 && (
         <div className="mb-4">
           <RoundTabs
             rounds={rounds}
@@ -142,6 +166,7 @@ export default function Games() {
           allGroups={allGroups}
           rounds={rounds}
           activeRoundId={effectiveRoundId}
+          activeScoreType={activeSkinsScoreType}
         />
       )}
 
@@ -151,6 +176,7 @@ export default function Games() {
           allGroups={allGroups}
           holeParsByRound={holeParsByRound}
           activeScoreType={activeCumScoreType}
+          rounds={rounds}
         />
       )}
     </Layout>
@@ -164,32 +190,34 @@ export default function Games() {
 import type { GroupDoc, RoundDoc } from "../types";
 import type { SkinsResult, HeadToHeadResult } from "../utils/sideGames";
 
-/** Shows all skins games (gross + net) for the selected round, stacked */
+/** Shows the selected skins game (gross or net) for the selected round */
 function SkinsTabView({
   games,
   allGroups,
   rounds,
   activeRoundId,
+  activeScoreType,
 }: {
   games: SideGameConfig[];
   allGroups: GroupDoc[];
   rounds: RoundDoc[];
   activeRoundId: string | null;
+  activeScoreType: "gross" | "net";
 }) {
   if (games.length === 0) {
     return <div className="text-center py-10 text-slate-400 text-sm">No skins games configured</div>;
   }
 
-  return (
-    <div className="space-y-8">
-      {games.map((game) => (
-        <div key={game.id}>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">{game.name}</h2>
-          <SkinsView game={game} allGroups={allGroups} rounds={rounds} externalRoundId={activeRoundId} />
-        </div>
-      ))}
-    </div>
-  );
+  // If only one game, show it; otherwise pick by score type
+  const game = games.length === 1
+    ? games[0]
+    : games.find((g) => g.scoreType === activeScoreType) ?? games[0];
+
+  if (!game) {
+    return <div className="text-center py-10 text-slate-400 text-sm">No skins games configured</div>;
+  }
+
+  return <SkinsView game={game} allGroups={allGroups} rounds={rounds} externalRoundId={activeRoundId} />;
 }
 
 /** Shows the selected cumulative game (gross or net) */
@@ -198,22 +226,73 @@ function CumTabView({
   allGroups,
   holeParsByRound,
   activeScoreType,
+  rounds,
 }: {
   games: SideGameConfig[];
   allGroups: GroupDoc[];
   holeParsByRound: Record<string, number[]>;
   activeScoreType: "gross" | "net";
+  rounds: RoundDoc[];
 }) {
+  const [activeDayTab, setActiveDayTab] = useState<string>("total");
+
   // If only one game, show it; otherwise pick by score type
   const game = games.length === 1
     ? games[0]
     : games.find((g) => g.scoreType === activeScoreType) ?? games[0];
 
+  const isGross = game?.scoreType === "gross";
+
+  // For gross: filter groups by selected day/round; for net: always show all (total)
+  const filteredGroups = useMemo(() => {
+    if (!isGross || activeDayTab === "total") return allGroups;
+    return allGroups.filter((g) => g.roundId === activeDayTab);
+  }, [allGroups, activeDayTab, isGross]);
+
+  const filteredHolePars = useMemo(() => {
+    if (!isGross || activeDayTab === "total") return holeParsByRound;
+    const roundPars = holeParsByRound[activeDayTab];
+    return roundPars ? { [activeDayTab]: roundPars } : {};
+  }, [holeParsByRound, activeDayTab, isGross]);
+
   if (!game) {
     return <div className="text-center py-10 text-slate-400 text-sm">No cumulative games configured</div>;
   }
 
-  return <CumulativeView game={game} allGroups={allGroups} holeParsByRound={holeParsByRound} />;
+  return (
+    <div>
+      {/* Day tabs for gross cumulative (net only shows total) */}
+      {isGross && rounds.length > 1 && (
+        <div className="flex gap-1 rounded-lg bg-slate-100 p-1 mb-4">
+          {rounds.map((round) => (
+            <button
+              key={round.id}
+              onClick={() => setActiveDayTab(round.id)}
+              className={`flex-1 rounded-md py-2 px-3 text-sm font-semibold transition-all ${
+                activeDayTab === round.id
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Day {round.day ?? "?"}
+            </button>
+          ))}
+          <button
+            onClick={() => setActiveDayTab("total")}
+            className={`flex-1 rounded-md py-2 px-3 text-sm font-semibold transition-all ${
+              activeDayTab === "total"
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            Total
+          </button>
+        </div>
+      )}
+
+      <CumulativeView game={game} allGroups={filteredGroups} holeParsByRound={filteredHolePars} />
+    </div>
+  );
 }
 
 // ============================================================================
