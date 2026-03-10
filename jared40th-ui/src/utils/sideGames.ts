@@ -99,8 +99,7 @@ export function computeSkins(
         if (rawScore == null) {
           allCompleted = false;
         } else if (overrideSet.has(`${g.roundId}:${p.playerId}:${h}`)) {
-          // Score is invalidated for skins — treat as if player didn't post a score
-          allCompleted = false;
+          // Score is invalidated for skins — exclude from competition but player still counts as complete
         } else {
           scores.push({ playerId: p.playerId, displayName: p.displayName, score: rawScore });
         }
