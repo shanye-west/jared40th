@@ -57,6 +57,12 @@ export type Scoreboard = {
   lastUpdated: any;
 };
 
+export type SkinOverride = {
+  playerId: string;
+  hole: number;
+  roundId: string;
+};
+
 export type SideGameConfig = {
   id: string;
   name: string;
@@ -69,6 +75,8 @@ export type SideGameConfig = {
   betFront?: number;
   betBack?: number;
   betTotal?: number;
+  // Skins overrides: scores to exclude from skins calculation (admin only)
+  skinOverrides?: SkinOverride[];
 };
 
 export type TournamentDoc = {

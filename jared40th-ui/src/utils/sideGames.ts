@@ -3,7 +3,7 @@
  * Derives skins and cumulative results from existing group score data.
  */
 
-import type { GroupDoc } from "../types";
+import type { GroupDoc, SkinOverride } from "../types";
 
 // ============================================================================
 // SKINS
@@ -47,9 +47,15 @@ export function computeSkins(
   groups: GroupDoc[],
   optedInPlayerIds: string[],
   scoreType: "gross" | "net",
-  pot: number
+  pot: number,
+  skinOverrides?: SkinOverride[]
 ): SkinsResult {
   const optedInSet = new Set(optedInPlayerIds);
+
+  // Build a set of "roundId:playerId:hole" keys for quick override lookup
+  const overrideSet = new Set(
+    (skinOverrides ?? []).map((o) => `${o.roundId}:${o.playerId}:${o.hole}`)
+  );
   const holes: HoleSkinResult[] = [];
   const playerMap = new Map<string, PlayerSkinsResult>();
 
@@ -91,6 +97,9 @@ export function computeSkins(
           : holeData.net?.[i] ?? null;
 
         if (rawScore == null) {
+          allCompleted = false;
+        } else if (overrideSet.has(`${g.roundId}:${p.playerId}:${h}`)) {
+          // Score is invalidated for skins — treat as if player didn't post a score
           allCompleted = false;
         } else {
           scores.push({ playerId: p.playerId, displayName: p.displayName, score: rawScore });

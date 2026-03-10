@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "../../firebase";
-import type { TournamentDoc, SideGameConfig } from "../../types";
+import type { TournamentDoc, SideGameConfig, SkinOverride } from "../../types";
+import { useRounds } from "../../hooks/useRounds";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
-import { Plus, Trash2, Save, X, Pencil } from "lucide-react";
+import { Plus, Trash2, Save, X, Pencil, ShieldX } from "lucide-react";
 
 type Props = { tournament: TournamentDoc };
 
@@ -32,6 +33,7 @@ const emptyForm: GameForm = {
 
 export default function GamesPanel({ tournament }: Props) {
   const games = tournament.sideGames ?? [];
+  const { rounds } = useRounds(tournament.roundIds);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<GameForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -356,8 +358,181 @@ export default function GamesPanel({ tournament }: Props) {
               </Button>
             </div>
           </div>
+
+          {/* Skin overrides section for skins games */}
+          {game.type === "skins" && (
+            <SkinOverridesSection
+              game={game}
+              games={games}
+              rounds={rounds}
+              tournament={tournament}
+              saveGames={saveGames}
+            />
+          )}
         </Card>
       ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// SKIN OVERRIDES (admin-only: invalidate individual scores for skins)
+// ============================================================================
+
+import type { RoundDoc } from "../../types";
+
+function SkinOverridesSection({
+  game,
+  games,
+  rounds,
+  tournament,
+  saveGames,
+}: {
+  game: SideGameConfig;
+  games: SideGameConfig[];
+  rounds: RoundDoc[];
+  tournament: TournamentDoc;
+  saveGames: (next: SideGameConfig[]) => Promise<void>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [addRoundId, setAddRoundId] = useState("");
+  const [addPlayerId, setAddPlayerId] = useState("");
+  const [addHole, setAddHole] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const overrides = game.skinOverrides ?? [];
+
+  const playerName = (pid: string): string => {
+    for (const t of tournament.teams) {
+      if (t.playerIds.includes(pid)) {
+        return pid;
+      }
+    }
+    return pid;
+  };
+
+  const roundLabel = (rid: string): string => {
+    const round = rounds.find((r) => r.id === rid);
+    return round ? `Day ${round.day ?? "?"}` : rid;
+  };
+
+  const handleAdd = async () => {
+    if (!addRoundId || !addPlayerId || !addHole) return;
+    const hole = Number(addHole);
+    if (hole < 1 || hole > 18) return;
+
+    // Check for duplicate
+    const exists = overrides.some(
+      (o) => o.roundId === addRoundId && o.playerId === addPlayerId && o.hole === hole
+    );
+    if (exists) return;
+
+    setSaving(true);
+    const newOverrides: SkinOverride[] = [...overrides, { roundId: addRoundId, playerId: addPlayerId, hole }];
+    const updated: SideGameConfig = { ...game, skinOverrides: newOverrides };
+    await saveGames(games.map((g) => (g.id === game.id ? updated : g)));
+    setAddRoundId("");
+    setAddPlayerId("");
+    setAddHole("");
+    setSaving(false);
+  };
+
+  const handleRemove = async (idx: number) => {
+    setSaving(true);
+    const newOverrides = overrides.filter((_, i) => i !== idx);
+    const updated: SideGameConfig = { ...game, skinOverrides: newOverrides.length > 0 ? newOverrides : undefined };
+    await saveGames(games.map((g) => (g.id === game.id ? updated : g)));
+    setSaving(false);
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-100">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700"
+      >
+        <ShieldX className="h-3.5 w-3.5" />
+        Skin Overrides ({overrides.length})
+        <span className="text-[0.6rem]">{expanded ? "▲" : "▼"}</span>
+      </button>
+
+      {expanded && (
+        <div className="mt-2 space-y-2">
+          {/* Existing overrides */}
+          {overrides.length > 0 && (
+            <div className="space-y-1">
+              {overrides.map((o, idx) => (
+                <div
+                  key={`${o.roundId}-${o.playerId}-${o.hole}`}
+                  className="flex items-center justify-between rounded-lg bg-red-50 border border-red-200 px-3 py-1.5"
+                >
+                  <div className="text-xs text-red-700">
+                    <span className="font-semibold">{playerName(o.playerId)}</span>
+                    {" "}&middot; {roundLabel(o.roundId)} &middot; Hole {o.hole}
+                  </div>
+                  <button
+                    onClick={() => handleRemove(idx)}
+                    disabled={saving}
+                    className="text-red-400 hover:text-red-600 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new override */}
+          <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-1.5 items-end">
+            <div>
+              <label className="text-[0.6rem] font-semibold text-slate-400 uppercase">Round</label>
+              <select
+                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                value={addRoundId}
+                onChange={(e) => setAddRoundId(e.target.value)}
+              >
+                <option value="">Round...</option>
+                {rounds.map((r) => (
+                  <option key={r.id} value={r.id}>Day {r.day ?? "?"}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[0.6rem] font-semibold text-slate-400 uppercase">Player</label>
+              <select
+                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                value={addPlayerId}
+                onChange={(e) => setAddPlayerId(e.target.value)}
+              >
+                <option value="">Player...</option>
+                {game.playerIds.map((pid) => (
+                  <option key={pid} value={pid}>{pid}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[0.6rem] font-semibold text-slate-400 uppercase">Hole</label>
+              <input
+                type="number"
+                min={1}
+                max={18}
+                className="w-14 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                value={addHole}
+                onChange={(e) => setAddHole(e.target.value)}
+                placeholder="#"
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={handleAdd}
+              disabled={saving || !addRoundId || !addPlayerId || !addHole}
+              className="h-[30px] px-2"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

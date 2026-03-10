@@ -319,8 +319,8 @@ function SkinsView({
   );
 
   const result: SkinsResult = useMemo(
-    () => computeSkins(roundGroups, game.playerIds, game.scoreType, game.pot),
-    [roundGroups, game.playerIds, game.scoreType, game.pot]
+    () => computeSkins(roundGroups, game.playerIds, game.scoreType, game.pot, game.skinOverrides),
+    [roundGroups, game.playerIds, game.scoreType, game.pot, game.skinOverrides]
   );
 
   return (
